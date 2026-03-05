@@ -289,8 +289,8 @@ function renderDeleteDialog(): string {
 function renderExtensionsTab(): string {
 	return `
 		<section class="panel placeholder">
-			<h1>Extensions</h1>
-			<p>차기 단계에서 정책 프리셋/스케줄링/팀 정책 파일을 추가할 예정입니다.</p>
+			<h1>Plugins Installs</h1>
+			<p>차기 단계에서 plugin 검색/설치/제거 기능을 추가할 예정입니다.</p>
 		</section>
 	`;
 }
@@ -299,9 +299,9 @@ function render(): void {
 	appRoot.innerHTML = `
 		<main>
 			<nav class="tabs">
-				<button class="tab ${activeTab === "updater" ? "active" : ""}" data-action="tab-updater">Updater</button>
+				<button class="tab ${activeTab === "extensions" ? "active" : ""}" data-action="tab-extensions">Plugins Installs</button>
+				<button class="tab ${activeTab === "updater" ? "active" : ""}" data-action="tab-updater">Plugins Updater</button>
 				<button class="tab ${activeTab === "logs" ? "active" : ""}" data-action="tab-logs">Logs</button>
-				<button class="tab ${activeTab === "extensions" ? "active" : ""}" data-action="tab-extensions">Extensions</button>
 			</nav>
 			${activeTab === "updater" ? renderUpdaterTab() : activeTab === "logs" ? renderLogsTab() : renderExtensionsTab()}
 		</main>

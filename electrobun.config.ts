@@ -4,7 +4,7 @@ export default {
 	app: {
 		name: "mise-manager",
 		identifier: "dev.eugene.mise-manager",
-		version: "0.1.0-poc",
+		version: "0.1.0",
 	},
 	build: {
 		copy: {

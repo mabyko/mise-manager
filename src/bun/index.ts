@@ -376,4 +376,4 @@ const mainWindow = new BrowserWindow({
 	},
 });
 
-console.log("mise-manager PoC started");
+console.log("mise-manager started");

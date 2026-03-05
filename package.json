@@ -1,8 +1,8 @@
 {
 	"name": "mise-manager",
-	"version": "0.1.0-poc",
+	"version": "0.1.0",
 	"type": "module",
-	"description": "PoC desktop app for mise plugin version management",
+	"description": "Desktop app for mise plugin version management",
 	"scripts": {
 		"start": "vite build && electrobun dev",
 		"dev": "electrobun dev --watch",
