@@ -1,79 +1,77 @@
 # mise-manager
 
-`mise-manager`는 `mise`로 관리되는 도구/플러그인을 데스크톱 UI에서 조회/설치/전역 전환/삭제하는 Electrobun 앱입니다.
+`mise-manager`는 `mise` 기반 런타임/도구를 데스크톱 UI에서 조회하고 관리하는 Electrobun 앱입니다.
 
-## 버전
-- App version: `0.1.0`
-- 기준 시점: 2026-03-05 (KST)
+## Version
+- App: `0.1.0`
+- Last updated: `2026-03-06` (KST)
 
-## 현재 UX
-- 탭:
-  - `Updater`: 버전 상태 조회 및 Install/Use/Delete
-  - `Logs`: 최근 작업 로그 + Clear Logs
-  - `Extensions`: placeholder
-- Updater 컬럼:
-  - `Plugin`
-  - `Installed Versions`
-  - `Active (Global)`
-  - `Same Major Latest`
-  - `Release Latest`
-  - `Pre-release Latest`
-  - `Status`
+## What It Does
+- `Plugins Updater` 탭:
+  - 설치된 버전 목록과 Active(Global) 버전을 한 화면에서 확인
+  - `Same Major Latest`, `Release Latest`, `Pre-release Latest` 비교
+  - 대상 버전에 대해 `Install` 또는 `Use Global` 실행
+  - 설치된 개별 버전에 대해 `Use Global`/`Delete` 실행
+- `Plugins Installs` 탭:
+  - 원격 plugin definition 검색
+  - 설치 상태를 `Plugin (User)`, `Plugin (Core)`, `Tool Installed` 배지로 표시
+  - User plugin의 URL 표시 및 `Custom URL` 여부 판별
+  - `Install Plugin`(선택적 Custom URL), `Edit Plugin`(URL 변경), `Remove Plugin`
+  - Core plugin은 제거 비활성화
+- `Logs` 탭:
+  - check/install/use/delete/install-plugin/edit/remove-plugin 로그 확인
+  - `Clear Logs` 지원
 
-## 동작 정책
-- `Install`: `mise install -y <plugin>@<version>`
-- `Use Global`: `mise use -g -y <plugin>@<version>`
-- `Delete`: `mise uninstall -y <plugin>@<version>`
-- Active(Global) 버전의 Delete는 비활성화
-- `Install`/`Use`/`Delete` 후 해당 플러그인 상태를 재조회해 UI 동기화
-- RPC timeout: 20분 (대형 설치 대응)
+## Command Mapping
+- Tool version install: `mise install -y <plugin>@<version>`
+- Tool version use global: `mise use -g -y <plugin>@<version>`
+- Tool version delete: `mise uninstall -y <plugin>@<version>`
+- Plugin install: `mise plugins install -y <plugin> [git_url]`
+- Plugin edit URL: `mise plugins install -y --force <plugin> <git_url>`
+- Plugin remove: `mise plugins uninstall -y <plugin>`
 
-## 버전 계산 규칙
-- 기준 버전: Active(Global) 우선, 없으면 설치 버전 최신
-- `Same Major Latest`: 기준 버전과 같은 메이저의 최신
+## Data Sources
+- Installed tool versions: `mise ls --installed --json`
+- Active global versions: `mise ls --global --json`
+- Installed user plugins: `mise plugins ls --user`, `mise plugins ls --user --urls`
+- Core plugins: `mise plugins ls --core`
+- Remote plugin definitions: `mise plugins ls-remote --only-names`, `mise plugins ls-remote --urls`
+- Version candidates: `mise ls-remote <plugin> --json`
+
+## Update Rules
+- Check base: `Active(Global)` 우선, 없으면 installed 최신 버전
+- `Same Major Latest`: base와 같은 major의 최신
 - `Release Latest`: 안정 버전 최신
-- `Pre-release Latest` 표시 조건:
-  - 프리릴리즈가 존재
-  - 기준이 semver면 `pre-release > 기준`
-  - 기준이 semver가 아니면 `pre-release >= release latest`
-- `python`, `ruby`는 pre/dev/test 필터 적용
+- `Pre-release Latest`: 아래 조건 모두 충족 시 표시
+  - pre-release 후보 존재
+  - base가 semver면 `pre-release > base`
+  - base가 semver가 아니면 `pre-release >= release latest`
+- `python`, `ruby`는 pre/dev/test 계열 필터 적용
+- Check Updates는 동시성 4로 병렬 실행
 
-## 실행
+## Run
 ```bash
 bun install
 bun run dev
 ```
 
-## 회귀 체크리스트
-1. Check Updates 시 진행률/행 상태가 정상 갱신된다.
-2. Install 후 Installed Versions가 즉시 갱신된다.
-3. Use Global 후 Active(Global)가 즉시 갱신된다.
-4. Active(Global) 버전의 Delete가 비활성화된다.
-5. Non-active Delete 클릭 시 확인 다이얼로그가 뜨고, 확인 시 삭제된다.
-6. Logs 탭에 check/install/use/delete 로그가 누적되고 Clear Logs가 동작한다.
-
-## 다음 단계 조사: Installs 탭
-`Installs` 탭 구현 전, `mise` CLI 기준으로 아래 흐름이 유효함을 확인했습니다.
-
-- 플러그인 검색:
-  - `mise plugins ls-remote --only-names`
-  - `mise plugins ls-remote --urls`
-- 플러그인 설치/제거:
-  - `mise plugins install <plugin> [-y]`
-  - `mise plugins uninstall <plugin> [-y]`
-  - 제거 시 완전 정리는 `--purge`
-- 도구 버전 설치/제거:
-  - `mise install <plugin>@<version> -y`
-  - `mise uninstall <plugin>@<version> -y`
-
-권장 설계(Installs 탭):
-1. 상단 검색창 + remote plugin 목록(`plugins ls-remote` 기반)
-2. 각 plugin 행에 `Install Plugin` / `Remove Plugin` 버튼
-3. plugin 상세 패널에서 버전 검색(`ls-remote <plugin>`) + 버전 설치/삭제
-4. 위험 액션(`Remove Plugin --purge`)은 별도 확인 다이얼로그
-
-## 릴리즈 태그
+## Build
 ```bash
-git tag 0.1.0
-git push origin 0.1.0
+bunx vite build
 ```
+
+## Regression Checklist
+1. `Check Updates` 실행 시 전체 progress/행 상태가 갱신된다.
+2. `Install` 후 Installed Versions가 즉시 반영된다.
+3. `Use Global` 후 Active(Global)이 즉시 반영된다.
+4. Active(Global) 버전 `Delete`는 비활성화된다.
+5. Non-active `Delete`는 확인 모달 후 삭제된다.
+6. Installs 탭에서 `Install Plugin` 시 URL 입력 모달이 동작한다.
+7. User plugin에서 `Edit Plugin`으로 URL 변경(`--force`)이 동작한다.
+8. Core plugin의 `Remove Plugin`은 비활성화된다.
+9. Logs 탭에서 작업 로그 누적 및 `Clear Logs`가 동작한다.
+
+## Documents
+- Product requirements: [`PRD.md`](./PRD.md)
+- Product planning: [`PLANNING.md`](./PLANNING.md)
+- Development phases: [`DEVELOPMENT_STAGES.md`](./DEVELOPMENT_STAGES.md)

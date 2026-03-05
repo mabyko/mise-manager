@@ -44,10 +44,29 @@ main {
 	padding: 24px;
 }
 
+.app-header {
+	position: fixed;
+	left: 12px;
+	right: 12px;
+	top: 10px;
+	z-index: 40;
+	background: rgba(255, 255, 255, 0.92);
+	backdrop-filter: blur(8px);
+	border: 1px solid var(--line);
+	border-radius: 16px;
+	padding: 14px 16px;
+	box-shadow: var(--shadow);
+}
+
+.app-content {
+	margin-top: 250px;
+}
+
 .tabs {
 	display: flex;
-	gap: 8px;
-	margin-bottom: 14px;
+	gap: 10px;
+	margin-bottom: 12px;
+	flex-wrap: wrap;
 }
 
 .tab {
@@ -55,7 +74,7 @@ main {
 	background: rgba(255, 255, 255, 0.65);
 	color: var(--ink);
 	font-weight: 700;
-	padding: 10px 14px;
+	padding: 10px 16px;
 	border-radius: 999px;
 	cursor: pointer;
 }
@@ -81,6 +100,44 @@ main {
 	align-items: flex-start;
 	gap: 12px;
 	margin-bottom: 14px;
+}
+
+.header-context {
+	display: flex;
+	justify-content: space-between;
+	align-items: flex-start;
+	gap: 18px;
+	margin-bottom: 10px;
+	flex-wrap: wrap;
+}
+
+.header-context h1 {
+	font-size: 1.5rem;
+	margin: 0;
+}
+
+.header-context p {
+	margin: 6px 0 0;
+	font-size: 0.95rem;
+	max-width: 780px;
+}
+
+.header-actions {
+	display: flex;
+	gap: 10px;
+	align-items: center;
+	flex-wrap: wrap;
+	justify-content: flex-end;
+	margin-left: auto;
+}
+
+.header-meta {
+	width: 100%;
+	margin-top: 4px;
+	padding-top: 8px;
+	border-top: 1px dashed #e2d7c4;
+	font-size: 0.86rem;
+	color: var(--muted);
 }
 
 h1 {
@@ -129,6 +186,11 @@ button:disabled {
 	margin-bottom: 12px;
 }
 
+.global-progress {
+	border-top: 1px solid #eadfcb;
+	padding-top: 8px;
+}
+
 .options-row {
 	display: flex;
 	gap: 14px;
@@ -137,6 +199,18 @@ button:disabled {
 	margin-bottom: 12px;
 	color: var(--muted);
 	font-size: 0.9rem;
+}
+
+.search-input {
+	min-width: 240px;
+	max-width: 560px;
+	/* width: 100%; */
+	border: 1px solid var(--line);
+	background: #fff;
+	border-radius: 9px;
+	padding: 8px 10px;
+	font-size: 0.92rem;
+	color: var(--ink);
 }
 
 .progress-head {
@@ -220,6 +294,29 @@ th {
 	color: #1557b6;
 }
 
+.badge.installed-core {
+	background: #f0eefc;
+	color: #5a48a8;
+}
+
+.badge.plugin-user {
+	background: #e9f5ed;
+	color: #136a36;
+	border: 1px solid #bee4ca;
+}
+
+.badge.plugin-core {
+	background: #f2eefc;
+	color: #5e45ac;
+	border: 1px solid #d8ccf6;
+}
+
+.badge.tool-installed {
+	background: #e8f1ff;
+	color: #174ea8;
+	border: 1px solid #c8dbff;
+}
+
 .badge.same {
 	background: #eef8ef;
 	color: var(--ok);
@@ -228,6 +325,40 @@ th {
 .badge.empty {
 	background: #f3eee7;
 	color: #7c6f5c;
+}
+
+.state-badges {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+}
+
+.plugin-url {
+	margin-top: 6px;
+	font-size: 0.78rem;
+	display: grid;
+	gap: 2px;
+}
+
+.plugin-url .url-label {
+	font-weight: 800;
+}
+
+.plugin-url .url-value {
+	color: #6f6556;
+	word-break: break-all;
+}
+
+.plugin-url.custom .url-label {
+	color: #8a5306;
+}
+
+.plugin-url.default .url-label {
+	color: #175999;
+}
+
+.plugin-url.unknown .url-label {
+	color: #6f6556;
 }
 
 .target-cell {
@@ -399,6 +530,16 @@ pre {
 	margin: 0;
 }
 
+.modal-input {
+	margin-top: 10px;
+	width: 100%;
+	border: 1px solid var(--line);
+	background: #fff;
+	border-radius: 9px;
+	padding: 9px 10px;
+	font-size: 0.9rem;
+}
+
 .modal-actions {
 	margin-top: 14px;
 	display: flex;
@@ -417,5 +558,21 @@ pre {
 
 	.bulk-actions {
 		justify-content: flex-start;
+	}
+
+	.app-content {
+		margin-top: 300px;
+	}
+
+	.header-context {
+		flex-direction: column;
+	}
+
+	.header-actions {
+		width: 100%;
+	}
+
+	.search-input {
+		min-width: 0;
 	}
 }

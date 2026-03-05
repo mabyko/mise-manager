@@ -2,6 +2,8 @@ import { BrowserView, BrowserWindow, Updater } from "electrobun/bun";
 
 import type {
 	AppRPC,
+	PluginDefinitionInfo,
+	PluginInstallResult,
 	PluginSummary,
 	PluginUpdateInfo,
 	UpdateResult,
@@ -135,6 +137,107 @@ async function listGlobalPlugins(): Promise<Map<string, string>> {
 	}
 
 	return globalMap;
+}
+
+async function listInstalledPluginNames(): Promise<string[]> {
+	const result = await runMise(["plugins", "ls", "--user"]);
+	if (result.exitCode !== 0) {
+		throw new Error(
+			result.stderr.trim() || "failed to run 'mise plugins ls --user'",
+		);
+	}
+
+	return result.stdout
+		.split("\n")
+		.map((line) => line.trim())
+		.filter((line) => line.length > 0)
+		.sort((a, b) => a.localeCompare(b));
+}
+
+function parsePluginInfoLines(stdout: string): PluginDefinitionInfo[] {
+	return stdout
+		.split("\n")
+		.map((line) => line.trim())
+		.filter((line) => line.length > 0)
+		.map((line) => {
+			const cols = line.split(/\s+/);
+			return {
+				name: cols[0] ?? "",
+				url: cols[1] && !cols[1].startsWith("*") ? cols[1] : null,
+			};
+		})
+		.filter((row) => row.name.length > 0);
+}
+
+async function listInstalledUserPluginInfos(): Promise<PluginDefinitionInfo[]> {
+	const result = await runMise(["plugins", "ls", "--user", "--urls"]);
+	if (result.exitCode !== 0) {
+		throw new Error(
+			result.stderr.trim() || "failed to run 'mise plugins ls --user --urls'",
+		);
+	}
+	return parsePluginInfoLines(result.stdout).sort((a, b) =>
+		a.name.localeCompare(b.name),
+	);
+}
+
+async function listCorePluginNames(): Promise<string[]> {
+	const result = await runMise(["plugins", "ls", "--core"]);
+	if (result.exitCode !== 0) {
+		throw new Error(result.stderr.trim() || "failed to run 'mise plugins ls --core'");
+	}
+
+	return result.stdout
+		.split("\n")
+		.map((line) => line.trim())
+		.filter((line) => line.length > 0)
+		.sort((a, b) => a.localeCompare(b));
+}
+
+async function listInstalledToolNames(): Promise<string[]> {
+	const result = await runMise(["ls", "--installed", "--json"]);
+	if (result.exitCode !== 0) {
+		throw new Error(
+			result.stderr.trim() || "failed to run 'mise ls --installed --json'",
+		);
+	}
+
+	try {
+		const parsed = JSON.parse(result.stdout) as Record<string, unknown>;
+		return Object.keys(parsed).sort((a, b) => a.localeCompare(b));
+	} catch {
+		throw new Error("failed to parse JSON from 'mise ls --installed --json'");
+	}
+}
+
+async function listRemotePluginNames(): Promise<string[]> {
+	const result = await runMise(["plugins", "ls-remote", "--only-names"]);
+	if (result.exitCode !== 0) {
+		throw new Error(
+			result.stderr.trim() || "failed to run 'mise plugins ls-remote --only-names'",
+		);
+	}
+
+	return [
+		...new Set(
+			result.stdout
+				.split("\n")
+				.map((line) => line.trim())
+				.filter((line) => line.length > 0),
+		),
+	].sort((a, b) => a.localeCompare(b));
+}
+
+async function listRemotePluginInfos(): Promise<PluginDefinitionInfo[]> {
+	const result = await runMise(["plugins", "ls-remote", "--urls"]);
+	if (result.exitCode !== 0) {
+		throw new Error(
+			result.stderr.trim() || "failed to run 'mise plugins ls-remote --urls'",
+		);
+	}
+	return parsePluginInfoLines(result.stdout).sort((a, b) =>
+		a.name.localeCompare(b.name),
+	);
 }
 
 async function listInstalledPlugins(): Promise<PluginSummary[]> {
@@ -349,6 +452,42 @@ async function deletePluginVersion({
 	};
 }
 
+async function installPluginDefinition({
+	plugin,
+	gitUrl,
+	force,
+}: {
+	plugin: string;
+	gitUrl?: string;
+	force?: boolean;
+}): Promise<PluginInstallResult> {
+	const args = ["plugins", "install", "-y"];
+	if (force) {
+		args.push("--force");
+	}
+	args.push(plugin);
+	if (gitUrl && gitUrl.trim().length > 0) {
+		args.push(gitUrl.trim());
+	}
+	const result = await runMise(args);
+	if (result.exitCode !== 0) {
+		throw new Error(result.stderr.trim() || `failed to install plugin '${plugin}'`);
+	}
+	return { plugin, stdout: result.stdout.trim() };
+}
+
+async function uninstallPluginDefinition({
+	plugin,
+}: {
+	plugin: string;
+}): Promise<PluginInstallResult> {
+	const result = await runMise(["plugins", "uninstall", "-y", plugin]);
+	if (result.exitCode !== 0) {
+		throw new Error(result.stderr.trim() || `failed to uninstall plugin '${plugin}'`);
+	}
+	return { plugin, stdout: result.stdout.trim() };
+}
+
 const url = await getMainViewUrl();
 
 const rpc = BrowserView.defineRPC<AppRPC>({
@@ -360,6 +499,14 @@ const rpc = BrowserView.defineRPC<AppRPC>({
 			useGlobalPlugin,
 			installPlugin,
 			deletePluginVersion,
+			listInstalledPluginNames,
+			listInstalledUserPluginInfos,
+			listCorePluginNames,
+			listInstalledToolNames,
+			listRemotePluginNames,
+			listRemotePluginInfos,
+			installPluginDefinition,
+			uninstallPluginDefinition,
 		},
 	},
 });

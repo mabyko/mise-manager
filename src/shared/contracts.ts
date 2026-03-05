@@ -30,6 +30,16 @@ export interface UpdateResult {
 	stdout: string;
 }
 
+export interface PluginInstallResult {
+	plugin: string;
+	stdout: string;
+}
+
+export interface PluginDefinitionInfo {
+	name: string;
+	url: string | null;
+}
+
 export interface AppRPC extends ElectrobunRPCSchema {
 	bun: {
 		requests: {
@@ -56,6 +66,42 @@ export interface AppRPC extends ElectrobunRPCSchema {
 			deletePluginVersion: {
 				params: { plugin: string; targetVersion: string };
 				response: UpdateResult;
+			};
+			listInstalledPluginNames: {
+				params: undefined;
+				response: string[];
+			};
+			listInstalledUserPluginInfos: {
+				params: undefined;
+				response: PluginDefinitionInfo[];
+			};
+			listCorePluginNames: {
+				params: undefined;
+				response: string[];
+			};
+			listInstalledToolNames: {
+				params: undefined;
+				response: string[];
+			};
+			listRemotePluginNames: {
+				params: undefined;
+				response: string[];
+			};
+			listRemotePluginInfos: {
+				params: undefined;
+				response: PluginDefinitionInfo[];
+			};
+			installPluginDefinition: {
+				params: {
+					plugin: string;
+					gitUrl?: string;
+					force?: boolean;
+				};
+				response: PluginInstallResult;
+			};
+			uninstallPluginDefinition: {
+				params: { plugin: string };
+				response: PluginInstallResult;
 			};
 		};
 		messages: Record<never, never>;
