@@ -75,3 +75,4 @@ bunx vite build
 - Product requirements: [`PRD.md`](./PRD.md)
 - Product planning: [`PLANNING.md`](./PLANNING.md)
 - Development phases: [`DEVELOPMENT_STAGES.md`](./DEVELOPMENT_STAGES.md)
+- Release notes: [`CHANGELOG.md`](./CHANGELOG.md)
