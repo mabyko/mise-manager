@@ -5,12 +5,18 @@
 ## [0.1.0] - 2026-03-06
 
 ### Added
+- `Mise Version` 탭:
+  - Current(local) / Latest(GitHub latest release) / Status 요약 카드
+  - `Status Guide` 설명 영역
+  - `Reload Current`, `Check Latest`, `Update Mise` 액션
+  - `Update Mise` 확인 모달 및 실행 결과(stdout/stderr) 표시
+  - Latest 확인 시각 표시
 - `Plugins Updater` 탭:
   - Installed Versions / Active(Global) / Same Major Latest / Release Latest / Pre-release Latest / Status 컬럼
   - `Install`, `Use Global`, `Delete` 액션
   - Delete 확인 모달
   - Check Updates 진행률 및 행 상태 표시
-- `Plugins Installs` 탭:
+- `Plugin Installs` 탭:
   - plugin 검색
   - Installed / Not Installed 분리 표
   - 상태 배지(`Plugin (User)`, `Plugin (Core)`, `Tool Installed`) 및 툴팁
@@ -20,26 +26,25 @@
 - `Logs` 탭:
   - 작업 로그 조회 및 `Clear Logs`
 - 문서:
-  - `PRD.md`
-  - `PLANNING.md`
-  - `DEVELOPMENT_STAGES.md`
-  - 최신 `README.md`
+  - `README.md` 문서 역할/사용 가이드 강화
+  - `PRD.md`, `PLANNING.md`, `DEVELOPMENT_STAGES.md` 최신 구조 반영
 
 ### Changed
-- 버전 정책 정교화:
-  - Same Major / Release / Pre-release 분리
-  - pre-release 노출 조건 적용
-  - python/ruby pre/dev/test 필터 적용
-- Installs 데이터 소스 정리:
-  - `mise plugins ls-remote --only-names/--urls`
-  - `mise plugins ls --user --urls`
-  - `mise plugins ls --core`
-  - `mise ls --installed --json`
-- UI 구조 개선:
-  - 고정 header + global progress 구조
-  - 탭 맥락 정보(제목/설명/액션) 고정
-- 성능 개선:
-  - Check Updates 병렬 처리(동시성 4)
+- 아키텍처 리팩토링:
+  - `mainview/main.ts`, `bun/index.ts` 단일 파일 구조를 기능 모듈 구조로 분리
+  - `mainview`: `features/*`, `core/*`, `render/*`, `events.ts`
+  - `bun`: `services/*`, `rpc/handlers.ts`, `app/mainViewUrl.ts`
+- 이벤트 처리 구조 개선:
+  - if-chain에서 액션 디스패처 맵 기반으로 전환
+- 탭/네이밍 정리:
+  - `extensions` -> `installs`
+  - `Mise Version` 탭 추가
+- Updater UX 조정:
+  - Same Major / Release / Pre-release 컬럼의 `Use Global` 제거
+  - 대상 컬럼은 `Install` 중심 동작
+- Mise UX 개선:
+  - 상태 기반 `Update Mise` 버튼 활성/비활성 제어
+  - 상태 라벨 + 설명 텍스트 + 버튼 비활성 사유(툴팁) 제공
 
 ### Fixed
 - `bun dev` 실행 시 RPC transport 관련 오류 수정
@@ -51,4 +56,5 @@
 ### Security / Safety
 - Active(Global) 버전 삭제 방지
 - Core plugin Remove 비활성화
-- 위험 액션(Delete)에 확인 단계 추가
+- 위험 액션(Delete, Mise Update)에 확인 단계 적용
+- 상태 미충족 시 Mise Update 실행 차단

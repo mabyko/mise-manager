@@ -39,13 +39,28 @@
 - User plugin URL 노출
 - remote source 대비 `Custom URL` 판별 표시
 
-## Stage 5 - 문서/릴리즈 정리 (진행 중)
-- README 최신 UX 기준 정리
-- PRD/기획/개발단계 문서 정리
+## Stage 5 - 기능별 리팩토링 (완료)
+- `mainview/main.ts`, `bun/index.ts` 단일 파일 과밀 해소
+- 기능 모듈 분리:
+  - `mainview`: `features/*`, `core/*`, `render/*`, `events.ts`
+  - `bun`: `services/*`, `rpc/handlers.ts`, `app/mainViewUrl.ts`
+- 이벤트 디스패처 맵 기반으로 액션 라우팅 구조화
+- 탭 네이밍 정리: `extensions` -> `installs`
+
+## Stage 6 - Mise Version 탭 추가 (완료)
+- `Mise Version` 탭 신설
+- `Current`(local) / `Latest`(GitHub) / `Status` 요약 카드 제공
+- `mise self-update -y` 실행 플로우(확인 모달 + 결과 로그)
+- 상태 설명(`Status Guide`) 노출
+- 상태 기반 `Update Mise` 버튼 활성/비활성 제어
+
+## Stage 7 - 문서/릴리즈 정리 (진행 중)
+- README에 문서 역할/사용 가이드 강화
+- PRD/Planning/Stages/Changelog 최신 UX 기준 동기화
 - 회귀 체크리스트 유지/보강
 
 ## 다음 작업 제안
-1. Installs URL 입력값 유효성 검사(형식/스킴)
-2. Custom URL 판별 규칙 테스트 케이스 추가
+1. `Mise Version` 상태 배지 컬러 체계(성공/경고/오류) 시각 강화
+2. GitHub API rate-limit/네트워크 오류 메시지 세분화
 3. 핵심 유즈케이스 e2e 스모크 스크립트 작성
 4. 0.1.0 태그/릴리즈 노트 확정

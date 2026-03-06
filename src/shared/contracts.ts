@@ -40,9 +40,28 @@ export interface PluginDefinitionInfo {
 	url: string | null;
 }
 
+export interface MiseSelfUpdateResult {
+	beforeVersion: string | null;
+	afterVersion: string | null;
+	stdout: string;
+	stderr: string;
+}
+
 export interface AppRPC extends ElectrobunRPCSchema {
 	bun: {
 		requests: {
+			getMiseVersion: {
+				params: undefined;
+				response: string | null;
+			};
+			getLatestMiseRelease: {
+				params: undefined;
+				response: string | null;
+			};
+			selfUpdateMise: {
+				params: undefined;
+				response: MiseSelfUpdateResult;
+			};
 			listInstalledPlugins: {
 				params: undefined;
 				response: PluginSummary[];

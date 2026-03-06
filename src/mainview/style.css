@@ -504,6 +504,47 @@ pre {
 	text-align: center;
 }
 
+.mise-summary-grid {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: 10px;
+}
+
+.mise-summary-card {
+	border: 1px solid var(--line);
+	border-radius: 12px;
+	background: var(--surface-strong);
+	padding: 12px;
+}
+
+.mise-summary-title {
+	font-size: 0.8rem;
+	font-weight: 800;
+	color: var(--muted);
+	margin-bottom: 6px;
+}
+
+.mise-summary-value {
+	font-size: 1rem;
+	font-weight: 800;
+	word-break: break-word;
+}
+
+.mise-summary-hint {
+	margin-top: 6px;
+	font-size: 0.76rem;
+	color: #7a7264;
+}
+
+.mise-status-note {
+	border: 1px dashed #d5c6ad;
+	background: #fffaf1;
+	padding: 10px 12px;
+	border-radius: 10px;
+	color: #5d4f3a;
+	font-size: 0.88rem;
+}
+
 .modal-overlay {
 	position: fixed;
 	inset: 0;
@@ -574,5 +615,9 @@ pre {
 
 	.search-input {
 		min-width: 0;
+	}
+
+	.mise-summary-grid {
+		grid-template-columns: 1fr;
 	}
 }

@@ -1,0 +1,65 @@
+import { state } from "../core/state";
+import { getMiseStatusSnapshot } from "../core/miseStatus";
+import { escapeHtml } from "../core/utils";
+
+export function renderFixedContext(): string {
+	if (state.activeTab === "mise") {
+		const status = getMiseStatusSnapshot(state);
+		const disableUpdate = state.busy || !status.canUpdate;
+		return `
+			<div class="header-context">
+				<div>
+					<h1>Mise Version</h1>
+					<p>현재 설치 버전과 GitHub 최신 릴리스를 확인하고 mise 자체 업데이트를 실행합니다.</p>
+				</div>
+				<div class="header-actions">
+					<button data-action="reload-mise" ${state.busy ? "disabled" : ""}>Reload Current</button>
+					<button data-action="check-latest-mise" ${state.busy ? "disabled" : ""}>Check Latest</button>
+					<button data-action="open-mise-update" title="${escapeHtml(status.buttonHint)}" ${disableUpdate ? "disabled" : ""}>Update Mise</button>
+				</div>
+				<div class="header-meta">Status: ${escapeHtml(status.label)} / ${escapeHtml(status.description)}</div>
+			</div>
+		`;
+	}
+	if (state.activeTab === "installs") {
+		return `
+			<div class="header-context">
+				<div>
+					<h1>Plugin Installs</h1>
+					<p>plugin 정의를 검색하고 설치/제거합니다.</p>
+				</div>
+				<div class="header-actions">
+					<input class="search-input" data-action="plugin-search" placeholder="Search plugin name..." value="${escapeHtml(state.pluginSearchQuery)}" ${state.busy ? "disabled" : ""} />
+					<button data-action="reload-installs" ${state.busy ? "disabled" : ""}>Reload Plugins</button>
+				</div>
+				<div class="header-meta">Remote Plugin Definitions: ${state.remotePluginNames.length} / Core Plugins: ${state.corePluginNames.length} / User Plugins: ${state.installedPluginNames.length} / Installed Tools: ${state.installedToolNames.length}</div>
+			</div>
+		`;
+	}
+	if (state.activeTab === "updater") {
+		return `
+			<div class="header-context">
+				<div>
+					<h1>Mise Plugins Updater</h1>
+					<p>Active(Global), Installed 버전, 업데이트 후보를 한 화면에서 관리합니다.</p>
+				</div>
+				<div class="header-actions">
+					<button data-action="reload" ${state.busy ? "disabled" : ""}>Reload Plugins</button>
+					<button data-action="check-updates" ${state.busy || state.plugins.length === 0 ? "disabled" : ""}>Check Updates</button>
+				</div>
+				<div class="header-meta">검사 기준: 현재 전역(Active Global) 버전 / Pre-release Latest는 조건 충족 시에만 표시</div>
+			</div>
+		`;
+	}
+	return `
+		<div class="header-context">
+			<div>
+				<h1>Logs</h1>
+				<p>최근 작업 내역과 오류 메시지를 확인합니다.</p>
+			</div>
+			<div class="header-actions">
+				<button data-action="clear-logs" ${state.busy ? "disabled" : ""}>Clear Logs</button>
+			</div>
+		</div>
+	`;
+}
