@@ -7,6 +7,7 @@
 - Last updated: `2026-03-06` (KST)
 
 ## What It Does
+- 앱 시작 기본 탭: `Mise Version`
 - `Mise Version` 탭:
   - `Current`(local `mise --version`) / `Latest`(GitHub latest release) 비교
   - 상태(`Update Available`, `Up-to-date`, `Check Failed`, `Updated (Reload Needed)` 등) 표시
@@ -15,6 +16,7 @@
   - `mise self-update -y` 실행 확인 모달 + 실행 결과(stdout/stderr) 표시
 - `Plugins Updater` 탭:
   - 설치된 버전 목록과 Active(Global) 버전을 한 화면에서 확인
+  - 탭 최초 진입 시 `reload + Check Updates` 1회 자동 실행
   - `Same Major Latest`, `Release Latest`, `Pre-release Latest` 비교
   - 대상 버전에 대해 `Install` 실행
   - 설치된 개별 버전에 대해 `Use Global`/`Delete` 실행
@@ -71,16 +73,18 @@ bunx vite build
 ```
 
 ## Regression Checklist
-1. `Mise Version` 탭 진입 시 Current/Latest 조회가 수행된다.
-2. 상태가 `Update Available`일 때만 `Update Mise` 버튼이 활성화된다.
-3. `Update Mise` 실행 후 결과 로그(`Before/After`, stdout/stderr)가 보인다.
-4. `Plugins Updater`의 Same/Release/Pre-release 컬럼은 `Install` 버튼만 제공한다.
-5. 설치된 버전 row의 `Use Global`/`Delete`가 정상 동작한다.
-6. Active(Global) 버전 `Delete`는 비활성화된다.
-7. Installs 탭에서 `Install Plugin` URL 입력 모달이 동작한다.
-8. User plugin에서 `Edit Plugin` URL 변경(`--force`)이 동작한다.
-9. Core plugin의 `Remove Plugin`은 비활성화된다.
-10. Logs 탭에서 작업 로그 누적 및 `Clear Logs`가 동작한다.
+1. 앱 시작 시 기본 활성 탭이 `Mise Version`이다.
+2. 앱 시작 시 `Mise Version`의 Current/Latest 조회가 자동 수행된다.
+3. `Plugins Updater` 탭 최초 진입 시 `reload + Check Updates`가 1회 자동 수행된다.
+4. 상태가 `Update Available`일 때만 `Update Mise` 버튼이 활성화된다.
+5. `Update Mise` 실행 후 결과 로그(`Before/After`, stdout/stderr)가 보인다.
+6. `Plugins Updater`의 Same/Release/Pre-release 컬럼은 `Install` 버튼만 제공한다.
+7. 설치된 버전 row의 `Use Global`/`Delete`가 정상 동작한다.
+8. Active(Global) 버전 `Delete`는 비활성화된다.
+9. Installs 탭에서 `Install Plugin` URL 입력 모달이 동작한다.
+10. User plugin에서 `Edit Plugin` URL 변경(`--force`)이 동작한다.
+11. Core plugin의 `Remove Plugin`은 비활성화된다.
+12. Logs 탭에서 작업 로그 누적 및 `Clear Logs`가 동작한다.
 
 ## Documents
 - [`PRD.md`](./PRD.md): 제품 요구사항 문서

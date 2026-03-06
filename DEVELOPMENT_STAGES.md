@@ -49,10 +49,12 @@
 
 ## Stage 6 - Mise Version 탭 추가 (완료)
 - `Mise Version` 탭 신설
+- 기본 활성 탭을 `Mise Version`으로 전환
 - `Current`(local) / `Latest`(GitHub) / `Status` 요약 카드 제공
 - `mise self-update -y` 실행 플로우(확인 모달 + 결과 로그)
 - 상태 설명(`Status Guide`) 노출
 - 상태 기반 `Update Mise` 버튼 활성/비활성 제어
+- `Plugins Updater` 탭 최초 진입 시 `reload + Check Updates` 1회 자동 실행
 
 ## Stage 7 - 문서/릴리즈 정리 (진행 중)
 - README에 문서 역할/사용 가이드 강화

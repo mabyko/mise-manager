@@ -39,6 +39,15 @@ export function registerEvents(appRoot: HTMLElement, render: () => void): void {
 		},
 		"tab-updater": () => {
 			state.activeTab = "updater";
+			if (!state.updaterAutoChecked) {
+				state.updaterAutoChecked = true;
+				void (async () => {
+					if (state.plugins.length === 0) {
+						await reloadPlugins(render);
+					}
+					await checkUpdates(render);
+				})();
+			}
 			render();
 		},
 		"tab-installs": () => {

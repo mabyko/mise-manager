@@ -37,6 +37,7 @@
   - Installed Versions / Active(Global) / Same Major Latest / Release Latest / Pre-release Latest / Status
   - 액션: Install(대상 컬럼), Use Global/Delete(설치 버전 단위)
   - Delete 확인 모달
+  - 탭 최초 진입 시 `reload + Check Updates` 1회 자동 실행
   - Check Updates 진행률 + 행별 상태
 - `Plugin Installs` 탭
   - plugin 검색
@@ -58,7 +59,7 @@
 - 팀 정책 파일(.mise-manager policy) 적용
 
 ## 6. Functional Requirements
-- FR-01: 앱 시작 시 설치된 plugin/tool 상태를 로드한다.
+- FR-01: 앱 시작 시 기본 활성 탭은 `Mise Version`이어야 하며 Current/Latest 조회가 자동 실행되어야 한다.
 - FR-02: Check Updates 실행 시 병렬 처리로 최신 정보를 계산한다.
 - FR-03: 사용자는 대상 버전에 대해 Install을 실행할 수 있다.
 - FR-04: 설치된 버전에 대해 Use Global/Delete를 실행할 수 있다.
@@ -70,6 +71,7 @@
 - FR-10: Mise Version 탭에서 Current/Latest를 조회하고 비교 상태를 표시해야 한다.
 - FR-11: Update Mise는 허용 상태에서만 실행 가능해야 한다.
 - FR-12: 오류는 사용자에게 텍스트로 표시되고 로그에 기록된다.
+- FR-13: Plugins Updater 탭은 최초 진입 시 1회 자동으로 `reload + Check Updates`를 실행해야 한다.
 
 ## 7. Non-Functional Requirements
 - NFR-01: macOS에서 실행 가능해야 한다.

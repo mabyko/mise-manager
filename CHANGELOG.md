@@ -45,6 +45,9 @@
 - Mise UX 개선:
   - 상태 기반 `Update Mise` 버튼 활성/비활성 제어
   - 상태 라벨 + 설명 텍스트 + 버튼 비활성 사유(툴팁) 제공
+  - 앱 시작 기본 탭을 `Mise Version`으로 전환
+- Updater 진입 UX 개선:
+  - `Plugins Updater` 탭 최초 진입 시 `reload + Check Updates` 1회 자동 실행
 
 ### Fixed
 - `bun dev` 실행 시 RPC transport 관련 오류 수정

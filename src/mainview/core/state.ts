@@ -14,6 +14,7 @@ export const state: MainViewState = {
 	miseNeedsReload: false,
 	miseLastResult: "",
 	pendingMiseUpdateConfirm: false,
+	updaterAutoChecked: false,
 	plugins: [],
 	logs: [],
 	busy: false,

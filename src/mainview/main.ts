@@ -1,7 +1,7 @@
 import "./style.css";
 
-import { reloadPlugins } from "./core/app";
 import { registerEvents } from "./events";
+import { checkLatestMiseRelease, reloadMiseVersion } from "./features/mise";
 import { createRenderer } from "./render/render";
 import "./core/rpc";
 
@@ -15,4 +15,7 @@ const render = createRenderer(app);
 registerEvents(app, render);
 
 render();
-void reloadPlugins(render);
+void (async () => {
+	await reloadMiseVersion(render);
+	await checkLatestMiseRelease(render);
+})();

@@ -27,6 +27,7 @@ export interface MainViewState {
 	miseNeedsReload: boolean;
 	miseLastResult: string;
 	pendingMiseUpdateConfirm: boolean;
+	updaterAutoChecked: boolean;
 	plugins: PluginRow[];
 	logs: string[];
 	busy: boolean;

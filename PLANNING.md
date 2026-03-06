@@ -21,7 +21,7 @@
 3. `Plugins Updater`
 4. `Logs`
 
-기본 진입 탭은 `Plugins Updater`, 탭/헤더/진행률은 상단 고정 구조를 사용한다.
+기본 진입 탭은 `Mise Version`, 탭/헤더/진행률은 상단 고정 구조를 사용한다.
 
 ## 5. 기능 기획
 ### 5.1 Mise Version
@@ -53,6 +53,8 @@
 - 액션:
   - 대상 컬럼: Install
   - 설치 버전 단위: Use Global, Delete
+- 자동 동작:
+  - 탭 최초 진입 시 `reload + Check Updates` 1회 자동 실행
 - 제약:
   - Active(Global) 버전 Delete 금지
   - Delete 전 확인 모달 필수
