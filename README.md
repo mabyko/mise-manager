@@ -72,6 +72,16 @@ bun run dev
 bunx vite build
 ```
 
+### Build in Codex vs Local Terminal
+- Codex(샌드박스)에서는 `hdiutil`이 막혀 있어 `electrobun build --env=stable`의 DMG 단계가 실패할 수 있습니다.
+- Codex에서는 아래까지만 검증하세요:
+  - `bun run ui:build`
+- 실제 릴리즈 빌드는 로컬 터미널(일반 Terminal/iTerm)에서 실행하세요:
+  - `bun run build:stable`
+- 안전 래퍼 스크립트:
+  - `bun run build:stable:safe` (샌드박스 감지 시 자동 skip)
+  - `bun run build:stable:force` (`ALLOW_STABLE_BUILD=1`로 강제 실행)
+
 ## Regression Checklist
 1. 앱 시작 시 기본 활성 탭이 `Mise Version`이다.
 2. 앱 시작 시 `Mise Version`의 Current/Latest 조회가 자동 수행된다.

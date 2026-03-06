@@ -10,7 +10,9 @@
 		"dev": "bun run ui:build && electrobun dev --watch",
 		"dev:hmr": "concurrently \"bun run ui:dev\" \"bun run dev\"",
 		"build:canary": "bun run ui:build && electrobun build --env=canary",
-		"build:stable": "bun run ui:build && electrobun build --env=stable"
+		"build:stable": "bun run ui:build && electrobun build --env=stable",
+		"build:stable:safe": "bash ./scripts/build-stable-safe.sh",
+		"build:stable:force": "ALLOW_STABLE_BUILD=1 bash ./scripts/build-stable-safe.sh"
 	},
 	"dependencies": {
 		"electrobun": "1.15.1"

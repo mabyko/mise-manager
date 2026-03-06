@@ -1,5 +1,7 @@
 import { pickLatest } from "../../shared/version";
 import type { PluginDefinitionInfo } from "../../shared/contracts";
+import { existsSync } from "node:fs";
+import { delimiter, join } from "node:path";
 
 export interface MiseResult {
 	stdout: string;
@@ -7,11 +9,82 @@ export interface MiseResult {
 	exitCode: number;
 }
 
+const FALLBACK_BIN_DIRS = [
+	".local/bin",
+	".mise/bin",
+	"bin",
+	"/opt/homebrew/bin",
+	"/usr/local/bin",
+	"/usr/bin",
+	"/bin",
+];
+
+function expandHomeDir(pathValue: string): string {
+	const home = process.env.HOME;
+	if (!home || !pathValue.startsWith("~/")) {
+		return pathValue;
+	}
+	return join(home, pathValue.slice(2));
+}
+
+function getAugmentedPath(): string {
+	const current = process.env.PATH ?? "";
+	const dirs = new Set(
+		current
+			.split(delimiter)
+			.map((entry) => entry.trim())
+			.filter((entry) => entry.length > 0),
+	);
+
+	const home = process.env.HOME;
+	for (const dir of FALLBACK_BIN_DIRS) {
+		const resolved = dir.startsWith("/") ? dir : home ? join(home, dir) : dir;
+		dirs.add(resolved);
+	}
+
+	return [...dirs].join(delimiter);
+}
+
+function resolveMiseExecutable(pathValue: string): string {
+	const envBin = process.env.MISE_BIN?.trim();
+	if (envBin) {
+		return expandHomeDir(envBin);
+	}
+
+	for (const dir of pathValue.split(delimiter)) {
+		const trimmed = dir.trim();
+		if (!trimmed) {
+			continue;
+		}
+		const candidate = join(trimmed, "mise");
+		if (existsSync(candidate)) {
+			return candidate;
+		}
+	}
+
+	return "mise";
+}
+
 export async function runMise(args: string[]): Promise<MiseResult> {
-	const proc = Bun.spawn(["mise", ...args], {
-		stdout: "pipe",
-		stderr: "pipe",
-	});
+	const pathValue = getAugmentedPath();
+	const miseExecutable = resolveMiseExecutable(pathValue);
+	const proc = (() => {
+		try {
+			return Bun.spawn([miseExecutable, ...args], {
+				stdout: "pipe",
+				stderr: "pipe",
+				env: {
+					...process.env,
+					PATH: pathValue,
+				},
+			});
+		} catch (error) {
+			const reason = error instanceof Error ? error.message : String(error);
+			throw new Error(
+				`failed to spawn mise executable '${miseExecutable}' (PATH='${pathValue}'): ${reason}`,
+			);
+		}
+	})();
 
 	const [stdout, stderr, exitCode] = await Promise.all([
 		new Response(proc.stdout).text(),
