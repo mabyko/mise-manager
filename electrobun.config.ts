@@ -2,7 +2,7 @@ import type { ElectrobunConfig } from "electrobun";
 
 export default {
 	app: {
-		name: "mise-manager",
+		name: "Mise Manager",
 		identifier: "forked.misemanager.local",
 		version: "0.1.0",
 	},
