@@ -306,8 +306,7 @@ export async function deleteInstalledVersion(
 		return;
 	}
 
-	setBusy(true, `Deleting ${pluginName}@${version}`, 40);
-	updatePluginInState(pluginName, { status: "updating" });
+	updatePluginInState(pluginName, { status: "deleting" });
 	render();
 	try {
 		await rpc.request.deletePluginVersion({ plugin: pluginName, targetVersion: version });
