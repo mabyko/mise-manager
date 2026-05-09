@@ -12,9 +12,11 @@ import { clearLogs } from "./features/logs";
 import {
 	cancelMiseUpdateDialog,
 	checkLatestMiseRelease,
+	checkMiseInstallationStatus,
 	confirmMiseSelfUpdate,
 	openMiseUpdateDialog,
 	reloadMiseVersion,
+	startMiseInstall,
 } from "./features/mise";
 import {
 	checkUpdates,
@@ -29,7 +31,15 @@ export function registerEvents(appRoot: HTMLElement, render: () => void): void {
 	const tabActions: Record<string, ButtonActionHandler> = {
 		"tab-mise": () => {
 			state.activeTab = "mise";
-			if (!state.miseLoaded || !state.miseLatestLoaded) {
+			if (!state.miseInstalledChecked) {
+				void (async () => {
+					await checkMiseInstallationStatus(render);
+					if (state.miseIsInstalled && (!state.miseLoaded || !state.miseLatestLoaded)) {
+						await reloadMiseVersion(render);
+						await checkLatestMiseRelease(render);
+					}
+				})();
+			} else if (state.miseIsInstalled && (!state.miseLoaded || !state.miseLatestLoaded)) {
 				void (async () => {
 					await reloadMiseVersion(render);
 					await checkLatestMiseRelease(render);
@@ -78,6 +88,12 @@ export function registerEvents(appRoot: HTMLElement, render: () => void): void {
 		},
 		"confirm-mise-update": () => {
 			void confirmMiseSelfUpdate(render);
+		},
+		"install-mise-sh": () => {
+			void startMiseInstall("sh", render);
+		},
+		"install-mise-brew": () => {
+			void startMiseInstall("brew", render);
 		},
 		reload: () => {
 			void reloadPlugins(render);

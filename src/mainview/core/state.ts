@@ -31,6 +31,10 @@ export const state: MainViewState = {
 	installsLoaded: false,
 	pendingPluginUrlDialog: null,
 	pendingPluginUrlValue: "",
+	miseInstalledChecked: false,
+	miseIsInstalled: true,
+	miseInstalling: false,
+	miseInstallMethod: null,
 };
 
 export function setBusy(nextBusy: boolean, nextLabel = "Ready", nextProgress = 0): void {

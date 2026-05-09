@@ -8,10 +8,13 @@ import {
 	listRemotePluginNames,
 } from "../services/pluginCatalog";
 import {
+	checkMiseInstalled,
 	checkPluginUpdates,
 	deletePluginVersion,
 	getLatestMiseRelease,
 	getMiseVersion,
+	installMiseBrew,
+	installMiseSh,
 	installPlugin,
 	installPluginDefinition,
 	selfUpdateMise,
@@ -36,4 +39,7 @@ export const requestHandlers = {
 	listRemotePluginInfos,
 	installPluginDefinition,
 	uninstallPluginDefinition,
+	checkMiseInstalled,
+	installMiseSh,
+	installMiseBrew,
 };

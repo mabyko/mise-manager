@@ -46,4 +46,8 @@ export interface MainViewState {
 		| { mode: "install" | "edit"; pluginName: string }
 		| null;
 	pendingPluginUrlValue: string;
+	miseInstalledChecked: boolean;
+	miseIsInstalled: boolean;
+	miseInstalling: boolean;
+	miseInstallMethod: "sh" | "brew" | null;
 }

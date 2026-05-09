@@ -2,7 +2,7 @@ import { state } from "../core/state";
 import { escapeHtml } from "../core/utils";
 import { renderInstallsTab, renderPluginUrlDialog } from "../features/installs";
 import { renderLogsTab } from "../features/logs";
-import { renderMiseTab, renderMiseUpdateDialog } from "../features/mise";
+import { renderMiseNotDetected, renderMiseTab, renderMiseUpdateDialog } from "../features/mise";
 import { renderDeleteDialog, renderUpdaterTab } from "../features/updater";
 import { renderFixedContext } from "./layout";
 
@@ -27,7 +27,7 @@ export function createRenderer(appRoot: HTMLElement): () => void {
 					</section>
 				</div>
 				<section class="app-content">
-					${state.activeTab === "mise" ? renderMiseTab() : state.activeTab === "updater" ? renderUpdaterTab() : state.activeTab === "logs" ? renderLogsTab() : renderInstallsTab()}
+					${state.activeTab === "mise" ? renderMiseNotDetected() + renderMiseTab() : state.activeTab === "updater" ? renderUpdaterTab() : state.activeTab === "logs" ? renderLogsTab() : renderInstallsTab()}
 				</section>
 			</main>
 			${renderDeleteDialog()}

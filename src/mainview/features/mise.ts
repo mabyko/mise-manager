@@ -5,6 +5,10 @@ import { state, setBusy } from "../core/state";
 import { escapeHtml } from "../core/utils";
 import { addLog } from "./logs";
 
+const MISE_OFFICIAL_URL = "https://mise.jdx.dev/getting-started.html";
+const IS_MAC = process.platform === "darwin";
+const IS_WINDOWS = process.platform === "win32";
+
 function renderCard(title: string, value: string, hint = ""): string {
 	return `
 		<div class="mise-summary-card">
@@ -169,4 +173,132 @@ export async function confirmMiseSelfUpdate(render: () => void): Promise<void> {
 		setBusy(false, "Update failed", 0);
 	}
 	render();
+}
+
+export async function checkMiseInstallationStatus(render: () => void): Promise<void> {
+	try {
+		const installed = await rpc.request.checkMiseInstalled();
+		state.miseIsInstalled = installed;
+		state.miseInstalledChecked = true;
+		if (!installed) {
+			addLog("mise is not installed on this system.");
+		}
+	} catch (error) {
+		state.miseIsInstalled = false;
+		state.miseInstalledChecked = true;
+		addLog(`Failed to check mise installation: ${(error as Error).message}`);
+	}
+	render();
+}
+
+export function renderMiseNotDetected(): string {
+	if (state.miseIsInstalled || !state.miseInstalledChecked) {
+		return "";
+	}
+
+	if (IS_WINDOWS) {
+		return `
+			<section class="panel">
+				<div class="panel-header">
+					<div>
+						<h2>mise Not Detected</h2>
+						<p>
+							mise가 설치되어 있지 않습니다.<br/>
+							Windows에서는 공식 사이트에서 설치 방법을 확인하세요.
+						</p>
+					</div>
+				</div>
+				<div style="margin-top: 16px;">
+					<a href="${MISE_OFFICIAL_URL}" target="_blank" class="primary-btn" style="display: inline-block; text-decoration: none;">
+						Visit Official Site
+					</a>
+				</div>
+			</section>
+		`;
+	}
+
+	return `
+		<section class="panel">
+			<div class="panel-header">
+				<div>
+					<h2>mise Not Detected</h2>
+					<p>
+						mise가 설치되어 있지 않습니다.<br/>
+						아래 방법 중 하나로 설치할 수 있습니다.
+					</p>
+				</div>
+			</div>
+			${state.miseInstalling ? `
+				<div class="log-card" style="margin-top: 12px;">
+					<strong>Installing mise...</strong>
+					${state.miseLastResult ? `<pre>${escapeHtml(state.miseLastResult)}</pre>` : ""}
+				</div>
+			` : `
+				<div style="margin-top: 16px; display: flex; gap: 8px; flex-wrap: wrap;">
+					<button class="primary-btn" data-action="install-mise-sh">
+						Quick Install (sh)
+					</button>
+					<button class="primary-btn" data-action="install-mise-brew">
+						Homebrew Install
+					</button>
+					<a href="${MISE_OFFICIAL_URL}" target="_blank" class="mini-btn" style="display: inline-block; text-decoration: none;">
+						Visit Official Site
+					</a>
+				</div>
+				<div class="log-card" style="margin-top: 12px;">
+					<strong>Quick Install (sh):</strong> <code>curl https://mise.run | sh</code><br/>
+					<strong>Homebrew:</strong> <code>brew install mise</code>
+				</div>
+			`}
+		</section>
+	`;
+}
+
+export async function startMiseInstall(method: "sh" | "brew", render: () => void): Promise<void> {
+	if (state.busy || state.miseInstalling) {
+		return;
+	}
+
+	state.miseInstalling = true;
+	state.miseInstallMethod = method;
+	state.miseLastResult = "";
+	setBusy(true, `Installing mise (${method === "sh" ? "curl" : "brew"})...`, 30);
+	render();
+
+	try {
+		const result = method === "sh"
+			? await rpc.request.installMiseSh()
+			: await rpc.request.installMiseBrew();
+
+		state.miseLastResult = [
+			result.success ? "Installation completed successfully!" : "Installation failed.",
+			result.stdout ? `\nSTDOUT:\n${result.stdout}` : "",
+			result.stderr ? `\nSTDERR:\n${result.stderr}` : "",
+		].filter((line) => line.length > 0).join("\n");
+
+		addLog(`mise ${method} install ${result.success ? "succeeded" : "failed"}.`);
+
+		if (result.success) {
+			addLog("mise installed. Verifying installation...");
+			await new Promise((resolve) => setTimeout(resolve, 2000));
+			await checkMiseInstallationStatus(render);
+
+			if (state.miseIsInstalled) {
+				addLog("mise installation verified. Loading version...");
+				await reloadMiseVersion(render);
+			} else {
+				addLog("mise installation completed but not yet detected in PATH. You may need to restart the app.");
+			}
+		}
+
+		setBusy(false, result.success ? "Installed" : "Install failed", 0);
+	} catch (error) {
+		state.miseLastResult = `ERROR:\n${(error as Error).message}`;
+		addLog(`mise install failed: ${(error as Error).message}`);
+		setBusy(false, "Install failed", 0);
+	} finally {
+		state.miseInstalling = false;
+		state.miseInstallMethod = null;
+		render();
+	}
 }

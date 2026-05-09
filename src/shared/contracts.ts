@@ -47,6 +47,12 @@ export interface MiseSelfUpdateResult {
 	stderr: string;
 }
 
+export interface MiseInstallResult {
+	success: boolean;
+	stdout: string;
+	stderr: string;
+}
+
 export interface AppRPC extends ElectrobunRPCSchema {
 	bun: {
 		requests: {
@@ -121,6 +127,18 @@ export interface AppRPC extends ElectrobunRPCSchema {
 			uninstallPluginDefinition: {
 				params: { plugin: string };
 				response: PluginInstallResult;
+			};
+			checkMiseInstalled: {
+				params: undefined;
+				response: boolean;
+			};
+			installMiseSh: {
+				params: undefined;
+				response: MiseInstallResult;
+			};
+			installMiseBrew: {
+				params: undefined;
+				response: MiseInstallResult;
 			};
 		};
 		messages: Record<never, never>;

@@ -1,4 +1,5 @@
 import type {
+	MiseInstallResult,
 	MiseSelfUpdateResult,
 	PluginInstallResult,
 	PluginUpdateInfo,
@@ -245,4 +246,51 @@ export async function uninstallPluginDefinition({
 		throw new Error(result.stderr.trim() || `failed to uninstall plugin '${plugin}'`);
 	}
 	return { plugin, stdout: result.stdout.trim() };
+}
+
+export async function checkMiseInstalled(): Promise<boolean> {
+	try {
+		await getMiseVersion();
+		return true;
+	} catch {
+		return false;
+	}
+}
+
+async function runShellCommand(args: string[]): Promise<MiseInstallResult> {
+	const proc = Bun.spawn(args, {
+		stdout: "pipe",
+		stderr: "pipe",
+		env: { ...process.env },
+	});
+
+	const [stdout, stderr, exitCode] = await Promise.all([
+		new Response(proc.stdout).text(),
+		new Response(proc.stderr).text(),
+		proc.exited,
+	]);
+
+	return {
+		success: exitCode === 0,
+		stdout: stdout.trim(),
+		stderr: stderr.trim(),
+	};
+}
+
+export async function installMiseSh(): Promise<MiseInstallResult> {
+	const result = await runShellCommand([
+		"sh",
+		"-c",
+		"curl https://mise.run | sh",
+	]);
+	return result;
+}
+
+export async function installMiseBrew(): Promise<MiseInstallResult> {
+	const result = await runShellCommand([
+		"brew",
+		"install",
+		"mise",
+	]);
+	return result;
 }
