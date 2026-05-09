@@ -5,9 +5,16 @@ import { state, setBusy } from "../core/state";
 import { escapeHtml } from "../core/utils";
 import { addLog } from "./logs";
 
-const MISE_OFFICIAL_URL = "https://mise.jdx.dev/getting-started.html";
-const IS_MAC = process.platform === "darwin";
-const IS_WINDOWS = process.platform === "win32";
+const MISE_OFFICIAL_URL = "https://mise.jdx.dev/getting-starting.html";
+
+export async function loadPlatform(render: () => void): Promise<void> {
+	try {
+		state.platform = await rpc.request.getPlatform();
+	} catch {
+		state.platform = "unknown";
+	}
+	render();
+}
 
 function renderCard(title: string, value: string, hint = ""): string {
 	return `
@@ -196,7 +203,10 @@ export function renderMiseNotDetected(): string {
 		return "";
 	}
 
-	if (IS_WINDOWS) {
+	const isWindows = state.platform === "win32";
+	const isMac = state.platform === "darwin";
+
+	if (isWindows) {
 		return `
 			<section class="panel">
 				<div class="panel-header">
@@ -223,8 +233,7 @@ export function renderMiseNotDetected(): string {
 				<div>
 					<h2>mise Not Detected</h2>
 					<p>
-						mise가 설치되어 있지 않습니다.<br/>
-						아래 방법 중 하나로 설치할 수 있습니다.
+						mise가 설치되어 있지 않습니다.${isMac ? "<br/>아래 방법 중 하나로 설치할 수 있습니다." : ""}
 					</p>
 				</div>
 			</div>
@@ -233,7 +242,7 @@ export function renderMiseNotDetected(): string {
 					<strong>Installing mise...</strong>
 					${state.miseLastResult ? `<pre>${escapeHtml(state.miseLastResult)}</pre>` : ""}
 				</div>
-			` : `
+			` : isMac ? `
 				<div style="margin-top: 16px; display: flex; gap: 8px; flex-wrap: wrap;">
 					<button class="primary-btn" data-action="install-mise-sh">
 						Quick Install (sh)
@@ -248,6 +257,12 @@ export function renderMiseNotDetected(): string {
 				<div class="log-card" style="margin-top: 12px;">
 					<strong>Quick Install (sh):</strong> <code>curl https://mise.run | sh</code><br/>
 					<strong>Homebrew:</strong> <code>brew install mise</code>
+				</div>
+			` : `
+				<div style="margin-top: 16px;">
+					<a href="${MISE_OFFICIAL_URL}" target="_blank" class="primary-btn" style="display: inline-block; text-decoration: none;">
+						Visit Official Site
+					</a>
 				</div>
 			`}
 		</section>

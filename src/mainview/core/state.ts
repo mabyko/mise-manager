@@ -35,6 +35,7 @@ export const state: MainViewState = {
 	miseIsInstalled: true,
 	miseInstalling: false,
 	miseInstallMethod: null,
+	platform: "unknown",
 };
 
 export function setBusy(nextBusy: boolean, nextLabel = "Ready", nextProgress = 0): void {

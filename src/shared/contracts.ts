@@ -141,6 +141,10 @@ export interface AppRPC extends ElectrobunRPCSchema {
 				params: undefined;
 				response: MiseInstallResult;
 			};
+			getPlatform: {
+				params: undefined;
+				response: string;
+			};
 		};
 		messages: Record<never, never>;
 	};

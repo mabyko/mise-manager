@@ -13,6 +13,7 @@ import {
 	deletePluginVersion,
 	getLatestMiseRelease,
 	getMiseVersion,
+	getPlatform,
 	installMiseBrew,
 	installMiseSh,
 	installPlugin,
@@ -42,4 +43,5 @@ export const requestHandlers = {
 	checkMiseInstalled,
 	installMiseSh,
 	installMiseBrew,
+	getPlatform,
 };

@@ -14,6 +14,7 @@ import {
 	checkLatestMiseRelease,
 	checkMiseInstallationStatus,
 	confirmMiseSelfUpdate,
+	loadPlatform,
 	openMiseUpdateDialog,
 	reloadMiseVersion,
 	startMiseInstall,
@@ -31,20 +32,21 @@ export function registerEvents(appRoot: HTMLElement, render: () => void): void {
 	const tabActions: Record<string, ButtonActionHandler> = {
 		"tab-mise": () => {
 			state.activeTab = "mise";
-			if (!state.miseInstalledChecked) {
-				void (async () => {
+			void (async () => {
+				if (state.platform === "unknown") {
+					await loadPlatform(render);
+				}
+				if (!state.miseInstalledChecked) {
 					await checkMiseInstallationStatus(render);
 					if (state.miseIsInstalled && (!state.miseLoaded || !state.miseLatestLoaded)) {
 						await reloadMiseVersion(render);
 						await checkLatestMiseRelease(render);
 					}
-				})();
-			} else if (state.miseIsInstalled && (!state.miseLoaded || !state.miseLatestLoaded)) {
-				void (async () => {
+				} else if (state.miseIsInstalled && (!state.miseLoaded || !state.miseLatestLoaded)) {
 					await reloadMiseVersion(render);
 					await checkLatestMiseRelease(render);
-				})();
-			}
+				}
+			})();
 			render();
 		},
 		"tab-updater": () => {

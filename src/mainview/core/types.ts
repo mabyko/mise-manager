@@ -50,4 +50,5 @@ export interface MainViewState {
 	miseIsInstalled: boolean;
 	miseInstalling: boolean;
 	miseInstallMethod: "sh" | "brew" | null;
+	platform: string;
 }

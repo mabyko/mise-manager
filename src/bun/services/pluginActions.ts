@@ -303,3 +303,7 @@ export async function installMiseBrew(): Promise<MiseInstallResult> {
 	]);
 	return result;
 }
+
+export function getPlatform(): string {
+	return process.platform;
+}
