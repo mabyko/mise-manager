@@ -1,1 +1,1 @@
-- [ ] Plugins Updater 탭에서 각 Plugin 버전을 Delete 하면 Status 에 Updating 이라고 뜨는데 Deleting 이라고 수정하는게 좋을 것 같음
+- [x] Plugins Updater 탭에서 각 Plugin 버전을 Delete 하면 상태 표시를 Updating에서 Deleting으로 수정함

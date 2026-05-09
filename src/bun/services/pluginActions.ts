@@ -84,6 +84,7 @@ export async function checkPluginUpdates(
 		includeChannels,
 	}: { plugin: string; baseVersion: string; includeChannels: boolean },
 ): Promise<PluginUpdateInfo> {
+	// Fetch all available versions for the plugin from remote source
 	const remoteResult = await runMise(["ls-remote", plugin, "--json"]);
 	if (remoteResult.exitCode !== 0) {
 		return {
@@ -97,6 +98,7 @@ export async function checkPluginUpdates(
 		};
 	}
 
+	// Filter and sort versions: strictly numeric starters, stable versions only
 	const remoteVersions = parseRemoteVersions(remoteResult.stdout)
 		.filter((version) => includeChannels || /^\d/.test(version))
 		.filter((version) => isStableVersion(plugin, version))
@@ -107,10 +109,16 @@ export async function checkPluginUpdates(
 	const preReleaseVersions = semverVersions.filter((version) =>
 		isPreReleaseVersion(version),
 	);
+	
+	// Identify the latest pre-release and stable release
 	const preReleaseLatest = pickLatest(preReleaseVersions);
 	const releaseLatest = pickLatest(
 		semverVersions.filter((version) => !isPreReleaseVersion(version)),
 	);
+	
+	// Determine the 'Overall Latest' candidate based on PRD rules:
+	// 1. If base is semver, pre-release must be > base.
+	// 2. If base is non-semver, pre-release must be >= release latest.
 	const isBaseSemver = /^\d/.test(baseVersion);
 	const overallLatest =
 		preReleaseLatest &&
@@ -121,6 +129,7 @@ export async function checkPluginUpdates(
 			? preReleaseLatest
 			: null;
 
+	// Find the latest version within the same major version for safety
 	const major = getMajor(baseVersion);
 	const sameMajorCandidates =
 		major === null

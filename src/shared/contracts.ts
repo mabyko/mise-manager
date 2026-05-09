@@ -6,6 +6,7 @@ export type PluginStatus =
 	| "done"
 	| "error"
 	| "updating"
+	| "deleting"
 	| "skipped";
 
 export interface PluginSummary {
