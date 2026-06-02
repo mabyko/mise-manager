@@ -14,6 +14,7 @@ import {
 } from "../../shared/version";
 import { listGlobalPlugins } from "./pluginCatalog";
 import { parseRemoteVersions, runMise } from "./mise";
+import { updateUserToolAlias } from "./miseConfig";
 
 export async function getMiseVersion(): Promise<string | null> {
 	const result = await runMise(["--version"]);
@@ -242,7 +243,22 @@ export async function installPluginDefinition({
 	if (result.exitCode !== 0) {
 		throw new Error(result.stderr.trim() || `failed to install plugin '${plugin}'`);
 	}
-	return { plugin, stdout: result.stdout.trim() };
+	const stdout = result.stdout.trim();
+	const trimmedGitUrl = gitUrl?.trim();
+	if (!trimmedGitUrl) {
+		return { plugin, stdout };
+	}
+
+	const configPath = await updateUserToolAlias({
+		plugin,
+		gitUrl: trimmedGitUrl,
+	});
+	return {
+		plugin,
+		stdout: [stdout, `Updated tool_alias in ${configPath}.`]
+			.filter((entry) => entry.length > 0)
+			.join("\n"),
+	};
 }
 
 export async function uninstallPluginDefinition({

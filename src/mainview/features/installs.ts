@@ -207,10 +207,13 @@ export async function installPluginDefinition(
 	setBusy(true, `${force ? "Updating" : "Installing"} plugin ${plugin}`, 40);
 	render();
 	try {
-		await rpc.request.installPluginDefinition({ plugin, gitUrl, force });
+		const result = await rpc.request.installPluginDefinition({ plugin, gitUrl, force });
 		await reloadPluginDefinitions(render);
 		const urlText = gitUrl && gitUrl.trim().length > 0 ? ` (${gitUrl.trim()})` : "";
 		addLog(`${plugin}: plugin ${force ? "updated" : "installed"}${urlText}.`);
+		if (result.stdout.includes("Updated tool_alias")) {
+			addLog(`${plugin}: ${result.stdout.split("\n").at(-1) ?? ""}`);
+		}
 	} catch (error) {
 		addLog(`${plugin}: plugin ${force ? "update" : "install"} failed - ${(error as Error).message}`);
 		setBusy(false, "Ready", 0);
@@ -246,6 +249,19 @@ export async function submitPluginUrlDialog(render: () => void): Promise<void> {
 	if (dialog.mode === "edit" && gitUrl.length === 0) {
 		addLog(`${dialog.pluginName}: URL is required for edit.`);
 		return;
+	}
+	if (dialog.mode === "edit") {
+		const userInfo = findUserPluginInfo(
+			dialog.pluginName,
+			state.installedUserPluginInfos,
+		);
+		if ((userInfo?.url ?? "").trim() === gitUrl) {
+			state.pendingPluginUrlDialog = null;
+			state.pendingPluginUrlValue = "";
+			addLog(`${dialog.pluginName}: URL unchanged; skipped plugin update.`);
+			render();
+			return;
+		}
 	}
 	state.pendingPluginUrlDialog = null;
 	state.pendingPluginUrlValue = "";
