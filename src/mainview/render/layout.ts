@@ -29,8 +29,9 @@ export function renderFixedContext(): string {
 					<p>plugin 정의를 검색하고 설치/제거합니다.</p>
 				</div>
 				<div class="header-actions">
-					<input class="search-input" data-action="plugin-search" placeholder="Search plugin name..." value="${escapeHtml(state.pluginSearchQuery)}" ${state.busy ? "disabled" : ""} />
-					<button data-action="reload-installs" ${state.busy ? "disabled" : ""}>Reload Plugins</button>
+			<input class="search-input" data-action="plugin-search" placeholder="Search plugin name..." value="${escapeHtml(state.pluginSearchQuery)}" ${state.busy ? "disabled" : ""} />
+			<button data-action="custom-install-plugin-def" ${state.busy ? "disabled" : ""}>Install Custom Plugin</button>
+			<button class="icon-btn" data-action="reload-installs" title="Reload Plugins" aria-label="Reload Plugins" ${state.busy ? "disabled" : ""}>↻</button>
 				</div>
 				<div class="header-meta">Remote Plugin Definitions: ${state.remotePluginNames.length} / Core Plugins: ${state.corePluginNames.length} / User Plugins: ${state.installedPluginNames.length} / Installed Tools: ${state.installedToolNames.length}</div>
 			</div>

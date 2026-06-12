@@ -44,7 +44,9 @@ export interface MainViewState {
 	installsLoaded: boolean;
 	pendingPluginUrlDialog:
 		| { mode: "install" | "edit"; pluginName: string }
+		| { mode: "custom-install" }
 		| null;
+	pendingPluginNameValue: string;
 	pendingPluginUrlValue: string;
 	miseInstalledChecked: boolean;
 	miseIsInstalled: boolean;

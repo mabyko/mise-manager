@@ -2,6 +2,7 @@ import { state } from "./core/state";
 import { reloadPlugins } from "./core/app";
 import {
 	installPluginDefinition,
+	openCustomPluginDialog,
 	openEditPluginDialog,
 	openInstallPluginDialog,
 	reloadPluginDefinitions,
@@ -115,11 +116,15 @@ export function registerEvents(appRoot: HTMLElement, render: () => void): void {
 		},
 		"cancel-plugin-url": () => {
 			state.pendingPluginUrlDialog = null;
+			state.pendingPluginNameValue = "";
 			state.pendingPluginUrlValue = "";
 			render();
 		},
 		"submit-plugin-url": () => {
 			void submitPluginUrlDialog(render);
+		},
+		"custom-install-plugin-def": () => {
+			openCustomPluginDialog(render);
 		},
 		"clear-logs": () => {
 			clearLogs();
@@ -210,6 +215,9 @@ export function registerEvents(appRoot: HTMLElement, render: () => void): void {
 		if (target.dataset.action !== "plugin-search") {
 			if (target.dataset.action === "plugin-url-input") {
 				state.pendingPluginUrlValue = target.value;
+			}
+			if (target.dataset.action === "plugin-name-input") {
+				state.pendingPluginNameValue = target.value;
 			}
 			return;
 		}

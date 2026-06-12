@@ -14,18 +14,46 @@ export function renderPluginUrlDialog(): string {
 	}
 
 	const isEdit = state.pendingPluginUrlDialog.mode === "edit";
+	const isCustomInstall = state.pendingPluginUrlDialog.mode === "custom-install";
+	const title = isCustomInstall
+		? "Install Custom Plugin"
+		: isEdit
+			? "Edit Plugin URL"
+			: "Install Plugin";
+	const description = isCustomInstall
+		? "목록에 없는 plugin definition을 이름과 Git URL로 설치합니다."
+		: isEdit
+			? "새 URL로 plugin definition을 재설치합니다(--force)."
+			: "비워두면 기본 registry source로 설치합니다.";
+	const pluginName = isCustomInstall
+		? state.pendingPluginNameValue
+		: state.pendingPluginUrlDialog.pluginName;
+	const urlPlaceholder = isCustomInstall
+		? "https://github.com/owner/repo.git"
+		: "https://github.com/owner/repo.git (optional)";
+
 	return `
 		<div class="modal-overlay">
 			<div class="modal-card">
-				<h3>${isEdit ? "Edit Plugin URL" : "Install Plugin"}</h3>
+				<h3>${title}</h3>
 				<p>
-					Plugin: <strong>${escapeHtml(state.pendingPluginUrlDialog.pluginName)}</strong><br/>
-					${isEdit ? "새 URL로 plugin definition을 재설치합니다(--force)." : "비워두면 기본 registry source로 설치합니다."}
+					${isCustomInstall ? "" : `Plugin: <strong>${escapeHtml(pluginName)}</strong><br/>`}
+					${description}
 				</p>
+				${
+					isCustomInstall
+						? `<input
+							class="modal-input"
+							data-action="plugin-name-input"
+							placeholder="Plugin name"
+							value="${escapeHtml(pluginName)}"
+						/>`
+						: ""
+				}
 				<input
 					class="modal-input"
 					data-action="plugin-url-input"
-					placeholder="https://github.com/owner/repo.git (optional)"
+					placeholder="${urlPlaceholder}"
 					value="${escapeHtml(state.pendingPluginUrlValue)}"
 				/>
 				<div class="modal-actions">
@@ -93,13 +121,15 @@ export function renderInstallsTab(): string {
 					<td class="plugin">${escapeHtml(plugin)}</td>
 					<td>${stateBadge}${userUrlBlock}</td>
 					<td class="actions">
-						<button data-action="edit-plugin-def" data-plugin="${escapeHtml(plugin)}" ${state.busy || corePlugin || !userPluginInstalled ? "disabled" : ""}>Edit Plugin</button>
-						<button
-							data-action="uninstall-plugin-def"
-							data-plugin="${escapeHtml(plugin)}"
-							title="${corePlugin ? "Core plugin은 제거할 수 없습니다." : "User plugin definition 제거"}"
-							${state.busy || !userPluginInstalled ? "disabled" : ""}
-						>Remove Plugin</button>
+						<div class="row-actions">
+							<button data-action="edit-plugin-def" data-plugin="${escapeHtml(plugin)}" ${state.busy || corePlugin || !userPluginInstalled ? "disabled" : ""}>Edit Plugin</button>
+							<button
+								data-action="uninstall-plugin-def"
+								data-plugin="${escapeHtml(plugin)}"
+								title="${corePlugin ? "Core plugin은 제거할 수 없습니다." : "User plugin definition 제거"}"
+								${state.busy || !userPluginInstalled ? "disabled" : ""}
+							>Remove Plugin</button>
+						</div>
 					</td>
 				</tr>
 			`;
@@ -121,7 +151,9 @@ export function renderInstallsTab(): string {
 					<td class="plugin">${escapeHtml(plugin)}</td>
 					<td><span class="badge empty">Not Installed</span></td>
 					<td class="actions">
-						<button data-action="install-plugin-def" data-plugin="${escapeHtml(plugin)}" ${state.busy ? "disabled" : ""}>Install Plugin</button>
+						<div class="row-actions">
+							<button data-action="install-plugin-def" data-plugin="${escapeHtml(plugin)}" ${state.busy ? "disabled" : ""}>Install Plugin</button>
+						</div>
 					</td>
 				</tr>
 			`;
@@ -158,7 +190,10 @@ export function renderInstallsTab(): string {
 						</tr>
 					</thead>
 					<tbody>
-						${notInstalledRows || `<tr><td colspan="3" class="empty-row">검색 결과가 없습니다.</td></tr>`}
+						${
+							notInstalledRows ||
+							`<tr><td colspan="3" class="empty-row">검색 결과가 없습니다. <button class="mini-btn" data-action="custom-install-plugin-def" ${state.busy ? "disabled" : ""}>Install Custom Plugin</button></td></tr>`
+						}
 					</tbody>
 				</table>
 			</section>
@@ -223,6 +258,14 @@ export async function installPluginDefinition(
 
 export function openInstallPluginDialog(plugin: string, render: () => void): void {
 	state.pendingPluginUrlDialog = { mode: "install", pluginName: plugin };
+	state.pendingPluginNameValue = "";
+	state.pendingPluginUrlValue = "";
+	render();
+}
+
+export function openCustomPluginDialog(render: () => void): void {
+	state.pendingPluginUrlDialog = { mode: "custom-install" };
+	state.pendingPluginNameValue = "";
 	state.pendingPluginUrlValue = "";
 	render();
 }
@@ -235,6 +278,7 @@ export function openEditPluginDialog(plugin: string, render: () => void): void {
 		return;
 	}
 	state.pendingPluginUrlDialog = { mode: "edit", pluginName: plugin };
+	state.pendingPluginNameValue = "";
 	state.pendingPluginUrlValue = userInfo.url ?? "";
 	render();
 }
@@ -246,8 +290,35 @@ export async function submitPluginUrlDialog(render: () => void): Promise<void> {
 
 	const dialog = state.pendingPluginUrlDialog;
 	const gitUrl = state.pendingPluginUrlValue.trim();
+
+	if (dialog.mode === "custom-install") {
+		const pluginName = state.pendingPluginNameValue.trim();
+		if (pluginName.length === 0) {
+			addLog("Custom plugin: plugin name is required.");
+			render();
+			return;
+		}
+		if (!/^[A-Za-z0-9._-]+$/.test(pluginName)) {
+			addLog(`${pluginName}: plugin name can only include letters, numbers, dot, underscore, and dash.`);
+			render();
+			return;
+		}
+		if (gitUrl.length === 0) {
+			addLog(`${pluginName}: Git URL is required for custom plugin install.`);
+			render();
+			return;
+		}
+		state.pendingPluginUrlDialog = null;
+		state.pendingPluginNameValue = "";
+		state.pendingPluginUrlValue = "";
+		render();
+		await installPluginDefinition(pluginName, render, gitUrl);
+		return;
+	}
+
 	if (dialog.mode === "edit" && gitUrl.length === 0) {
 		addLog(`${dialog.pluginName}: URL is required for edit.`);
+		render();
 		return;
 	}
 	if (dialog.mode === "edit") {
@@ -257,13 +328,15 @@ export async function submitPluginUrlDialog(render: () => void): Promise<void> {
 		);
 		if ((userInfo?.url ?? "").trim() === gitUrl) {
 			state.pendingPluginUrlDialog = null;
+			state.pendingPluginNameValue = "";
 			state.pendingPluginUrlValue = "";
-			addLog(`${dialog.pluginName}: URL unchanged; skipped plugin update.`);
+			addLog(`${dialog.pluginName}: URL unchanged; plugin update skipped.`);
 			render();
 			return;
 		}
 	}
 	state.pendingPluginUrlDialog = null;
+	state.pendingPluginNameValue = "";
 	state.pendingPluginUrlValue = "";
 	render();
 	await installPluginDefinition(

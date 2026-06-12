@@ -30,6 +30,7 @@ export const state: MainViewState = {
 	pluginSearchQuery: "",
 	installsLoaded: false,
 	pendingPluginUrlDialog: null,
+	pendingPluginNameValue: "",
 	pendingPluginUrlValue: "",
 	miseInstalledChecked: false,
 	miseIsInstalled: true,

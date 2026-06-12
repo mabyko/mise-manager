@@ -152,7 +152,7 @@ p {
 
 .header-actions,
 .bulk-actions,
-.actions {
+.row-actions {
 	display: flex;
 	gap: 8px;
 	flex-wrap: wrap;
@@ -213,6 +213,12 @@ button:disabled {
 	color: var(--ink);
 }
 
+.header-actions .search-input,
+.header-actions button {
+	box-sizing: border-box;
+	height: 42px;
+}
+
 .progress-head {
 	display: flex;
 	justify-content: space-between;
@@ -264,6 +270,18 @@ td {
 	border-bottom: 1px solid #efe4d1;
 	text-align: left;
 	vertical-align: middle;
+}
+
+td.actions {
+	min-width: 220px;
+	white-space: nowrap;
+	vertical-align: middle;
+}
+
+.row-actions {
+	align-items: center;
+	flex-wrap: nowrap;
+	justify-content: flex-end;
 }
 
 th {
@@ -346,7 +364,11 @@ th {
 
 .plugin-url .url-value {
 	color: #6f6556;
-	word-break: break-all;
+	display: block;
+	max-width: min(560px, 48vw);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 }
 
 .plugin-url.custom .url-label {
@@ -412,6 +434,18 @@ th {
 	display: flex;
 	gap: 6px;
 	flex-wrap: wrap;
+}
+
+.icon-btn {
+	align-items: center;
+	aspect-ratio: 1;
+	display: inline-flex;
+	font-size: 1.05rem;
+	justify-content: center;
+	line-height: 1;
+	min-width: 38px;
+	padding: 8px;
+	width: 42px;
 }
 
 .installed-item {
