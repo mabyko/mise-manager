@@ -4,7 +4,7 @@ export default {
 	app: {
 		name: "Mise Manager",
 		identifier: "forked.misemanager.local",
-		version: "0.1.0",
+		version: "0.1.2",
 	},
 	build: {
 		copy: {

@@ -39,6 +39,7 @@ export interface PluginInstallResult {
 export interface PluginDefinitionInfo {
 	name: string;
 	url: string | null;
+	source?: "mise_user" | "tool_alias" | "remote" | "core";
 }
 
 export interface MiseSelfUpdateResult {
@@ -122,6 +123,7 @@ export interface AppRPC extends ElectrobunRPCSchema {
 					plugin: string;
 					gitUrl?: string;
 					force?: boolean;
+					removeToolAlias?: boolean;
 				};
 				response: PluginInstallResult;
 			};
