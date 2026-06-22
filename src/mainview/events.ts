@@ -1,5 +1,7 @@
 import { state } from "./core/state";
 import { reloadPlugins } from "./core/app";
+import { handleNativeInputShortcutFallback } from "./core/inputShortcuts";
+import { syncDialogInputState } from "./core/inputState";
 import {
 	installPluginDefinition,
 	openCustomPluginDialog,
@@ -121,6 +123,7 @@ export function registerEvents(appRoot: HTMLElement, render: () => void): void {
 			render();
 		},
 		"submit-plugin-url": () => {
+			syncDialogInputState(appRoot, state);
 			void submitPluginUrlDialog(render);
 		},
 		"custom-install-plugin-def": () => {
@@ -232,5 +235,9 @@ export function registerEvents(appRoot: HTMLElement, render: () => void): void {
 			nextSearch.focus();
 			nextSearch.setSelectionRange(selectionStart, selectionEnd);
 		}
+	});
+
+	appRoot.addEventListener("keydown", (event) => {
+		handleNativeInputShortcutFallback(event);
 	});
 }

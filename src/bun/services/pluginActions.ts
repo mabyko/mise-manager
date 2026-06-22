@@ -14,7 +14,7 @@ import {
 } from "../../shared/version";
 import { listGlobalPlugins } from "./pluginCatalog";
 import { parseRemoteVersions, runMise } from "./mise";
-import { updateUserToolAlias } from "./miseConfig";
+import { removeUserToolAlias, updateUserToolAlias } from "./miseConfig";
 
 export async function getMiseVersion(): Promise<string | null> {
 	const result = await runMise(["--version"]);
@@ -226,39 +226,53 @@ export async function installPluginDefinition({
 	plugin,
 	gitUrl,
 	force,
+	removeToolAlias,
 }: {
 	plugin: string;
 	gitUrl?: string;
 	force?: boolean;
+	removeToolAlias?: boolean;
 }): Promise<PluginInstallResult> {
 	const args = ["plugins", "install", "-y"];
 	if (force) {
 		args.push("--force");
 	}
 	args.push(plugin);
-	if (gitUrl && gitUrl.trim().length > 0) {
-		args.push(gitUrl.trim());
+	const trimmedGitUrl = gitUrl?.trim();
+	if (trimmedGitUrl) {
+		args.push(trimmedGitUrl);
 	}
+
 	const result = await runMise(args);
 	if (result.exitCode !== 0) {
 		throw new Error(result.stderr.trim() || `failed to install plugin '${plugin}'`);
 	}
+
 	const stdout = result.stdout.trim();
-	const trimmedGitUrl = gitUrl?.trim();
-	if (!trimmedGitUrl) {
-		return { plugin, stdout };
+	if (trimmedGitUrl) {
+		const configPath = await updateUserToolAlias({
+			plugin,
+			gitUrl: trimmedGitUrl,
+		});
+		return {
+			plugin,
+			stdout: [stdout, `Updated tool_alias in ${configPath}.`]
+				.filter((entry) => entry.length > 0)
+				.join("\n"),
+		};
 	}
 
-	const configPath = await updateUserToolAlias({
-		plugin,
-		gitUrl: trimmedGitUrl,
-	});
-	return {
-		plugin,
-		stdout: [stdout, `Updated tool_alias in ${configPath}.`]
-			.filter((entry) => entry.length > 0)
-			.join("\n"),
-	};
+	if (removeToolAlias) {
+		const configPath = await removeUserToolAlias({ plugin });
+		return {
+			plugin,
+			stdout: [stdout, `Removed tool_alias from ${configPath}.`]
+				.filter((entry) => entry.length > 0)
+				.join("\n"),
+		};
+	}
+
+	return { plugin, stdout };
 }
 
 export async function uninstallPluginDefinition({

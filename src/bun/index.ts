@@ -1,8 +1,10 @@
-import { BrowserView, BrowserWindow } from "electrobun/bun";
-
+import { ApplicationMenu, BrowserView, BrowserWindow } from "electrobun/bun";
 import type { AppRPC } from "../shared/contracts";
+import { createApplicationMenu } from "./app/applicationMenu";
 import { getMainViewUrl } from "./app/mainViewUrl";
 import { requestHandlers } from "./rpc/handlers";
+
+ApplicationMenu.setApplicationMenu(createApplicationMenu());
 
 const url = await getMainViewUrl();
 

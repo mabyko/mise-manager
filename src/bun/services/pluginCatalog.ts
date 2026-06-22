@@ -6,6 +6,7 @@ import {
 	runMise,
 	sanitizeVersion,
 } from "./mise";
+import { readUserToolAliases } from "./miseConfig";
 
 export async function listGlobalPlugins(): Promise<Map<string, string>> {
 	const result = await runMise(["ls", "--global", "--json"]);
@@ -70,9 +71,16 @@ export async function listInstalledUserPluginInfos(): Promise<PluginDefinitionIn
 			result.stderr.trim() || "failed to run 'mise plugins ls --user --urls'",
 		);
 	}
-	return parsePluginInfoLines(result.stdout).sort((a, b) =>
-		a.name.localeCompare(b.name),
-	);
+	const aliases = await readUserToolAliases();
+	return parsePluginInfoLines(result.stdout)
+		.map((entry) => {
+			const aliasUrl = aliases.get(entry.name);
+			if (aliasUrl) {
+				return { ...entry, url: aliasUrl, source: "tool_alias" as const };
+			}
+			return { ...entry, source: "mise_user" as const };
+		})
+		.sort((a, b) => a.name.localeCompare(b.name));
 }
 
 export async function listCorePluginNames(): Promise<string[]> {

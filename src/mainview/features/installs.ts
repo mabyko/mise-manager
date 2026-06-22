@@ -4,7 +4,9 @@ import { buildInstallCatalog } from "../core/helpers";
 import {
 	escapeHtml,
 	findUserPluginInfo,
+	isDefaultPluginUrl,
 	isCustomUserPluginUrl,
+	normalizePluginInstallUrl,
 } from "../core/utils";
 import { addLog } from "./logs";
 
@@ -235,6 +237,7 @@ export async function installPluginDefinition(
 	render: () => void,
 	gitUrl?: string,
 	force = false,
+	removeToolAlias = false,
 ): Promise<void> {
 	if (state.busy) {
 		return;
@@ -242,16 +245,25 @@ export async function installPluginDefinition(
 	setBusy(true, `${force ? "Updating" : "Installing"} plugin ${plugin}`, 40);
 	render();
 	try {
-		const result = await rpc.request.installPluginDefinition({ plugin, gitUrl, force });
+		const result = await rpc.request.installPluginDefinition({
+			plugin,
+			gitUrl,
+			force,
+			...(removeToolAlias ? { removeToolAlias: true } : {}),
+		});
 		await reloadPluginDefinitions(render);
 		const urlText = gitUrl && gitUrl.trim().length > 0 ? ` (${gitUrl.trim()})` : "";
 		addLog(`${plugin}: plugin ${force ? "updated" : "installed"}${urlText}.`);
-		if (result.stdout.includes("Updated tool_alias")) {
+		if (
+			result.stdout.includes("Updated tool_alias") ||
+			result.stdout.includes("Removed tool_alias")
+		) {
 			addLog(`${plugin}: ${result.stdout.split("\n").at(-1) ?? ""}`);
 		}
 	} catch (error) {
+		const actionLabel = force ? "Update" : "Install";
 		addLog(`${plugin}: plugin ${force ? "update" : "install"} failed - ${(error as Error).message}`);
-		setBusy(false, "Ready", 0);
+		setBusy(false, `${actionLabel} failed: ${plugin}`, 0);
 		render();
 	}
 }
@@ -289,17 +301,18 @@ export async function submitPluginUrlDialog(render: () => void): Promise<void> {
 	}
 
 	const dialog = state.pendingPluginUrlDialog;
-	const gitUrl = state.pendingPluginUrlValue.trim();
+	const rawGitUrl = state.pendingPluginUrlValue.trim();
+	const gitUrl = normalizePluginInstallUrl(rawGitUrl);
 
 	if (dialog.mode === "custom-install") {
 		const pluginName = state.pendingPluginNameValue.trim();
 		if (pluginName.length === 0) {
-			addLog("Custom plugin: plugin name is required.");
+			addLog("Custom plugin: plugin name required.");
 			render();
 			return;
 		}
 		if (!/^[A-Za-z0-9._-]+$/.test(pluginName)) {
-			addLog(`${pluginName}: plugin name can only include letters, numbers, dot, underscore, and dash.`);
+			addLog(`${pluginName}: plugin name can only contain letters, numbers, dot, underscore, dash.`);
 			render();
 			return;
 		}
@@ -316,17 +329,30 @@ export async function submitPluginUrlDialog(render: () => void): Promise<void> {
 		return;
 	}
 
-	if (dialog.mode === "edit" && gitUrl.length === 0) {
+	if (dialog.mode === "edit" && rawGitUrl.length === 0) {
 		addLog(`${dialog.pluginName}: URL is required for edit.`);
 		render();
 		return;
 	}
+
+	let nextGitUrl: string | undefined = gitUrl.length > 0 ? gitUrl : undefined;
+	let removeToolAlias = false;
+
 	if (dialog.mode === "edit") {
 		const userInfo = findUserPluginInfo(
 			dialog.pluginName,
 			state.installedUserPluginInfos,
 		);
-		if ((userInfo?.url ?? "").trim() === gitUrl) {
+		const nextIsDefault = isDefaultPluginUrl(
+			dialog.pluginName,
+			nextGitUrl,
+			state.remotePluginInfos,
+		);
+		if (nextIsDefault) {
+			nextGitUrl = undefined;
+			removeToolAlias = userInfo?.source === "tool_alias";
+		}
+		if (!removeToolAlias && (userInfo?.url ?? "").trim() === rawGitUrl) {
 			state.pendingPluginUrlDialog = null;
 			state.pendingPluginNameValue = "";
 			state.pendingPluginUrlValue = "";
@@ -335,6 +361,7 @@ export async function submitPluginUrlDialog(render: () => void): Promise<void> {
 			return;
 		}
 	}
+
 	state.pendingPluginUrlDialog = null;
 	state.pendingPluginNameValue = "";
 	state.pendingPluginUrlValue = "";
@@ -342,8 +369,9 @@ export async function submitPluginUrlDialog(render: () => void): Promise<void> {
 	await installPluginDefinition(
 		dialog.pluginName,
 		render,
-		gitUrl.length > 0 ? gitUrl : undefined,
+		nextGitUrl,
 		dialog.mode === "edit",
+		removeToolAlias,
 	);
 }
 
