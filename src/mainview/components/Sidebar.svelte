@@ -50,7 +50,7 @@
 </script>
 
 <aside class="sidebar">
-	<div class="brand">⛰<span class="lbl"> Mise Manager</span></div>
+	<div class="brand"><span class="brand-ico">⛰</span><span class="lbl">Mise Manager</span></div>
 	<nav>
 		<button class:on={state.activeTab === "overview"} onclick={openOverview}>
 			<span class="ico">⌂</span><span class="lbl">Overview</span>
@@ -75,13 +75,12 @@
 		{#if hasUpdate}
 			<span class="foot-dot" title="mise {currentVersion} → {latestVersion} Update Available"></span>
 		{/if}
-		<span class="lbl">
-			mise <span class="v">{currentVersion}</span><br />
-			{#if hasUpdate}
-				<span class="pill up">Update Available → {latestVersion}</span>
-			{:else}
-				<span class="foot-sub">{status.label}</span>
-			{/if}
-		</span>
+		<span class="lbl">mise <span class="v">{currentVersion}</span></span>
+		<button
+			class="foot-gear"
+			title="Mise Version 관리"
+			aria-label="Mise Version 관리"
+			onclick={openMiseTab}
+		>⚙</button>
 	</div>
 </aside>

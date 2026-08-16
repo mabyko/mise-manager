@@ -96,10 +96,18 @@ input:focus-visible {
 }
 
 .brand {
+	display: flex;
+	align-items: center;
+	gap: 9px;
 	font-weight: 800;
 	font-size: 0.95rem;
 	padding: 4px 12px 14px;
 	letter-spacing: -0.01em;
+}
+
+.brand-ico {
+	font-size: 1.05rem;
+	line-height: 1;
 }
 
 .sidebar nav button {
@@ -151,6 +159,9 @@ input:focus-visible {
 	padding: 12px 12px 4px;
 	font-size: 0.78rem;
 	color: var(--muted);
+	display: flex;
+	align-items: center;
+	gap: 8px;
 }
 
 .side-foot .v {
@@ -158,8 +169,21 @@ input:focus-visible {
 	color: var(--ink);
 }
 
-.foot-sub {
-	font-size: 0.72rem;
+.foot-gear {
+	margin-left: auto;
+	border: 0;
+	background: none;
+	color: var(--muted);
+	font-size: 1rem;
+	line-height: 1;
+	padding: 4px 6px;
+	border-radius: 7px;
+	cursor: pointer;
+}
+
+.foot-gear:hover {
+	background: rgba(128, 128, 128, 0.12);
+	color: var(--ink);
 }
 
 .pill {
@@ -903,7 +927,7 @@ pre {
 	background: var(--side);
 	backdrop-filter: blur(10px);
 	border-top: 1px solid var(--line);
-	padding: 8px 32px;
+	padding: 10px 32px 15px;
 	display: flex;
 	align-items: center;
 	gap: 10px;
@@ -1011,7 +1035,7 @@ pre {
 
 	.brand {
 		padding: 4px 0 14px;
-		text-align: center;
+		justify-content: center;
 	}
 
 	.lbl {
@@ -1034,10 +1058,17 @@ pre {
 
 	.side-foot {
 		padding: 12px 0 4px;
+		flex-direction: column;
+		gap: 8px;
+	}
+
+	.foot-gear {
+		margin-left: 0;
 	}
 
 	.foot-dot {
 		display: block;
+		margin: 0;
 	}
 
 	.content {
@@ -1045,7 +1076,7 @@ pre {
 	}
 
 	.statusbar {
-		padding: 8px 20px;
+		padding: 10px 20px 15px;
 	}
 }
 
