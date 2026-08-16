@@ -41,15 +41,32 @@ export const state: MainViewState = $state({
 	platform: "unknown",
 });
 
+let statusResetTimer: ReturnType<typeof setTimeout> | undefined;
+
 export function setBusy(
 	nextBusy: boolean,
 	nextLabel = "Ready",
 	nextProgress: number | null = null,
 ): void {
+	if (statusResetTimer) {
+		clearTimeout(statusResetTimer);
+		statusResetTimer = undefined;
+	}
 	if (nextBusy) {
 		state.liveOutputLine = "";
 	}
 	state.busy = nextBusy;
 	state.progressLabel = nextLabel;
 	state.progress = nextProgress;
+
+	// Completion labels ("Check complete · 100%") shouldn't linger forever.
+	if (!nextBusy && nextLabel !== "Ready") {
+		statusResetTimer = setTimeout(() => {
+			statusResetTimer = undefined;
+			if (!state.busy) {
+				state.progressLabel = "Ready";
+				state.progress = 0;
+			}
+		}, 4000);
+	}
 }
