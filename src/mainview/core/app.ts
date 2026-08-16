@@ -1,4 +1,4 @@
-import { state, setBusy } from "./state";
+import { state, setBusy } from "./state.svelte";
 import { rpc } from "./rpc";
 import { toPluginRow, normalizeInstalled, updatePluginInState } from "./helpers";
 import { addLog } from "../features/logs";
@@ -15,9 +15,8 @@ export async function refreshPlugin(pluginName: string): Promise<void> {
 	});
 }
 
-export async function reloadPlugins(render: () => void): Promise<void> {
+export async function reloadPlugins(): Promise<void> {
 	setBusy(true, "Loading plugins", 5);
-	render();
 	try {
 		const installed = await rpc.request.listInstalledPlugins();
 		state.plugins = installed.map(toPluginRow).map(normalizeInstalled);
@@ -26,7 +25,5 @@ export async function reloadPlugins(render: () => void): Promise<void> {
 	} catch (error) {
 		addLog(`Failed to load plugins: ${(error as Error).message}`);
 		setBusy(false, "Load failed", 0);
-	} finally {
-		render();
 	}
 }

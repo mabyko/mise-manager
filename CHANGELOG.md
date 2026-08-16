@@ -2,6 +2,28 @@
 
 이 프로젝트의 주요 변경 사항을 기록합니다.
 
+## [Unreleased] - Tauri 2 + Svelte 5 포팅 (2026-08-16)
+
+### Changed
+- 데스크톱 셸을 Electrobun에서 **Tauri 2**로 전면 포팅:
+  - `src/bun/**`(Bun 프로세스)을 Rust `#[tauri::command]` 20개로 재작성 (`src-tauri/src/`)
+  - mise 실행 PATH 보강/`MISE_BIN` 오버라이드 로직 유지, 실행 파일 절대경로는 startup에 1회 해석해 캐시
+  - `~/.config/mise/config.toml`의 `[tool_alias]` 편집을 `toml_edit` 기반으로 전환 (주석/포맷 보존, 잘못된 TOML이면 덮어쓰기 대신 중단)
+  - GitHub latest release 조회는 `reqwest`로 수행
+- 프런트엔드를 바닐라 TS 수동 렌더링에서 **Svelte 5(runes)** 컴포넌트로 재작성:
+  - `render/`·`events.ts`·`inputState.ts`의 수동 innerHTML 재렌더/이벤트 위임/입력값 복원 체계 제거 (`$state` 반응성과 `bind:value`가 대체)
+  - 검색 입력 포커스 복원 해크 불필요해짐
+- 테스트 러너를 `bun:test`에서 **vitest**(+happy-dom)로 전환, Rust 백엔드는 `cargo test`
+- Vite 6 → 8 업그레이드
+- 버전 비교 로직(`shared/version.ts`)은 프런트/백엔드 양쪽에서 사용되어 Rust(`version.rs`)와 TS에 중복 유지 — 동일한 미러 테스트로 드리프트 방지
+
+### Fixed
+- mise 미설치 안내의 공식 사이트 링크 오타 수정 (`getting-starting.html` → `getting-started.html`)
+
+### Known
+- 앱 자동 업데이트(구 Electrobun Updater 채널)는 이번 포팅 범위에서 제외 (`tauri-plugin-updater` 도입 시 별도 작업)
+- mise 미설치 화면의 외부 링크(`target="_blank"`)는 `tauri-plugin-opener` 도입 전까지 동작하지 않을 수 있음
+
 ## [0.1.0] - 2026-03-06
 
 ### Added

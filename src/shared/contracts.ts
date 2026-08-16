@@ -1,5 +1,3 @@
-import type { ElectrobunRPCSchema } from "electrobun/view";
-
 export type PluginStatus =
 	| "idle"
 	| "checking"
@@ -55,7 +53,7 @@ export interface MiseInstallResult {
 	stderr: string;
 }
 
-export interface AppRPC extends ElectrobunRPCSchema {
+export interface AppRPC {
 	bun: {
 		requests: {
 			getMiseVersion: {

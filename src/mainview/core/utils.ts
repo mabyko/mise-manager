@@ -1,15 +1,6 @@
 import { compareVersions } from "../../shared/version";
 import type { PluginDefinitionInfo } from "../../shared/contracts";
 
-export function escapeHtml(value: string): string {
-	return value
-		.replaceAll("&", "&amp;")
-		.replaceAll("<", "&lt;")
-		.replaceAll(">", "&gt;")
-		.replaceAll('"', "&quot;")
-		.replaceAll("'", "&#39;");
-}
-
 export function nowLabel(): string {
 	return new Date().toLocaleString("ko-KR", { hour12: false });
 }

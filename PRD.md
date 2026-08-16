@@ -2,7 +2,7 @@
 
 ## 1. Product Summary
 - Product: `mise-manager`
-- Type: macOS desktop app (Electrobun)
+- Type: macOS desktop app (Tauri 2 + Svelte 5)
 - Goal: `mise` 사용자가 버전 상태 확인, 업데이트 판단, 설치/전역 전환/삭제를 UI로 빠르게 수행하도록 지원
 - Baseline date: `2026-03-06` (KST)
 

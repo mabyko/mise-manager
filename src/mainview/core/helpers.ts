@@ -1,4 +1,4 @@
-import { checkModeActiveOnly, state } from "./state";
+import { checkModeActiveOnly, state } from "./state.svelte";
 import type { PluginRow } from "./types";
 import type { PluginSummary } from "../../shared/contracts";
 import { sortVersionsDesc } from "./utils";

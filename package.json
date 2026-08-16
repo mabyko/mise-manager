@@ -6,21 +6,21 @@
 	"scripts": {
 		"ui:build": "vite build",
 		"ui:dev": "vite --port 5173",
-		"start": "bun run ui:build && electrobun dev",
-		"dev": "bun run ui:build && electrobun dev --watch",
-		"dev:hmr": "concurrently \"bun run ui:dev\" \"bun run dev\"",
-		"build:canary": "bun run ui:build && electrobun build --env=canary",
-		"build:stable": "bun run ui:build && electrobun build --env=stable",
-		"build:stable:safe": "bash ./scripts/build-stable-safe.sh",
-		"build:stable:force": "ALLOW_STABLE_BUILD=1 bash ./scripts/build-stable-safe.sh"
+		"dev": "tauri dev",
+		"start": "tauri dev",
+		"build": "tauri build",
+		"test": "vitest run"
 	},
 	"dependencies": {
-		"electrobun": "1.15.1"
+		"@tauri-apps/api": "^2"
 	},
 	"devDependencies": {
-		"@types/bun": "latest",
-		"concurrently": "^9.2.1",
+		"@sveltejs/vite-plugin-svelte": "^7.3.0",
+		"@tauri-apps/cli": "^2.11.4",
+		"happy-dom": "^20.11.2",
+		"svelte": "^5",
 		"typescript": "^5.9.3",
-		"vite": "^6.4.2"
+		"vite": "^8",
+		"vitest": "^4.1.10"
 	}
 }

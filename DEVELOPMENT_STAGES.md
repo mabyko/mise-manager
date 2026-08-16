@@ -61,6 +61,13 @@
 - PRD/Planning/Stages/Changelog 최신 UX 기준 동기화
 - 회귀 체크리스트 유지/보강
 
+## Stage 8 - Tauri 2 + Svelte 5 포팅 (완료)
+- Electrobun → Tauri 2 전환 (`src-tauri/` Rust 커맨드 20개)
+- 바닐라 TS 프런트 → Svelte 5(runes) 컴포넌트 재작성
+- bun:test → vitest 전환, Rust `cargo test` 추가
+- Vite 8 업그레이드, 빌드 파이프라인을 `tauri dev`/`tauri build`로 교체
+- 근거 문서: HANDOFF-tauri-port.md / tauri-migration-research.md (스크래치패드)
+
 ## 다음 작업 제안
 1. `Mise Version` 상태 배지 컬러 체계(성공/경고/오류) 시각 강화
 2. GitHub API rate-limit/네트워크 오류 메시지 세분화

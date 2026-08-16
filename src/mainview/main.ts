@@ -1,21 +1,19 @@
 import "./style.css";
 
-import { registerEvents } from "./events";
+import { mount } from "svelte";
+
+import App from "./App.svelte";
 import { checkLatestMiseRelease, reloadMiseVersion } from "./features/mise";
-import { createRenderer } from "./render/render";
-import "./core/rpc";
 
-const app = document.getElementById("app");
+const target = document.getElementById("app");
 
-if (!app) {
+if (!target) {
 	throw new Error("app container not found");
 }
 
-const render = createRenderer(app);
-registerEvents(app, render);
+mount(App, { target });
 
-render();
 void (async () => {
-	await reloadMiseVersion(render);
-	await checkLatestMiseRelease(render);
+	await reloadMiseVersion();
+	await checkLatestMiseRelease();
 })();

@@ -1,10 +1,11 @@
 # mise-manager
 
-`mise-manager`는 `mise` 기반 런타임/도구를 데스크톱 UI에서 조회하고 관리하는 Electrobun 앱입니다.
+`mise-manager`는 `mise` 기반 런타임/도구를 데스크톱 UI에서 조회하고 관리하는 Tauri 2 앱입니다.
+프런트엔드는 Svelte 5(runes) + Vite, 백엔드는 Rust Tauri 커맨드로 구성됩니다.
 
 ## Version
-- App: `0.1.0`
-- Last updated: `2026-03-06` (KST)
+- App: `0.1.2`
+- Last updated: `2026-08-16` (KST)
 
 ## What It Does
 - 앱 시작 기본 탭: `Mise Version`
@@ -64,23 +65,27 @@
 ## Run
 ```bash
 bun install
-bun run dev
+bun run dev   # tauri dev (Vite HMR 포함)
 ```
 
 ## Build
 ```bash
-bunx vite build
+bun run build   # tauri build (.app/.dmg)
+```
+
+## Test
+```bash
+bunx vitest run             # frontend
+cargo test                  # backend (src-tauri/ 에서)
 ```
 
 ### Build in Codex vs Local Terminal
-- Codex(샌드박스)에서는 `hdiutil`이 막혀 있어 `electrobun build --env=stable`의 DMG 단계가 실패할 수 있습니다.
+- Codex(샌드박스)에서는 `hdiutil`이 막혀 있어 `tauri build`의 DMG 번들 단계가 실패할 수 있습니다.
 - Codex에서는 아래까지만 검증하세요:
   - `bun run ui:build`
+  - `cargo check` / `cargo test` (`src-tauri/`)
 - 실제 릴리즈 빌드는 로컬 터미널(일반 Terminal/iTerm)에서 실행하세요:
-  - `bun run build:stable`
-- 안전 래퍼 스크립트:
-  - `bun run build:stable:safe` (샌드박스 감지 시 자동 skip)
-  - `bun run build:stable:force` (`ALLOW_STABLE_BUILD=1`로 강제 실행)
+  - `bun run build`
 
 ## Regression Checklist
 1. 앱 시작 시 기본 활성 탭이 `Mise Version`이다.
