@@ -3,7 +3,7 @@ import type { MainViewState } from "./types";
 export const checkModeActiveOnly = true;
 
 export const state: MainViewState = $state({
-	activeTab: "mise",
+	activeTab: "overview",
 	miseVersion: null,
 	miseLoaded: false,
 	miseCurrentError: null,
@@ -22,6 +22,7 @@ export const state: MainViewState = $state({
 	progressLabel: "Ready",
 	liveOutputLine: "",
 	pendingDelete: null,
+	pendingMajorUpdate: null,
 	remotePluginNames: [],
 	installedPluginNames: [],
 	corePluginNames: [],

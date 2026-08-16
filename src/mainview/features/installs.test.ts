@@ -16,7 +16,6 @@ vi.mock("../core/rpc", () => ({ rpc: { request: rpcRequest } }));
 
 import { state } from "../core/state.svelte";
 import { resolvePluginInstallPlan, submitPluginUrlDialog } from "./installs";
-import HeaderContext from "../components/HeaderContext.svelte";
 import InstallsTab from "../components/InstallsTab.svelte";
 
 function renderComponent(component: unknown): string {
@@ -65,7 +64,7 @@ describe("installs", () => {
 	test("shows custom plugin install action beside plugin search controls", () => {
 		state.remotePluginNames = ["node", "python"];
 
-		const html = renderComponent(HeaderContext);
+		const html = renderComponent(InstallsTab);
 
 		expect(html).toContain("Install Custom Plugin");
 		expect(html).toContain("icon-btn");

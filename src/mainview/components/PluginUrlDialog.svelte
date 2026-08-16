@@ -69,7 +69,7 @@
 			/>
 			<div class="modal-actions">
 				<button class="mini-btn" onclick={closePluginUrlDialog}>Cancel</button>
-				<button class="mini-btn" disabled={state.busy} onclick={() => void submitPluginUrlDialog()}>
+				<button class="mini-btn primary" disabled={state.busy} onclick={() => void submitPluginUrlDialog()}>
 					{isEdit ? "Save URL" : "Install"}
 				</button>
 			</div>

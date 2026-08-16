@@ -8,7 +8,12 @@
 - Last updated: `2026-08-16` (KST)
 
 ## What It Does
-- 앱 시작 기본 탭: `Mise Version`
+- 좌측 사이드바 내비게이션 (좁은 창에서는 아이콘 레일로 축소)
+- 앱 시작 기본 화면: `Overview`
+- `Overview` 화면:
+  - Mise Runtime / Plugins / Updates Available 요약 카드
+  - `Available Updates`: same-major 후보는 `Update to X`(설치 + Use Global 전환) 원클릭, major 후보는 확인 모달 경유, pre-release 제외
+  - 체크 실패 플러그인 `Retry`, 최근 로그 5줄 + 전체 로그 이동
 - `Mise Version` 탭:
   - `Current`(local `mise --version`) / `Latest`(GitHub latest release) 비교
   - 상태(`Update Available`, `Up-to-date`, `Check Failed`, `Updated (Reload Needed)` 등) 표시
@@ -88,12 +93,12 @@ cargo test                  # backend (src-tauri/ 에서)
   - `bun run build`
 
 ## Regression Checklist
-1. 앱 시작 시 기본 활성 탭이 `Mise Version`이다.
-2. 앱 시작 시 `Mise Version`의 Current/Latest 조회가 자동 수행된다.
-3. `Plugins Updater` 탭 최초 진입 시 `reload + Check Updates`가 1회 자동 수행된다.
+1. 앱 시작 시 기본 화면이 `Overview`이고, Current/Latest 조회 + `reload + Check Updates`가 1회 자동 수행된다.
+2. `Overview`의 `Update to X`는 설치 후 Use Global까지 전환하고, major 후보는 확인 모달을 거친다.
+3. `Plugins Updater` 탭 최초 진입 시(Overview에서 이미 수행되지 않았다면) `reload + Check Updates`가 1회 자동 수행된다.
 4. 상태가 `Update Available`일 때만 `Update Mise` 버튼이 활성화된다.
 5. `Update Mise` 실행 후 결과 로그(`Before/After`, stdout/stderr)가 보인다.
-6. `Plugins Updater`의 Same/Release/Pre-release 컬럼은 `Install` 버튼만 제공한다.
+6. `Plugins Updater`의 `Updates` 열은 실제 존재하는 후보만 종류 태그(same major/release/pre-release)와 함께 나열하고 `Install` 버튼만 제공한다. Active와 같은 버전은 표시하지 않고, 후보가 없으면 `Up to date ✓`를 표시한다.
 7. 설치된 버전 row의 `Use Global`/`Delete`가 정상 동작한다.
 8. Active(Global) 버전 `Delete`는 비활성화된다.
 9. Installs 탭에서 `Install Plugin` URL 입력 모달이 동작한다.

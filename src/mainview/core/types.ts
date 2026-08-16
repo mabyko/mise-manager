@@ -4,7 +4,7 @@ import type {
 	PluginSummary,
 } from "../../shared/contracts";
 
-export type ActiveTab = "mise" | "updater" | "logs" | "installs";
+export type ActiveTab = "overview" | "mise" | "updater" | "logs" | "installs";
 
 export interface PluginRow extends PluginSummary {
 	sameMajorLatest: string | null;
@@ -37,6 +37,8 @@ export interface MainViewState {
 	/** Latest subprocess output line streamed from the backend while busy. */
 	liveOutputLine: string;
 	pendingDelete: { pluginName: string; version: string } | null;
+	/** Major update awaiting confirmation (Overview action). */
+	pendingMajorUpdate: { pluginName: string; fromVersion: string | null; targetVersion: string } | null;
 	remotePluginNames: string[];
 	installedPluginNames: string[];
 	corePluginNames: string[];

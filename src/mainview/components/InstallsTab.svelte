@@ -6,6 +6,7 @@
 		openCustomPluginDialog,
 		openEditPluginDialog,
 		openInstallPluginDialog,
+		reloadPluginDefinitions,
 		uninstallPluginDefinition,
 	} from "../features/installs";
 
@@ -36,16 +37,42 @@
 	const installedHidden = $derived(installedAll.length - installedRows.length);
 
 	const notInstalledAll = $derived.by(() =>
-		filtered.filter(
-			(plugin) =>
-				!state.installedPluginNames.includes(plugin) &&
-				!state.corePluginNames.includes(plugin) &&
-				!state.installedToolNames.includes(plugin),
-		),
+		filtered
+			.filter(
+				(plugin) =>
+					!state.installedPluginNames.includes(plugin) &&
+					!state.corePluginNames.includes(plugin) &&
+					!state.installedToolNames.includes(plugin),
+			)
+			.map((plugin) => ({
+				plugin,
+				url: state.remotePluginInfos.find((entry) => entry.name === plugin)?.url ?? null,
+			})),
 	);
 	const notInstalledRows = $derived(notInstalledAll.slice(0, ROW_LIMIT));
 	const notInstalledHidden = $derived(notInstalledAll.length - notInstalledRows.length);
 </script>
+
+<div class="page-head">
+	<h1>Plugin Installs</h1>
+	<div class="page-actions">
+		<input
+			class="search-input"
+			placeholder="Search plugin name..."
+			aria-label="Search plugin name"
+			bind:value={state.pluginSearchQuery}
+		/>
+		<button class="btn" onclick={openCustomPluginDialog} disabled={state.busy}>Install Custom Plugin</button>
+		<button
+			class="btn icon-btn"
+			title="Reload Plugins"
+			aria-label="Reload Plugins"
+			onclick={() => void reloadPluginDefinitions()}
+			disabled={state.busy}
+		>↻</button>
+	</div>
+</div>
+<div class="page-meta">Remote Plugin Definitions: {state.remotePluginNames.length} / Core Plugins: {state.corePluginNames.length} / User Plugins: {state.installedPluginNames.length} / Installed Tools: {state.installedToolNames.length}</div>
 
 <section class="panel">
 	<h2>Installed</h2>
@@ -55,7 +82,7 @@
 				<tr>
 					<th>Plugin</th>
 					<th>State</th>
-					<th>Actions</th>
+					<th class="th-actions">Actions</th>
 				</tr>
 			</thead>
 			<tbody>
@@ -78,17 +105,21 @@
 							{/if}
 						</td>
 						<td class="actions">
-							<div class="row-actions">
-								<button
-									disabled={state.busy || row.corePlugin || !row.userPluginInstalled}
-									onclick={() => openEditPluginDialog(row.plugin)}
-								>Edit Plugin</button>
-								<button
-									title={row.corePlugin ? "Core plugin은 제거할 수 없습니다." : "User plugin definition 제거"}
-									disabled={state.busy || !row.userPluginInstalled}
-									onclick={() => void uninstallPluginDefinition(row.plugin)}
-								>Remove Plugin</button>
-							</div>
+							{#if row.userPluginInstalled}
+								<div class="row-actions">
+									<button
+										disabled={state.busy || row.corePlugin}
+										onclick={() => openEditPluginDialog(row.plugin)}
+									>Edit Plugin</button>
+									<button
+										title="User plugin definition 제거"
+										disabled={state.busy}
+										onclick={() => void uninstallPluginDefinition(row.plugin)}
+									>Remove Plugin</button>
+								</div>
+							{:else}
+								<span class="version-meta">{row.corePlugin ? "Core — 제거 불가" : "Tool only"}</span>
+							{/if}
 						</td>
 					</tr>
 				{:else}
@@ -106,18 +137,24 @@
 			<thead>
 				<tr>
 					<th>Plugin</th>
-					<th>State</th>
-					<th>Actions</th>
+					<th>Source</th>
+					<th class="th-actions">Actions</th>
 				</tr>
 			</thead>
 			<tbody>
-				{#each notInstalledRows as plugin (plugin)}
+				{#each notInstalledRows as row (row.plugin)}
 					<tr>
-						<td class="plugin">{plugin}</td>
-						<td><span class="badge empty">Not Installed</span></td>
+						<td class="plugin">{row.plugin}</td>
+						<td>
+							{#if row.url}
+								<span class="version-meta src-url" title={row.url}>{row.url}</span>
+							{:else}
+								<span class="version-meta">registry</span>
+							{/if}
+						</td>
 						<td class="actions">
 							<div class="row-actions">
-								<button disabled={state.busy} onclick={() => openInstallPluginDialog(plugin)}>Install Plugin</button>
+								<button disabled={state.busy} onclick={() => openInstallPluginDialog(row.plugin)}>Install Plugin</button>
 							</div>
 						</td>
 					</tr>

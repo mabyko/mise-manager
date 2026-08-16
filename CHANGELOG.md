@@ -17,6 +17,13 @@
 - Vite 6 → 8 업그레이드
 - 버전 비교 로직(`shared/version.ts`)은 프런트/백엔드 양쪽에서 사용되어 Rust(`version.rs`)와 TS에 중복 유지 — 동일한 미러 테스트로 드리프트 방지
 
+### UI Redesign (시안 A — Sidebar Native)
+- 탭 스트립을 **좌측 사이드바 내비게이션**으로 전환 (macOS 설정 스타일). 좁은 창(≤1020px)에서는 64px 아이콘 레일로 접히고, 사이드바 하단에 mise 버전·업데이트 배지 상주
+- **Overview 화면 신설** (기본 화면): Mise Runtime/Plugins/Updates Available 스탯 카드 + Available Updates 리스트 + Recent Activity
+- **Available Updates 규칙**: same-major 후보가 `Update to X` 주 버튼(설치 + Use Global 전환, 이전 버전 유지), major 후보는 `Update to Y (major)…` 보조 버튼으로 확인 모달 경유. pre-release는 Overview에서 제외 (Updater 탭 전용)
+- 상단 헤더/진행률 바를 **하단 상태바**로 대체 — busy 스피너 + 라이브 mise 출력 + 실제 % 표시
+- 팔레트를 시안 A 기준으로 교체 (라이트/다크 토큰 모두), 860px 이하에서 카드 스택 + 버튼 라벨 압축
+
 ### UI
 - **진짜 진행률**: mise 서브프로세스 출력을 라인 단위로 스트리밍(`mise-output` 이벤트)해 진행 라벨 아래에 실시간 표시. 실제 계산 가능한 %(플러그인 체크 N/M)만 숫자로 표시하고, 그 외 busy 상태는 indeterminate 애니메이션 바로 전환 — 조작된 퍼센트 제거
 - **다크 모드**: `prefers-color-scheme` 기반 다크 팔레트 추가 (구조 색상 토큰화)

@@ -4,7 +4,7 @@ import { state, setBusy } from "../core/state.svelte";
 import type { PluginRow } from "../core/types";
 import { resolveBaseVersion, updatePluginInState } from "../core/helpers";
 import { addLog } from "./logs";
-import { refreshPlugin } from "../core/app";
+import { refreshPlugin, reloadPlugins } from "../core/app";
 
 export function getTargetVersion(
 	plugin: PluginRow,
@@ -15,6 +15,44 @@ export function getTargetVersion(
 		: mode === "release"
 			? plugin.releaseLatest
 			: plugin.overallLatest;
+}
+
+async function checkPlugin(plugin: PluginRow): Promise<void> {
+	const baseVersion = resolveBaseVersion(plugin);
+	if (!baseVersion) {
+		updatePluginInState(plugin.name, {
+			status: "error",
+			error: "no active/installed version to compare",
+		});
+		addLog(`${plugin.name}: no base version found.`);
+		return;
+	}
+
+	updatePluginInState(plugin.name, { status: "checking" });
+
+	try {
+		const result: PluginUpdateInfo = await rpc.request.checkPluginUpdates({
+			plugin: plugin.name,
+			baseVersion,
+			includeChannels: false,
+		});
+		updatePluginInState(plugin.name, {
+			sameMajorLatest: result.sameMajorLatest,
+			releaseLatest: result.releaseLatest,
+			overallLatest: result.overallLatest,
+			checkedVersions: result.checkedVersions,
+			status: result.error ? "error" : "done",
+			error: result.error,
+		});
+		if (result.error) {
+			addLog(`${plugin.name}: ${result.error}`);
+		} else {
+			addLog(`${plugin.name}: checked ${result.checkedVersions} version(s), base=${baseVersion}.`);
+		}
+	} catch (error) {
+		updatePluginInState(plugin.name, { status: "error", error: (error as Error).message });
+		addLog(`${plugin.name}: ${(error as Error).message}`);
+	}
 }
 
 export async function checkUpdates(): Promise<void> {
@@ -30,52 +68,14 @@ export async function checkUpdates(): Promise<void> {
 	const queue = [...state.plugins];
 	const concurrency = Math.min(4, total);
 
-	const processOne = async (plugin: PluginRow): Promise<void> => {
-		const baseVersion = resolveBaseVersion(plugin);
-		if (!baseVersion) {
-			updatePluginInState(plugin.name, {
-				status: "error",
-				error: "no active/installed version to compare",
-			});
-			addLog(`${plugin.name}: no base version found.`);
-			return;
-		}
-
-		updatePluginInState(plugin.name, { status: "checking" });
-		setBusy(true, `Checking ${plugin.name}`, (processed / total) * 100);
-
-		try {
-			const result: PluginUpdateInfo = await rpc.request.checkPluginUpdates({
-				plugin: plugin.name,
-				baseVersion,
-				includeChannels: false,
-			});
-			updatePluginInState(plugin.name, {
-				sameMajorLatest: result.sameMajorLatest,
-				releaseLatest: result.releaseLatest,
-				overallLatest: result.overallLatest,
-				checkedVersions: result.checkedVersions,
-				status: result.error ? "error" : "done",
-				error: result.error,
-			});
-			if (result.error) {
-				addLog(`${plugin.name}: ${result.error}`);
-			} else {
-				addLog(`${plugin.name}: checked ${result.checkedVersions} version(s), base=${baseVersion}.`);
-			}
-		} catch (error) {
-			updatePluginInState(plugin.name, { status: "error", error: (error as Error).message });
-			addLog(`${plugin.name}: ${(error as Error).message}`);
-		}
-	};
-
 	const workers = Array.from({ length: concurrency }, async () => {
 		while (true) {
 			const plugin = queue.shift();
 			if (!plugin) {
 				return;
 			}
-			await processOne(plugin);
+			setBusy(true, `Checking ${plugin.name}`, (processed / total) * 100);
+			await checkPlugin(plugin);
 			processed += 1;
 			setBusy(true, `Checking ${plugin.name}`, (processed / total) * 100);
 		}
@@ -83,6 +83,81 @@ export async function checkUpdates(): Promise<void> {
 	await Promise.all(workers);
 
 	setBusy(false, "Check complete", 100);
+}
+
+/** One-shot load + check when the Overview/Updater surface is first shown. */
+export function ensureUpdaterData(): void {
+	if (state.updaterAutoChecked) {
+		return;
+	}
+	state.updaterAutoChecked = true;
+	void (async () => {
+		if (state.plugins.length === 0) {
+			await reloadPlugins();
+		}
+		await checkUpdates();
+	})();
+}
+
+export async function retryCheck(pluginName: string): Promise<void> {
+	if (state.busy) {
+		return;
+	}
+	const plugin = state.plugins.find((entry) => entry.name === pluginName);
+	if (!plugin) {
+		return;
+	}
+	setBusy(true, `Checking ${pluginName}`);
+	await checkPlugin(plugin);
+	setBusy(false, "Check complete");
+}
+
+/** Overview "Update to X": install then switch global. The old version stays installed. */
+export async function updateToVersion(pluginName: string, targetVersion: string): Promise<void> {
+	if (state.busy) {
+		return;
+	}
+	setBusy(true, `Updating ${pluginName}@${targetVersion}`);
+	updatePluginInState(pluginName, { status: "updating" });
+
+	try {
+		await rpc.request.installPlugin({ plugin: pluginName, targetVersion });
+	} catch (error) {
+		updatePluginInState(pluginName, { status: "error", error: (error as Error).message });
+		addLog(`${pluginName}: install failed - ${(error as Error).message}`);
+		setBusy(false);
+		return;
+	}
+
+	try {
+		await rpc.request.useGlobalPlugin({ plugin: pluginName, targetVersion });
+		await refreshPlugin(pluginName);
+		updatePluginInState(pluginName, { status: "done", error: undefined });
+		addLog(`${pluginName}: updated to ${targetVersion} (installed + switched global).`);
+	} catch (error) {
+		await refreshPlugin(pluginName).catch(() => {});
+		updatePluginInState(pluginName, { status: "error", error: (error as Error).message });
+		addLog(`${pluginName}: installed ${targetVersion} but switching global failed - ${(error as Error).message}`);
+	}
+	setBusy(false);
+}
+
+export function requestMajorUpdate(pluginName: string, targetVersion: string): void {
+	const plugin = state.plugins.find((entry) => entry.name === pluginName);
+	state.pendingMajorUpdate = {
+		pluginName,
+		fromVersion: plugin?.activeGlobalVersion ?? null,
+		targetVersion,
+	};
+}
+
+export async function confirmMajorUpdate(): Promise<void> {
+	if (!state.pendingMajorUpdate || state.busy) {
+		return;
+	}
+	const { pluginName, targetVersion } = state.pendingMajorUpdate;
+	state.pendingMajorUpdate = null;
+	await updateToVersion(pluginName, targetVersion);
 }
 
 export async function runTargetAction(

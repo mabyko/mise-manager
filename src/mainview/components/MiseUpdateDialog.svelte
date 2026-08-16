@@ -22,7 +22,7 @@
 			</p>
 			<div class="modal-actions">
 				<button class="mini-btn" onclick={cancelMiseUpdateDialog}>Cancel</button>
-				<button class="mini-btn" disabled={state.busy} onclick={() => void confirmMiseSelfUpdate()}>Run Update</button>
+				<button class="mini-btn primary" disabled={state.busy} onclick={() => void confirmMiseSelfUpdate()}>Run Update</button>
 			</div>
 		</div>
 	</div>

@@ -3,7 +3,12 @@
 
 	import { state } from "../core/state.svelte";
 	import { getMiseStatusSnapshot } from "../core/miseStatus";
-	import { startMiseInstall } from "../features/mise";
+	import {
+		checkLatestMiseRelease,
+		openMiseUpdateDialog,
+		reloadMiseVersion,
+		startMiseInstall,
+	} from "../features/mise";
 
 	const MISE_OFFICIAL_URL = "https://mise.jdx.dev/getting-started.html";
 	const visitOfficialSite = () => void openUrl(MISE_OFFICIAL_URL);
@@ -27,6 +32,15 @@
 	const isWindows = $derived(state.platform === "win32");
 	const isMac = $derived(state.platform === "darwin");
 </script>
+
+<div class="page-head">
+	<h1>Mise Version</h1>
+	<div class="page-actions">
+		<button class="btn" onclick={() => void reloadMiseVersion()} disabled={state.busy}>Reload Current</button>
+		<button class="btn" onclick={() => void checkLatestMiseRelease()} disabled={state.busy}>Check Latest</button>
+		<button class="btn primary" onclick={openMiseUpdateDialog} title={status.buttonHint} disabled={state.busy || !status.canUpdate}>Update Mise…</button>
+	</div>
+</div>
 
 {#snippet card(title: string, value: string, hint: string)}
 	<div class="mise-summary-card">
