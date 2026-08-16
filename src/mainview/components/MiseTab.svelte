@@ -1,9 +1,12 @@
 <script lang="ts">
+	import { openUrl } from "@tauri-apps/plugin-opener";
+
 	import { state } from "../core/state.svelte";
 	import { getMiseStatusSnapshot } from "../core/miseStatus";
 	import { startMiseInstall } from "../features/mise";
 
 	const MISE_OFFICIAL_URL = "https://mise.jdx.dev/getting-started.html";
+	const visitOfficialSite = () => void openUrl(MISE_OFFICIAL_URL);
 
 	const status = $derived(getMiseStatusSnapshot(state));
 	const current = $derived(
@@ -45,9 +48,7 @@
 		</div>
 		{#if isWindows}
 			<div style="margin-top: 16px;">
-				<a href={MISE_OFFICIAL_URL} target="_blank" class="primary-btn" style="display: inline-block; text-decoration: none;">
-					Visit Official Site
-				</a>
+				<button class="primary-btn" onclick={visitOfficialSite}>Visit Official Site</button>
 			</div>
 		{:else if state.miseInstalling}
 			<div class="log-card" style="margin-top: 12px;">
@@ -62,9 +63,7 @@
 				<button class="primary-btn" onclick={() => void startMiseInstall("brew")}>
 					Homebrew Install
 				</button>
-				<a href={MISE_OFFICIAL_URL} target="_blank" class="mini-btn" style="display: inline-block; text-decoration: none;">
-					Visit Official Site
-				</a>
+				<button class="mini-btn" onclick={visitOfficialSite}>Visit Official Site</button>
 			</div>
 			<div class="log-card" style="margin-top: 12px;">
 				<strong>Quick Install (sh):</strong> <code>curl https://mise.run | sh</code><br />
@@ -72,9 +71,7 @@
 			</div>
 		{:else}
 			<div style="margin-top: 16px;">
-				<a href={MISE_OFFICIAL_URL} target="_blank" class="primary-btn" style="display: inline-block; text-decoration: none;">
-					Visit Official Site
-				</a>
+				<button class="primary-btn" onclick={visitOfficialSite}>Visit Official Site</button>
 			</div>
 		{/if}
 	</section>

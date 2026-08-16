@@ -13,6 +13,7 @@ pub fn run() {
     // (undo/redo/cut/copy/paste/select-all) that Electrobun's custom menu provided.
     tauri::Builder::default()
         .manage(mise::MiseState::default())
+        .plugin(tauri_plugin_opener::init())
         .setup(|app| {
             if cfg!(debug_assertions) {
                 app.handle().plugin(
@@ -21,8 +22,10 @@ pub fn run() {
                         .build(),
                 )?;
             }
+            let state = app.state::<mise::MiseState>();
+            state.set_app_handle(app.handle().clone());
             // Warm the mise path cache (a handful of stat calls).
-            app.state::<mise::MiseState>().executable();
+            state.executable();
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![

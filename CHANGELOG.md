@@ -17,12 +17,21 @@
 - Vite 6 → 8 업그레이드
 - 버전 비교 로직(`shared/version.ts`)은 프런트/백엔드 양쪽에서 사용되어 Rust(`version.rs`)와 TS에 중복 유지 — 동일한 미러 테스트로 드리프트 방지
 
+### UI
+- **진짜 진행률**: mise 서브프로세스 출력을 라인 단위로 스트리밍(`mise-output` 이벤트)해 진행 라벨 아래에 실시간 표시. 실제 계산 가능한 %(플러그인 체크 N/M)만 숫자로 표시하고, 그 외 busy 상태는 indeterminate 애니메이션 바로 전환 — 조작된 퍼센트 제거
+- **다크 모드**: `prefers-color-scheme` 기반 다크 팔레트 추가 (구조 색상 토큰화)
+- 고정 헤더를 `position: sticky`로 전환 — 하드코딩된 본문 여백(250px/300px) 제거, 헤더 높이 변화에 따른 겹침/공백 해소
+- 모달 키보드 UX: Esc 닫기(전체), Enter 제출(URL 입력 모달), 열릴 때 입력 필드 autofocus. 파괴적 확인 모달(Delete/Update)은 의도적으로 Enter 미적용
+- Installs 목록 200개 초과 시 "+N개 더 있음 — 검색으로 좁혀보세요" 안내 표시
+- busy 중에도 무해한 컨트롤(플러그인 검색, Clear Logs)은 활성 유지
+- 외부 링크를 `tauri-plugin-opener` 기반 버튼으로 교체 (기본 브라우저로 열림)
+- 창 최소 크기 720x560 설정, 폰트 스택에 `system-ui` 폴백 추가, `:focus-visible` 포커스 링 추가
+
 ### Fixed
 - mise 미설치 안내의 공식 사이트 링크 오타 수정 (`getting-starting.html` → `getting-started.html`)
 
 ### Known
 - 앱 자동 업데이트(구 Electrobun Updater 채널)는 이번 포팅 범위에서 제외 (`tauri-plugin-updater` 도입 시 별도 작업)
-- mise 미설치 화면의 외부 링크(`target="_blank"`)는 `tauri-plugin-opener` 도입 전까지 동작하지 않을 수 있음
 
 ## [0.1.0] - 2026-03-06
 

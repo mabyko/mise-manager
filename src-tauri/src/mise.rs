@@ -1,9 +1,10 @@
 // Port of src/bun/services/mise.ts: mise executable discovery + runner + output parsers.
 // GUI apps on macOS don't inherit the shell PATH, so we augment it with known bin dirs
 // instead of pulling in fix-path-env-rs (which runs the user's interactive login shell).
-use std::ffi::OsString;
+use std::ffi::{OsStr, OsString};
+use std::io::{BufRead, BufReader};
 use std::path::{Path, PathBuf};
-use std::process::Command;
+use std::process::{Command, Stdio};
 use std::sync::Mutex;
 
 use crate::contracts::PluginDefinitionInfo;
@@ -82,12 +83,22 @@ fn resolve_mise_executable() -> PathBuf {
 
 /// Resolved mise path, cached after the first successful discovery.
 /// Re-resolves while mise is missing so an in-app install is picked up immediately.
+/// Also carries the AppHandle so subprocess output can be streamed to the UI.
 #[derive(Default)]
 pub struct MiseState {
     exe: Mutex<Option<PathBuf>>,
+    app: Mutex<Option<tauri::AppHandle>>,
 }
 
 impl MiseState {
+    pub fn set_app_handle(&self, handle: tauri::AppHandle) {
+        *self.app.lock().unwrap() = Some(handle);
+    }
+
+    pub fn app_handle(&self) -> Option<tauri::AppHandle> {
+        self.app.lock().unwrap().clone()
+    }
+
     pub fn executable(&self) -> PathBuf {
         let mut cached = self.exe.lock().unwrap();
         if let Some(path) = cached.as_ref() {
@@ -103,27 +114,73 @@ impl MiseState {
     }
 }
 
+fn emit_output(app: &Option<tauri::AppHandle>, stream: &str, line: &str) {
+    use tauri::Emitter;
+    if let Some(app) = app {
+        let _ = app.emit(
+            "mise-output",
+            serde_json::json!({ "stream": stream, "line": line }),
+        );
+    }
+}
+
+/// Runs a subprocess with piped output, emitting each line as a `mise-output`
+/// event so the UI can show live progress instead of a fabricated percentage.
+pub(crate) fn run_streaming_blocking(
+    program: &Path,
+    args: &[String],
+    path_override: Option<&OsStr>,
+    app: Option<tauri::AppHandle>,
+) -> std::io::Result<MiseResult> {
+    let mut command = Command::new(program);
+    command.args(args).stdout(Stdio::piped()).stderr(Stdio::piped());
+    if let Some(path_value) = path_override {
+        command.env("PATH", path_value);
+    }
+    let mut child = command.spawn()?;
+    let stdout_pipe = child.stdout.take().expect("stdout is piped");
+    let stderr_pipe = child.stderr.take().expect("stderr is piped");
+
+    let app_for_stderr = app.clone();
+    let stderr_thread = std::thread::spawn(move || {
+        let mut collected = String::new();
+        for line in BufReader::new(stderr_pipe).lines().map_while(Result::ok) {
+            emit_output(&app_for_stderr, "stderr", &line);
+            collected.push_str(&line);
+            collected.push('\n');
+        }
+        collected
+    });
+
+    let mut stdout_collected = String::new();
+    for line in BufReader::new(stdout_pipe).lines().map_while(Result::ok) {
+        emit_output(&app, "stdout", &line);
+        stdout_collected.push_str(&line);
+        stdout_collected.push('\n');
+    }
+
+    let stderr_collected = stderr_thread.join().unwrap_or_default();
+    let status = child.wait()?;
+    Ok(MiseResult {
+        stdout: stdout_collected,
+        stderr: stderr_collected,
+        exit_code: status.code().unwrap_or(-1),
+    })
+}
+
 pub async fn run<S: AsRef<str>>(state: &MiseState, args: &[S]) -> Result<MiseResult, String> {
     let exe = state.executable();
+    let app = state.app_handle();
     let args: Vec<String> = args.iter().map(|a| a.as_ref().to_string()).collect();
     tauri::async_runtime::spawn_blocking(move || {
         let path_value = get_augmented_path();
-        let output = Command::new(&exe)
-            .args(&args)
-            .env("PATH", &path_value)
-            .output()
-            .map_err(|error| {
-                format!(
-                    "failed to spawn mise executable '{}' (PATH='{}'): {}",
-                    exe.display(),
-                    path_value.to_string_lossy(),
-                    error
-                )
-            })?;
-        Ok(MiseResult {
-            stdout: String::from_utf8_lossy(&output.stdout).into_owned(),
-            stderr: String::from_utf8_lossy(&output.stderr).into_owned(),
-            exit_code: output.status.code().unwrap_or(-1),
+        run_streaming_blocking(&exe, &args, Some(path_value.as_os_str()), app).map_err(|error| {
+            format!(
+                "failed to spawn mise executable '{}' (PATH='{}'): {}",
+                exe.display(),
+                path_value.to_string_lossy(),
+                error
+            )
         })
     })
     .await

@@ -104,7 +104,7 @@ export async function runTargetAction(
 		return;
 	}
 
-	setBusy(true, `${actionType === "install" ? "Installing" : "Using"} ${pluginName}@${target}`, 30);
+	setBusy(true, `${actionType === "install" ? "Installing" : "Using"} ${pluginName}@${target}`);
 	updatePluginInState(pluginName, { status: "updating" });
 
 	try {
@@ -124,7 +124,7 @@ export async function runTargetAction(
 		addLog(`${pluginName}: action failed - ${(error as Error).message}`);
 	}
 
-	setBusy(false, "Ready", 0);
+	setBusy(false);
 }
 
 export async function useInstalledVersion(
@@ -134,7 +134,7 @@ export async function useInstalledVersion(
 	if (state.busy) {
 		return;
 	}
-	setBusy(true, `Using ${pluginName}@${version}`, 40);
+	setBusy(true, `Using ${pluginName}@${version}`);
 	updatePluginInState(pluginName, { status: "updating" });
 	try {
 		await rpc.request.useGlobalPlugin({ plugin: pluginName, targetVersion: version });
@@ -145,7 +145,7 @@ export async function useInstalledVersion(
 		updatePluginInState(pluginName, { status: "error", error: (error as Error).message });
 		addLog(`${pluginName}: use failed - ${(error as Error).message}`);
 	}
-	setBusy(false, "Ready", 0);
+	setBusy(false);
 }
 
 export async function deleteInstalledVersion(
@@ -171,7 +171,7 @@ export async function deleteInstalledVersion(
 		updatePluginInState(pluginName, { status: "error", error: (error as Error).message });
 		addLog(`${pluginName}: delete failed - ${(error as Error).message}`);
 	}
-	setBusy(false, "Ready", 0);
+	setBusy(false);
 }
 
 export async function confirmDeleteInstalledVersion(): Promise<void> {

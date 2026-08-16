@@ -1,7 +1,16 @@
 <script lang="ts">
 	import { state } from "../core/state.svelte";
 	import { cancelMiseUpdateDialog, confirmMiseSelfUpdate } from "../features/mise";
+
+	// Escape closes; Enter deliberately does nothing on a consequential confirm.
+	function handleKeydown(event: KeyboardEvent) {
+		if (state.pendingMiseUpdateConfirm && event.key === "Escape") {
+			cancelMiseUpdateDialog();
+		}
+	}
 </script>
+
+<svelte:window onkeydown={handleKeydown} />
 
 {#if state.pendingMiseUpdateConfirm}
 	<div class="modal-overlay">

@@ -31,8 +31,11 @@ export interface MainViewState {
 	plugins: PluginRow[];
 	logs: string[];
 	busy: boolean;
-	progress: number;
+	/** Real percentage when one exists (e.g. N/M plugin checks); null = indeterminate. */
+	progress: number | null;
 	progressLabel: string;
+	/** Latest subprocess output line streamed from the backend while busy. */
+	liveOutputLine: string;
 	pendingDelete: { pluginName: string; version: string } | null;
 	remotePluginNames: string[];
 	installedPluginNames: string[];

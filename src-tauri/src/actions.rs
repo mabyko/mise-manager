@@ -320,18 +320,22 @@ pub async fn check_mise_installed(state: State<'_, MiseState>) -> Result<bool, S
 
 // Runs with the plain process env on purpose: these are the "mise isn't installed
 // yet" paths, so the augmented-PATH machinery in mise::run doesn't apply.
-async fn run_shell_command(program: &str, args: &[&str]) -> Result<MiseInstallResult, String> {
-    let program = program.to_string();
+// Output still streams to the UI via the shared mise-output event.
+async fn run_shell_command(
+    state: &MiseState,
+    program: &str,
+    args: &[&str],
+) -> Result<MiseInstallResult, String> {
+    let app = state.app_handle();
+    let program = std::path::PathBuf::from(program);
     let args: Vec<String> = args.iter().map(|a| a.to_string()).collect();
     tauri::async_runtime::spawn_blocking(move || {
-        let output = std::process::Command::new(&program)
-            .args(&args)
-            .output()
+        let result = mise::run_streaming_blocking(&program, &args, None, app)
             .map_err(|error| error.to_string())?;
         Ok(MiseInstallResult {
-            success: output.status.success(),
-            stdout: String::from_utf8_lossy(&output.stdout).trim().to_string(),
-            stderr: String::from_utf8_lossy(&output.stderr).trim().to_string(),
+            success: result.exit_code == 0,
+            stdout: result.stdout.trim().to_string(),
+            stderr: result.stderr.trim().to_string(),
         })
     })
     .await
@@ -339,13 +343,13 @@ async fn run_shell_command(program: &str, args: &[&str]) -> Result<MiseInstallRe
 }
 
 #[tauri::command]
-pub async fn install_mise_sh() -> Result<MiseInstallResult, String> {
-    run_shell_command("sh", &["-c", "curl https://mise.run | sh"]).await
+pub async fn install_mise_sh(state: State<'_, MiseState>) -> Result<MiseInstallResult, String> {
+    run_shell_command(&state, "sh", &["-c", "curl https://mise.run | sh"]).await
 }
 
 #[tauri::command]
-pub async fn install_mise_brew() -> Result<MiseInstallResult, String> {
-    run_shell_command("brew", &["install", "mise"]).await
+pub async fn install_mise_brew(state: State<'_, MiseState>) -> Result<MiseInstallResult, String> {
+    run_shell_command(&state, "brew", &["install", "mise"]).await
 }
 
 #[tauri::command]

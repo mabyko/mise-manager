@@ -16,7 +16,9 @@
 		);
 	});
 
-	const installedRows = $derived.by(() =>
+	const ROW_LIMIT = 200;
+
+	const installedAll = $derived.by(() =>
 		filtered
 			.map((plugin) => {
 				const userPluginInstalled = state.installedPluginNames.includes(plugin);
@@ -28,20 +30,21 @@
 					: false;
 				return { plugin, userPluginInstalled, corePlugin, toolInstalled, userInfo, isCustomUserUrl };
 			})
-			.filter((row) => row.userPluginInstalled || row.corePlugin || row.toolInstalled)
-			.slice(0, 200),
+			.filter((row) => row.userPluginInstalled || row.corePlugin || row.toolInstalled),
 	);
+	const installedRows = $derived(installedAll.slice(0, ROW_LIMIT));
+	const installedHidden = $derived(installedAll.length - installedRows.length);
 
-	const notInstalledRows = $derived.by(() =>
-		filtered
-			.filter(
-				(plugin) =>
-					!state.installedPluginNames.includes(plugin) &&
-					!state.corePluginNames.includes(plugin) &&
-					!state.installedToolNames.includes(plugin),
-			)
-			.slice(0, 200),
+	const notInstalledAll = $derived.by(() =>
+		filtered.filter(
+			(plugin) =>
+				!state.installedPluginNames.includes(plugin) &&
+				!state.corePluginNames.includes(plugin) &&
+				!state.installedToolNames.includes(plugin),
+		),
 	);
+	const notInstalledRows = $derived(notInstalledAll.slice(0, ROW_LIMIT));
+	const notInstalledHidden = $derived(notInstalledAll.length - notInstalledRows.length);
 </script>
 
 <section class="panel">
@@ -91,6 +94,9 @@
 				{:else}
 					<tr><td colspan="3" class="empty-row">설치된 항목이 없습니다.</td></tr>
 				{/each}
+				{#if installedHidden > 0}
+					<tr><td colspan="3" class="empty-row">+{installedHidden}개 더 있음 — 검색으로 좁혀보세요.</td></tr>
+				{/if}
 			</tbody>
 		</table>
 	</section>
@@ -118,6 +124,9 @@
 				{:else}
 					<tr><td colspan="3" class="empty-row">검색 결과가 없습니다. <button class="mini-btn" disabled={state.busy} onclick={openCustomPluginDialog}>Install Custom Plugin</button></td></tr>
 				{/each}
+				{#if notInstalledHidden > 0}
+					<tr><td colspan="3" class="empty-row">+{notInstalledHidden}개 더 있음 — 검색으로 좁혀보세요.</td></tr>
+				{/if}
 			</tbody>
 		</table>
 	</section>

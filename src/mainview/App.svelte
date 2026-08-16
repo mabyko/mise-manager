@@ -70,11 +70,20 @@
 		<section class="global-progress">
 			<div class="progress-head">
 				<strong>{state.progressLabel}</strong>
-				<span>{Math.round(state.progress)}%</span>
+				{#if state.progress !== null}
+					<span>{Math.round(state.progress)}%</span>
+				{/if}
 			</div>
 			<div class="progress-track">
-				<div class="progress-fill" style:width="{Math.max(0, Math.min(100, state.progress))}%"></div>
+				{#if state.busy && state.progress === null}
+					<div class="progress-fill indeterminate"></div>
+				{:else}
+					<div class="progress-fill" style:width="{Math.max(0, Math.min(100, state.progress ?? 0))}%"></div>
+				{/if}
 			</div>
+			{#if state.busy && state.liveOutputLine}
+				<div class="live-output">{state.liveOutputLine}</div>
+			{/if}
 		</section>
 	</div>
 	<section class="app-content">

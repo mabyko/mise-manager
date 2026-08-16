@@ -1,7 +1,16 @@
 <script lang="ts">
 	import { state } from "../core/state.svelte";
 	import { confirmDeleteInstalledVersion } from "../features/updater";
+
+	// Escape closes; Enter deliberately does nothing on a destructive confirm.
+	function handleKeydown(event: KeyboardEvent) {
+		if (state.pendingDelete && event.key === "Escape") {
+			state.pendingDelete = null;
+		}
+	}
 </script>
+
+<svelte:window onkeydown={handleKeydown} />
 
 {#if state.pendingDelete}
 	<div class="modal-overlay">

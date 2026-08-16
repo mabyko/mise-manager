@@ -10,7 +10,7 @@ import {
 import { addLog } from "./logs";
 
 export async function reloadPluginDefinitions(): Promise<void> {
-	setBusy(true, "Loading plugin definitions", 10);
+	setBusy(true, "Loading plugin definitions");
 	try {
 		const [userPluginInfos, corePlugins, installedTools, remoteInfos] = await Promise.all([
 			rpc.request.listInstalledUserPluginInfos(),
@@ -28,10 +28,10 @@ export async function reloadPluginDefinitions(): Promise<void> {
 		);
 		state.installsLoaded = true;
 		addLog(`Loaded install sources: remotePlugins=${state.remotePluginNames.length}, userPlugins=${state.installedPluginNames.length}, corePlugins=${state.corePluginNames.length}, installedTools=${state.installedToolNames.length}.`);
-		setBusy(false, "Ready", 0);
+		setBusy(false);
 	} catch (error) {
 		addLog(`Failed to load plugin definitions: ${(error as Error).message}`);
-		setBusy(false, "Load failed", 0);
+		setBusy(false, "Load failed");
 	}
 }
 
@@ -44,7 +44,7 @@ export async function installPluginDefinition(
 	if (state.busy) {
 		return;
 	}
-	setBusy(true, `${force ? "Updating" : "Installing"} plugin ${plugin}`, 40);
+	setBusy(true, `${force ? "Updating" : "Installing"} plugin ${plugin}`);
 	try {
 		const result = await rpc.request.installPluginDefinition({
 			plugin,
@@ -64,7 +64,7 @@ export async function installPluginDefinition(
 	} catch (error) {
 		const actionLabel = force ? "Update" : "Install";
 		addLog(`${plugin}: plugin ${force ? "update" : "install"} failed - ${(error as Error).message}`);
-		setBusy(false, `${actionLabel} failed: ${plugin}`, 0);
+		setBusy(false, `${actionLabel} failed: ${plugin}`);
 	}
 }
 
@@ -208,13 +208,13 @@ export async function uninstallPluginDefinition(plugin: string): Promise<void> {
 	if (state.busy) {
 		return;
 	}
-	setBusy(true, `Removing plugin ${plugin}`, 40);
+	setBusy(true, `Removing plugin ${plugin}`);
 	try {
 		await rpc.request.uninstallPluginDefinition({ plugin });
 		await reloadPluginDefinitions();
 		addLog(`${plugin}: plugin removed.`);
 	} catch (error) {
 		addLog(`${plugin}: plugin remove failed - ${(error as Error).message}`);
-		setBusy(false, "Ready", 0);
+		setBusy(false);
 	}
 }

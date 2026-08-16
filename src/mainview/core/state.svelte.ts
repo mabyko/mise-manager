@@ -20,6 +20,7 @@ export const state: MainViewState = $state({
 	busy: false,
 	progress: 0,
 	progressLabel: "Ready",
+	liveOutputLine: "",
 	pendingDelete: null,
 	remotePluginNames: [],
 	installedPluginNames: [],
@@ -39,7 +40,14 @@ export const state: MainViewState = $state({
 	platform: "unknown",
 });
 
-export function setBusy(nextBusy: boolean, nextLabel = "Ready", nextProgress = 0): void {
+export function setBusy(
+	nextBusy: boolean,
+	nextLabel = "Ready",
+	nextProgress: number | null = null,
+): void {
+	if (nextBusy) {
+		state.liveOutputLine = "";
+	}
 	state.busy = nextBusy;
 	state.progressLabel = nextLabel;
 	state.progress = nextProgress;

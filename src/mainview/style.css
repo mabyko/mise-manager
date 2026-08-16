@@ -3,15 +3,54 @@
 	--bg-2: #efe6d6;
 	--ink: #1a1813;
 	--muted: #635c4e;
+	--muted-2: #8f826d;
 	--surface: rgba(255, 255, 255, 0.78);
 	--surface-strong: #ffffff;
+	--surface-header: rgba(255, 255, 255, 0.92);
+	--panel-border: rgba(255, 255, 255, 0.4);
+	--control-bg: #ffffff;
+	--tab-bg: rgba(255, 255, 255, 0.65);
+	--tab-active-ink: #ffffff;
+	--table-head: #faf4e9;
+	--track: #e9e0d2;
 	--line: #d9cdb8;
+	--line-soft: #efe4d1;
+	--note-bg: #fffaf1;
+	--note-border: #d5c6ad;
+	--note-ink: #5d4f3a;
+	--overlay: rgba(0, 0, 0, 0.35);
 	--accent: #1f6feb;
 	--accent-2: #0f5ad0;
 	--danger: #c0342f;
 	--ok: #1f7a3d;
 	--warn: #9a6c10;
 	--shadow: 0 12px 36px rgba(32, 19, 3, 0.12);
+}
+
+@media (prefers-color-scheme: dark) {
+	:root {
+		--bg-1: #191611;
+		--bg-2: #12100b;
+		--ink: #ece5d6;
+		--muted: #a89c86;
+		--muted-2: #948a76;
+		--surface: rgba(32, 29, 22, 0.82);
+		--surface-strong: #23201a;
+		--surface-header: rgba(26, 23, 17, 0.92);
+		--panel-border: rgba(255, 255, 255, 0.08);
+		--control-bg: #2b2721;
+		--tab-bg: rgba(43, 39, 33, 0.7);
+		--tab-active-ink: #17150f;
+		--table-head: #29251d;
+		--track: #3a352a;
+		--line: #3d3729;
+		--line-soft: #322d23;
+		--note-bg: #292317;
+		--note-border: #4a4130;
+		--note-ink: #d0c4aa;
+		--overlay: rgba(0, 0, 0, 0.55);
+		--shadow: 0 12px 36px rgba(0, 0, 0, 0.45);
+	}
 }
 
 * {
@@ -26,12 +65,26 @@ body {
 }
 
 body {
-	font-family: "Manrope", "Pretendard", "Noto Sans KR", "Apple SD Gothic Neo", sans-serif;
+	font-family: "Manrope", "Pretendard", "Noto Sans KR", "Apple SD Gothic Neo", system-ui, sans-serif;
 	color: var(--ink);
 	background:
 		radial-gradient(circle at 10% 10%, rgba(255, 255, 255, 0.8), transparent 45%),
 		radial-gradient(circle at 85% 20%, rgba(242, 201, 120, 0.25), transparent 35%),
 		linear-gradient(140deg, var(--bg-1) 0%, var(--bg-2) 100%);
+}
+
+@media (prefers-color-scheme: dark) {
+	body {
+		background:
+			radial-gradient(circle at 85% 20%, rgba(242, 201, 120, 0.06), transparent 35%),
+			linear-gradient(140deg, var(--bg-1) 0%, var(--bg-2) 100%);
+	}
+}
+
+button:focus-visible,
+input:focus-visible {
+	outline: 2px solid var(--accent);
+	outline-offset: 2px;
 }
 
 #app {
@@ -45,12 +98,10 @@ main {
 }
 
 .app-header {
-	position: fixed;
-	left: 12px;
-	right: 12px;
+	position: sticky;
 	top: 10px;
 	z-index: 40;
-	background: rgba(255, 255, 255, 0.92);
+	background: var(--surface-header);
 	backdrop-filter: blur(8px);
 	border: 1px solid var(--line);
 	border-radius: 16px;
@@ -59,7 +110,7 @@ main {
 }
 
 .app-content {
-	margin-top: 250px;
+	margin-top: 18px;
 }
 
 .tabs {
@@ -71,7 +122,7 @@ main {
 
 .tab {
 	border: 1px solid var(--line);
-	background: rgba(255, 255, 255, 0.65);
+	background: var(--tab-bg);
 	color: var(--ink);
 	font-weight: 700;
 	padding: 10px 16px;
@@ -81,14 +132,14 @@ main {
 
 .tab.active {
 	background: var(--ink);
-	color: #fff;
+	color: var(--tab-active-ink);
 	border-color: var(--ink);
 }
 
 .panel {
 	background: var(--surface);
 	backdrop-filter: blur(14px);
-	border: 1px solid rgba(255, 255, 255, 0.4);
+	border: 1px solid var(--panel-border);
 	border-radius: 18px;
 	padding: 20px;
 	box-shadow: var(--shadow);
@@ -135,7 +186,7 @@ main {
 	width: 100%;
 	margin-top: 4px;
 	padding-top: 8px;
-	border-top: 1px dashed #e2d7c4;
+	border-top: 1px dashed var(--line-soft);
 	font-size: 0.86rem;
 	color: var(--muted);
 }
@@ -160,7 +211,7 @@ p {
 
 button {
 	border: 1px solid var(--line);
-	background: #fff;
+	background: var(--control-bg);
 	color: var(--ink);
 	border-radius: 9px;
 	padding: 8px 12px;
@@ -187,8 +238,18 @@ button:disabled {
 }
 
 .global-progress {
-	border-top: 1px solid #eadfcb;
+	border-top: 1px solid var(--line-soft);
 	padding-top: 8px;
+}
+
+.live-output {
+	margin-top: 6px;
+	font-family: "JetBrains Mono", "SFMono-Regular", monospace;
+	font-size: 0.74rem;
+	color: var(--muted);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
 }
 
 .options-row {
@@ -206,7 +267,7 @@ button:disabled {
 	max-width: 560px;
 	/* width: 100%; */
 	border: 1px solid var(--line);
-	background: #fff;
+	background: var(--control-bg);
 	border-radius: 9px;
 	padding: 8px 10px;
 	font-size: 0.92rem;
@@ -228,7 +289,7 @@ button:disabled {
 .progress-track {
 	height: 12px;
 	border-radius: 999px;
-	background: #e9e0d2;
+	background: var(--track);
 	overflow: hidden;
 }
 
@@ -236,6 +297,22 @@ button:disabled {
 	height: 100%;
 	background: linear-gradient(90deg, var(--accent), var(--accent-2));
 	transition: width 0.2s ease;
+}
+
+.progress-fill.indeterminate {
+	width: 32%;
+	border-radius: 999px;
+	transition: none;
+	animation: progress-slide 1.1s ease-in-out infinite;
+}
+
+@keyframes progress-slide {
+	0% {
+		margin-left: -32%;
+	}
+	100% {
+		margin-left: 100%;
+	}
 }
 
 .bulk-actions {
@@ -267,7 +344,7 @@ table {
 th,
 td {
 	padding: 10px;
-	border-bottom: 1px solid #efe4d1;
+	border-bottom: 1px solid var(--line-soft);
 	text-align: left;
 	vertical-align: middle;
 }
@@ -285,7 +362,7 @@ td.actions {
 }
 
 th {
-	background: #faf4e9;
+	background: var(--table-head);
 	position: sticky;
 	top: 0;
 	z-index: 2;
@@ -363,7 +440,7 @@ th {
 }
 
 .plugin-url .url-value {
-	color: #6f6556;
+	color: var(--muted-2);
 	display: block;
 	max-width: min(560px, 48vw);
 	overflow: hidden;
@@ -421,7 +498,7 @@ th {
 
 .version-meta {
 	font-size: 0.75rem;
-	color: #8f826d;
+	color: var(--muted-2);
 }
 
 .mini-btn {
@@ -477,6 +554,7 @@ th {
 
 .status.idle {
 	background: #f2ebe0;
+	color: #5f5749;
 }
 
 .status.checking,
@@ -567,29 +645,29 @@ pre {
 .mise-summary-hint {
 	margin-top: 6px;
 	font-size: 0.76rem;
-	color: #7a7264;
+	color: var(--muted-2);
 }
 
 .mise-status-note {
-	border: 1px dashed #d5c6ad;
-	background: #fffaf1;
+	border: 1px dashed var(--note-border);
+	background: var(--note-bg);
 	padding: 10px 12px;
 	border-radius: 10px;
-	color: #5d4f3a;
+	color: var(--note-ink);
 	font-size: 0.88rem;
 }
 
 .modal-overlay {
 	position: fixed;
 	inset: 0;
-	background: rgba(0, 0, 0, 0.35);
+	background: var(--overlay);
 	display: grid;
 	place-items: center;
 	z-index: 50;
 }
 
 .modal-card {
-	background: #fff;
+	background: var(--surface-strong);
 	width: min(520px, calc(100vw - 24px));
 	border-radius: 14px;
 	padding: 16px;
@@ -609,7 +687,8 @@ pre {
 	margin-top: 10px;
 	width: 100%;
 	border: 1px solid var(--line);
-	background: #fff;
+	background: var(--control-bg);
+	color: var(--ink);
 	border-radius: 9px;
 	padding: 9px 10px;
 	font-size: 0.9rem;
@@ -633,10 +712,6 @@ pre {
 
 	.bulk-actions {
 		justify-content: flex-start;
-	}
-
-	.app-content {
-		margin-top: 300px;
 	}
 
 	.header-context {

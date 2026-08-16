@@ -16,14 +16,14 @@ export async function refreshPlugin(pluginName: string): Promise<void> {
 }
 
 export async function reloadPlugins(): Promise<void> {
-	setBusy(true, "Loading plugins", 5);
+	setBusy(true, "Loading plugins");
 	try {
 		const installed = await rpc.request.listInstalledPlugins();
 		state.plugins = installed.map(toPluginRow).map(normalizeInstalled);
 		addLog(`Loaded ${state.plugins.length} plugin(s).`);
-		setBusy(false, "Ready", 0);
+		setBusy(false);
 	} catch (error) {
 		addLog(`Failed to load plugins: ${(error as Error).message}`);
-		setBusy(false, "Load failed", 0);
+		setBusy(false, "Load failed");
 	}
 }

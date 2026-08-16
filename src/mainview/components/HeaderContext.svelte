@@ -41,8 +41,8 @@
 			<input
 				class="search-input"
 				placeholder="Search plugin name..."
+				aria-label="Search plugin name"
 				bind:value={state.pluginSearchQuery}
-				disabled={state.busy}
 			/>
 			<button onclick={openCustomPluginDialog} disabled={state.busy}>Install Custom Plugin</button>
 			<button
@@ -74,7 +74,7 @@
 			<p>최근 작업 내역과 오류 메시지를 확인합니다.</p>
 		</div>
 		<div class="header-actions">
-			<button onclick={clearLogs} disabled={state.busy}>Clear Logs</button>
+			<button onclick={clearLogs}>Clear Logs</button>
 		</div>
 	</div>
 {/if}

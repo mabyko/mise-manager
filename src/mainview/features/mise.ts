@@ -13,24 +13,24 @@ export async function loadPlatform(): Promise<void> {
 }
 
 export async function reloadMiseVersion(): Promise<void> {
-	setBusy(true, "Loading mise version", 15);
+	setBusy(true, "Loading mise version");
 	try {
 		const version = await rpc.request.getMiseVersion();
 		state.miseVersion = version;
 		state.miseLoaded = true;
 		state.miseCurrentError = null;
 		addLog(`Loaded mise version: ${version ?? "unknown"}.`);
-		setBusy(false, "Ready", 0);
+		setBusy(false);
 	} catch (error) {
 		state.miseLoaded = true;
 		state.miseCurrentError = (error as Error).message;
 		addLog(`Failed to load mise version: ${(error as Error).message}`);
-		setBusy(false, "Load failed", 0);
+		setBusy(false, "Load failed");
 	}
 }
 
 export async function checkLatestMiseRelease(): Promise<void> {
-	setBusy(true, "Checking latest mise release", 20);
+	setBusy(true, "Checking latest mise release");
 	try {
 		const latest = await rpc.request.getLatestMiseRelease();
 		state.miseLatestVersion = latest;
@@ -40,7 +40,7 @@ export async function checkLatestMiseRelease(): Promise<void> {
 			hour12: false,
 		});
 		addLog(`Loaded latest mise release: ${latest ?? "unknown"}.`);
-		setBusy(false, "Ready", 0);
+		setBusy(false);
 	} catch (error) {
 		state.miseLatestLoaded = true;
 		state.miseLatestError = (error as Error).message;
@@ -48,7 +48,7 @@ export async function checkLatestMiseRelease(): Promise<void> {
 			hour12: false,
 		});
 		addLog(`Failed to check latest mise release: ${(error as Error).message}`);
-		setBusy(false, "Check failed", 0);
+		setBusy(false, "Check failed");
 	}
 }
 
@@ -70,7 +70,7 @@ export async function confirmMiseSelfUpdate(): Promise<void> {
 		return;
 	}
 	state.pendingMiseUpdateConfirm = false;
-	setBusy(true, "Running mise self-update", 30);
+	setBusy(true, "Running mise self-update");
 
 	try {
 		const result: MiseSelfUpdateResult = await rpc.request.selfUpdateMise();
@@ -92,7 +92,7 @@ export async function confirmMiseSelfUpdate(): Promise<void> {
 		state.miseNeedsReload = false;
 		state.miseLastResult = `ERROR:\n${(error as Error).message}`;
 		addLog(`mise self-update failed: ${(error as Error).message}`);
-		setBusy(false, "Update failed", 0);
+		setBusy(false, "Update failed");
 	}
 }
 
@@ -119,7 +119,7 @@ export async function startMiseInstall(method: "sh" | "brew"): Promise<void> {
 	state.miseInstalling = true;
 	state.miseInstallMethod = method;
 	state.miseLastResult = "";
-	setBusy(true, `Installing mise (${method === "sh" ? "curl" : "brew"})...`, 30);
+	setBusy(true, `Installing mise (${method === "sh" ? "curl" : "brew"})...`);
 
 	try {
 		const result = method === "sh"
@@ -147,11 +147,11 @@ export async function startMiseInstall(method: "sh" | "brew"): Promise<void> {
 			}
 		}
 
-		setBusy(false, result.success ? "Installed" : "Install failed", 0);
+		setBusy(false, result.success ? "Installed" : "Install failed");
 	} catch (error) {
 		state.miseLastResult = `ERROR:\n${(error as Error).message}`;
 		addLog(`mise install failed: ${(error as Error).message}`);
-		setBusy(false, "Install failed", 0);
+		setBusy(false, "Install failed");
 	} finally {
 		state.miseInstalling = false;
 		state.miseInstallMethod = null;

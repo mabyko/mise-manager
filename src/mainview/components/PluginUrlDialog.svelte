@@ -23,7 +23,27 @@
 			? "https://github.com/owner/repo.git"
 			: "https://github.com/owner/repo.git (optional)",
 	);
+
+	function focusOnMount(node: HTMLElement, enabled: boolean = true) {
+		if (enabled) {
+			node.focus();
+		}
+	}
+
+	function handleKeydown(event: KeyboardEvent) {
+		if (!state.pendingPluginUrlDialog) {
+			return;
+		}
+		if (event.key === "Escape") {
+			closePluginUrlDialog();
+		} else if (event.key === "Enter" && !state.busy) {
+			event.preventDefault();
+			void submitPluginUrlDialog();
+		}
+	}
 </script>
+
+<svelte:window onkeydown={handleKeydown} />
 
 {#if dialog}
 	<div class="modal-overlay">
@@ -38,12 +58,14 @@
 					class="modal-input"
 					placeholder="Plugin name"
 					bind:value={state.pendingPluginNameValue}
+					use:focusOnMount
 				/>
 			{/if}
 			<input
 				class="modal-input"
 				placeholder={urlPlaceholder}
 				bind:value={state.pendingPluginUrlValue}
+				use:focusOnMount={!isCustomInstall}
 			/>
 			<div class="modal-actions">
 				<button class="mini-btn" onclick={closePluginUrlDialog}>Cancel</button>
