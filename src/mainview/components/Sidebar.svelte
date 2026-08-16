@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { state } from "../core/state.svelte";
+	import { state, setBusy } from "../core/state.svelte";
 	import { getMiseStatusSnapshot, normalizeVersionToken } from "../core/miseStatus";
 	import {
 		checkLatestMiseRelease,
@@ -47,6 +47,12 @@
 			void reloadPluginDefinitions();
 		}
 	}
+
+	function notifySettingsPending(): void {
+		if (!state.busy) {
+			setBusy(false, "설정 화면은 준비 중입니다 ⚙");
+		}
+	}
 </script>
 
 <aside class="sidebar">
@@ -72,15 +78,17 @@
 		</button>
 	</nav>
 	<div class="side-foot">
-		{#if hasUpdate}
-			<span class="foot-dot" title="mise {currentVersion} → {latestVersion} Update Available"></span>
-		{/if}
-		<span class="lbl">mise <span class="v">{currentVersion}</span></span>
 		<button
-			class="foot-gear"
-			title="Mise Version 관리"
-			aria-label="Mise Version 관리"
-			onclick={openMiseTab}
-		>⚙</button>
+			class="foot-item"
+			title="Settings — 준비 중"
+			aria-label="Settings"
+			onclick={notifySettingsPending}
+		>
+			<span class="ico">⚙</span>
+			<span class="lbl">mise <span class="v">{currentVersion}</span></span>
+			{#if hasUpdate}
+				<span class="foot-dot" title="mise {currentVersion} → {latestVersion} Update Available"></span>
+			{/if}
+		</button>
 	</div>
 </aside>

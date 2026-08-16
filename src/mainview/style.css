@@ -1,5 +1,6 @@
 :root {
 	--sidew: 224px;
+	--footbar-h: 42px;
 	--bg: #f5f5f7;
 	--side: rgba(255, 255, 255, 0.72);
 	--surface: #ffffff;
@@ -92,7 +93,7 @@ input:focus-visible {
 	border-right: 1px solid var(--line);
 	display: flex;
 	flex-direction: column;
-	padding: 18px 10px 46px;
+	padding: 18px 10px 0;
 }
 
 .brand {
@@ -153,15 +154,14 @@ input:focus-visible {
 	background: rgba(255, 255, 255, 0.25);
 }
 
+/* Same-height band as the status bar so their top borders form one line. */
 .side-foot {
-	margin-top: auto;
+	margin: auto -10px 0;
 	border-top: 1px solid var(--line);
-	padding: 12px 12px 4px;
-	font-size: 0.78rem;
-	color: var(--muted);
+	height: var(--footbar-h);
 	display: flex;
 	align-items: center;
-	gap: 8px;
+	padding: 0 10px;
 }
 
 .side-foot .v {
@@ -169,21 +169,31 @@ input:focus-visible {
 	color: var(--ink);
 }
 
-.foot-gear {
-	margin-left: auto;
+.foot-item {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	width: 100%;
 	border: 0;
 	background: none;
+	padding: 6px 12px;
+	border-radius: 9px;
+	font: inherit;
+	font-size: 0.8rem;
 	color: var(--muted);
-	font-size: 1rem;
-	line-height: 1;
-	padding: 4px 6px;
-	border-radius: 7px;
 	cursor: pointer;
 }
 
-.foot-gear:hover {
+.foot-item:hover {
 	background: rgba(128, 128, 128, 0.12);
 	color: var(--ink);
+}
+
+.foot-item .ico {
+	width: 20px;
+	text-align: center;
+	font-size: 1rem;
+	line-height: 1;
 }
 
 .pill {
@@ -927,7 +937,8 @@ pre {
 	background: var(--side);
 	backdrop-filter: blur(10px);
 	border-top: 1px solid var(--line);
-	padding: 10px 32px 15px;
+	height: var(--footbar-h);
+	padding: 0 32px;
 	display: flex;
 	align-items: center;
 	gap: 10px;
@@ -1030,7 +1041,7 @@ pre {
 	}
 
 	.sidebar {
-		padding: 18px 8px 46px;
+		padding: 18px 8px 0;
 	}
 
 	.brand {
@@ -1057,13 +1068,13 @@ pre {
 	}
 
 	.side-foot {
-		padding: 12px 0 4px;
-		flex-direction: column;
-		gap: 8px;
+		margin: auto -8px 0;
+		padding: 0 8px;
 	}
 
-	.foot-gear {
-		margin-left: 0;
+	.foot-item {
+		justify-content: center;
+		padding: 6px 0;
 	}
 
 	.foot-dot {
@@ -1076,7 +1087,7 @@ pre {
 	}
 
 	.statusbar {
-		padding: 10px 20px 15px;
+		padding: 0 20px;
 	}
 }
 
