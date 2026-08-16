@@ -15,7 +15,7 @@ const rpcRequest = vi.hoisted(() => ({
 vi.mock("../core/rpc", () => ({ rpc: { request: rpcRequest } }));
 
 import { state } from "../core/state.svelte";
-import { submitPluginUrlDialog } from "./installs";
+import { resolvePluginInstallPlan, submitPluginUrlDialog } from "./installs";
 import HeaderContext from "../components/HeaderContext.svelte";
 import InstallsTab from "../components/InstallsTab.svelte";
 
@@ -145,6 +145,92 @@ describe("installs", () => {
 			removeToolAlias: true,
 		});
 		expect(params.gitUrl).toBeUndefined();
+	});
+
+	test("resolvePluginInstallPlan normalizes custom install shorthand", () => {
+		expect(
+			resolvePluginInstallPlan({
+				dialog: { mode: "custom-install" },
+				nameValue: "zoxide",
+				urlValue: "nyrst/asdf-zoxide.git",
+				installedUserPluginInfos: [],
+				remotePluginInfos: [],
+			}),
+		).toEqual({
+			kind: "install",
+			plugin: "zoxide",
+			gitUrl: "https://github.com/nyrst/asdf-zoxide.git",
+			force: false,
+			removeToolAlias: false,
+		});
+	});
+
+	test("resolvePluginInstallPlan rejects invalid custom input", () => {
+		const noName = resolvePluginInstallPlan({
+			dialog: { mode: "custom-install" },
+			nameValue: "  ",
+			urlValue: "owner/repo",
+			installedUserPluginInfos: [],
+			remotePluginInfos: [],
+		});
+		expect(noName.kind).toBe("invalid");
+
+		const badName = resolvePluginInstallPlan({
+			dialog: { mode: "custom-install" },
+			nameValue: "bad name",
+			urlValue: "owner/repo",
+			installedUserPluginInfos: [],
+			remotePluginInfos: [],
+		});
+		expect(badName.kind).toBe("invalid");
+
+		const noUrl = resolvePluginInstallPlan({
+			dialog: { mode: "custom-install" },
+			nameValue: "zoxide",
+			urlValue: "",
+			installedUserPluginInfos: [],
+			remotePluginInfos: [],
+		});
+		expect(noUrl.kind).toBe("invalid");
+	});
+
+	test("resolvePluginInstallPlan skips edit when URL is unchanged", () => {
+		const plan = resolvePluginInstallPlan({
+			dialog: { mode: "edit", pluginName: "zoxide" },
+			nameValue: "",
+			urlValue: "https://example.com/custom.git",
+			installedUserPluginInfos: [
+				{ name: "zoxide", url: "https://example.com/custom.git", source: "mise_user" },
+			],
+			remotePluginInfos: [],
+		});
+		expect(plan.kind).toBe("skip");
+	});
+
+	test("resolvePluginInstallPlan reverts to default install when edit URL matches remote", () => {
+		expect(
+			resolvePluginInstallPlan({
+				dialog: { mode: "edit", pluginName: "flutter" },
+				nameValue: "",
+				urlValue: "asdf:asdf-community/asdf-flutter",
+				installedUserPluginInfos: [
+					{
+						name: "flutter",
+						url: "https://github.com/asdf-community/asdf-flutter.git",
+						source: "tool_alias",
+					},
+				],
+				remotePluginInfos: [
+					{ name: "flutter", url: "https://github.com/asdf-community/asdf-flutter.git" },
+				],
+			}),
+		).toEqual({
+			kind: "install",
+			plugin: "flutter",
+			gitUrl: undefined,
+			force: true,
+			removeToolAlias: true,
+		});
 	});
 
 	test("leaves failed installs visible in progress label", async () => {

@@ -130,6 +130,20 @@ pub async fn run<S: AsRef<str>>(state: &MiseState, args: &[S]) -> Result<MiseRes
     .map_err(|error| error.to_string())?
 }
 
+/// run + non-zero-exit handling folded together: the caller only ever sees a
+/// successful MiseResult or a user-facing error string.
+pub async fn run_ok<S: AsRef<str>>(
+    state: &MiseState,
+    args: &[S],
+    fallback_error: &str,
+) -> Result<MiseResult, String> {
+    let result = run(state, args).await?;
+    if result.exit_code != 0 {
+        return Err(err_or(&result.stderr, fallback_error));
+    }
+    Ok(result)
+}
+
 pub fn err_or(stderr: &str, fallback: &str) -> String {
     let trimmed = stderr.trim();
     if trimmed.is_empty() {

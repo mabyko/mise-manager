@@ -1,5 +1,7 @@
+import type { PluginDefinitionInfo } from "../../shared/contracts";
 import { rpc } from "../core/rpc";
 import { state, setBusy } from "../core/state.svelte";
+import type { MainViewState } from "../core/types";
 import {
 	findUserPluginInfo,
 	isDefaultPluginUrl,
@@ -95,70 +97,111 @@ export function closePluginUrlDialog(): void {
 	state.pendingPluginUrlValue = "";
 }
 
-export async function submitPluginUrlDialog(): Promise<void> {
-	if (!state.pendingPluginUrlDialog || state.busy) {
-		return;
-	}
+export type PluginInstallPlan =
+	| { kind: "invalid"; log: string }
+	| { kind: "skip"; log: string }
+	| {
+			kind: "install";
+			plugin: string;
+			gitUrl?: string;
+			force: boolean;
+			removeToolAlias: boolean;
+	  };
 
-	const dialog = state.pendingPluginUrlDialog;
-	const rawGitUrl = state.pendingPluginUrlValue.trim();
+// Pure decision core of the plugin URL dialog: what to send to mise, or why
+// not. "invalid" keeps the dialog open; "skip" closes it without installing.
+export function resolvePluginInstallPlan(input: {
+	dialog: NonNullable<MainViewState["pendingPluginUrlDialog"]>;
+	nameValue: string;
+	urlValue: string;
+	installedUserPluginInfos: PluginDefinitionInfo[];
+	remotePluginInfos: PluginDefinitionInfo[];
+}): PluginInstallPlan {
+	const rawGitUrl = input.urlValue.trim();
 	const gitUrl = normalizePluginInstallUrl(rawGitUrl);
 
-	if (dialog.mode === "custom-install") {
-		const pluginName = state.pendingPluginNameValue.trim();
+	if (input.dialog.mode === "custom-install") {
+		const pluginName = input.nameValue.trim();
 		if (pluginName.length === 0) {
-			addLog("Custom plugin: plugin name required.");
-			return;
+			return { kind: "invalid", log: "Custom plugin: plugin name required." };
 		}
 		if (!/^[A-Za-z0-9._-]+$/.test(pluginName)) {
-			addLog(`${pluginName}: plugin name can only contain letters, numbers, dot, underscore, dash.`);
-			return;
+			return {
+				kind: "invalid",
+				log: `${pluginName}: plugin name can only contain letters, numbers, dot, underscore, dash.`,
+			};
 		}
 		if (gitUrl.length === 0) {
-			addLog(`${pluginName}: Git URL is required for custom plugin install.`);
-			return;
+			return {
+				kind: "invalid",
+				log: `${pluginName}: Git URL is required for custom plugin install.`,
+			};
 		}
-		closePluginUrlDialog();
-		await installPluginDefinition(pluginName, gitUrl);
-		return;
+		return { kind: "install", plugin: pluginName, gitUrl, force: false, removeToolAlias: false };
 	}
 
-	if (dialog.mode === "edit" && rawGitUrl.length === 0) {
-		addLog(`${dialog.pluginName}: URL is required for edit.`);
-		return;
+	if (input.dialog.mode === "edit" && rawGitUrl.length === 0) {
+		return { kind: "invalid", log: `${input.dialog.pluginName}: URL is required for edit.` };
 	}
 
 	let nextGitUrl: string | undefined = gitUrl.length > 0 ? gitUrl : undefined;
 	let removeToolAlias = false;
 
-	if (dialog.mode === "edit") {
+	if (input.dialog.mode === "edit") {
 		const userInfo = findUserPluginInfo(
-			dialog.pluginName,
-			state.installedUserPluginInfos,
+			input.dialog.pluginName,
+			input.installedUserPluginInfos,
 		);
 		const nextIsDefault = isDefaultPluginUrl(
-			dialog.pluginName,
+			input.dialog.pluginName,
 			nextGitUrl,
-			state.remotePluginInfos,
+			input.remotePluginInfos,
 		);
 		if (nextIsDefault) {
 			nextGitUrl = undefined;
 			removeToolAlias = userInfo?.source === "tool_alias";
 		}
 		if (!removeToolAlias && (userInfo?.url ?? "").trim() === rawGitUrl) {
-			closePluginUrlDialog();
-			addLog(`${dialog.pluginName}: URL unchanged; plugin update skipped.`);
-			return;
+			return {
+				kind: "skip",
+				log: `${input.dialog.pluginName}: URL unchanged; plugin update skipped.`,
+			};
 		}
 	}
 
-	closePluginUrlDialog();
-	await installPluginDefinition(
-		dialog.pluginName,
-		nextGitUrl,
-		dialog.mode === "edit",
+	return {
+		kind: "install",
+		plugin: input.dialog.pluginName,
+		gitUrl: nextGitUrl,
+		force: input.dialog.mode === "edit",
 		removeToolAlias,
-	);
+	};
+}
+
+export async function submitPluginUrlDialog(): Promise<void> {
+	if (!state.pendingPluginUrlDialog || state.busy) {
+		return;
+	}
+
+	const plan = resolvePluginInstallPlan({
+		dialog: state.pendingPluginUrlDialog,
+		nameValue: state.pendingPluginNameValue,
+		urlValue: state.pendingPluginUrlValue,
+		installedUserPluginInfos: state.installedUserPluginInfos,
+		remotePluginInfos: state.remotePluginInfos,
+	});
+
+	if (plan.kind === "invalid") {
+		addLog(plan.log);
+		return;
+	}
+
+	closePluginUrlDialog();
+	if (plan.kind === "skip") {
+		addLog(plan.log);
+		return;
+	}
+	await installPluginDefinition(plan.plugin, plan.gitUrl, plan.force, plan.removeToolAlias);
 }
 
 export async function uninstallPluginDefinition(plugin: string): Promise<void> {

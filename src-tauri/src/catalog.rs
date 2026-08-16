@@ -50,10 +50,12 @@ pub async fn list_global_plugins(state: &MiseState) -> HashMap<String, String> {
 
 #[tauri::command]
 pub async fn list_installed_plugins(state: State<'_, MiseState>) -> Result<Vec<PluginSummary>, String> {
-    let result = mise::run(&state, &["ls", "--installed", "--json"]).await?;
-    if result.exit_code != 0 {
-        return Err(mise::err_or(&result.stderr, "failed to run 'mise ls --installed --json'"));
-    }
+    let result = mise::run_ok(
+        &state,
+        &["ls", "--installed", "--json"],
+        "failed to run 'mise ls --installed --json'",
+    )
+    .await?;
 
     let parsed: serde_json::Value = serde_json::from_str(result.stdout.trim())
         .map_err(|_| "failed to parse JSON from 'mise ls --installed --json'".to_string())?;
@@ -102,10 +104,7 @@ async fn list_trimmed_lines(
     args: &[&str],
     fallback_error: &str,
 ) -> Result<Vec<String>, String> {
-    let result = mise::run(state, args).await?;
-    if result.exit_code != 0 {
-        return Err(mise::err_or(&result.stderr, fallback_error));
-    }
+    let result = mise::run_ok(state, args, fallback_error).await?;
     Ok(result
         .stdout
         .lines()
@@ -131,10 +130,12 @@ pub async fn list_installed_plugin_names(state: State<'_, MiseState>) -> Result<
 pub async fn list_installed_user_plugin_infos(
     state: State<'_, MiseState>,
 ) -> Result<Vec<PluginDefinitionInfo>, String> {
-    let result = mise::run(&state, &["plugins", "ls", "--user", "--urls"]).await?;
-    if result.exit_code != 0 {
-        return Err(mise::err_or(&result.stderr, "failed to run 'mise plugins ls --user --urls'"));
-    }
+    let result = mise::run_ok(
+        &state,
+        &["plugins", "ls", "--user", "--urls"],
+        "failed to run 'mise plugins ls --user --urls'",
+    )
+    .await?;
 
     let aliases = config::read_user_tool_aliases()?;
     let mut infos: Vec<PluginDefinitionInfo> = mise::parse_plugin_info_lines(&result.stdout)
@@ -167,10 +168,12 @@ pub async fn list_core_plugin_names(state: State<'_, MiseState>) -> Result<Vec<S
 
 #[tauri::command]
 pub async fn list_installed_tool_names(state: State<'_, MiseState>) -> Result<Vec<String>, String> {
-    let result = mise::run(&state, &["ls", "--installed", "--json"]).await?;
-    if result.exit_code != 0 {
-        return Err(mise::err_or(&result.stderr, "failed to run 'mise ls --installed --json'"));
-    }
+    let result = mise::run_ok(
+        &state,
+        &["ls", "--installed", "--json"],
+        "failed to run 'mise ls --installed --json'",
+    )
+    .await?;
     let parsed: serde_json::Value = serde_json::from_str(result.stdout.trim())
         .map_err(|_| "failed to parse JSON from 'mise ls --installed --json'".to_string())?;
     let entries = parsed
@@ -198,10 +201,12 @@ pub async fn list_remote_plugin_names(state: State<'_, MiseState>) -> Result<Vec
 pub async fn list_remote_plugin_infos(
     state: State<'_, MiseState>,
 ) -> Result<Vec<PluginDefinitionInfo>, String> {
-    let result = mise::run(&state, &["plugins", "ls-remote", "--urls"]).await?;
-    if result.exit_code != 0 {
-        return Err(mise::err_or(&result.stderr, "failed to run 'mise plugins ls-remote --urls'"));
-    }
+    let result = mise::run_ok(
+        &state,
+        &["plugins", "ls-remote", "--urls"],
+        "failed to run 'mise plugins ls-remote --urls'",
+    )
+    .await?;
     let mut infos = mise::parse_plugin_info_lines(&result.stdout);
     infos.sort_by(|a, b| a.name.cmp(&b.name));
     Ok(infos)

@@ -19,6 +19,20 @@ export interface MiseStatusSnapshot {
 	buttonHint: string;
 }
 
+// The 8 fields the decision table actually reads — callers pass the full
+// MainViewState, tests build just this.
+export type MiseStatusInput = Pick<
+	MainViewState,
+	| "miseNeedsReload"
+	| "progressLabel"
+	| "miseCurrentError"
+	| "miseLatestError"
+	| "miseLoaded"
+	| "miseLatestLoaded"
+	| "miseVersion"
+	| "miseLatestVersion"
+>;
+
 export function normalizeVersionToken(value: string | null): string | null {
 	if (!value) {
 		return null;
@@ -30,7 +44,7 @@ export function normalizeVersionToken(value: string | null): string | null {
 	return matched[0].replace(/^v/, "");
 }
 
-export function getMiseStatusSnapshot(state: MainViewState): MiseStatusSnapshot {
+export function getMiseStatusSnapshot(state: MiseStatusInput): MiseStatusSnapshot {
 	if (state.miseNeedsReload) {
 		return {
 			key: "updated_needs_reload",

@@ -1,13 +1,11 @@
 import { invoke } from "@tauri-apps/api/core";
 
-import type { AppRPC } from "../../shared/contracts";
-
-type Requests = AppRPC["bun"]["requests"];
+import type { AppRequests } from "../../shared/contracts";
 
 type RequestClient = {
-	[K in keyof Requests]: Requests[K]["params"] extends undefined
-		? () => Promise<Requests[K]["response"]>
-		: (params: Requests[K]["params"]) => Promise<Requests[K]["response"]>;
+	[K in keyof AppRequests]: AppRequests[K]["params"] extends undefined
+		? () => Promise<AppRequests[K]["response"]>
+		: (params: AppRequests[K]["params"]) => Promise<AppRequests[K]["response"]>;
 };
 
 const toSnakeCase = (name: string) =>

@@ -15,10 +15,7 @@ use crate::version::{
 };
 
 pub(crate) async fn mise_version(state: &MiseState) -> Result<Option<String>, String> {
-    let result = mise::run(state, &["--version"]).await?;
-    if result.exit_code != 0 {
-        return Err(mise::err_or(&result.stderr, "failed to run 'mise --version'"));
-    }
+    let result = mise::run_ok(state, &["--version"], "failed to run 'mise --version'").await?;
     Ok(result
         .stdout
         .lines()
@@ -60,10 +57,12 @@ pub async fn get_latest_mise_release() -> Result<Option<String>, String> {
 pub async fn self_update_mise(state: State<'_, MiseState>) -> Result<MiseSelfUpdateResult, String> {
     let before_version = mise_version(&state).await.unwrap_or(None);
 
-    let result = mise::run(&state, &["self-update", "-y"]).await?;
-    if result.exit_code != 0 {
-        return Err(mise::err_or(&result.stderr, "failed to run 'mise self-update -y'"));
-    }
+    let result = mise::run_ok(
+        &state,
+        &["self-update", "-y"],
+        "failed to run 'mise self-update -y'",
+    )
+    .await?;
 
     let after_version = match mise_version(&state).await {
         Ok(version) => version,
@@ -78,31 +77,15 @@ pub async fn self_update_mise(state: State<'_, MiseState>) -> Result<MiseSelfUpd
     })
 }
 
-#[tauri::command]
-pub async fn check_plugin_updates(
-    state: State<'_, MiseState>,
+/// PRD rules for the Plugins Updater columns, separated from the mise call so
+/// they are testable without a mise binary. Input is the raw `ls-remote` stdout.
+pub(crate) fn plan_plugin_update(
     plugin: String,
     base_version: String,
     include_channels: bool,
-) -> Result<PluginUpdateInfo, String> {
-    let remote = mise::run(&state, &["ls-remote", &plugin, "--json"]).await?;
-    if remote.exit_code != 0 {
-        let error = mise::err_or(
-            &remote.stderr,
-            &format!("failed to fetch remote versions for {plugin}"),
-        );
-        return Ok(PluginUpdateInfo {
-            plugin,
-            base_version,
-            same_major_latest: None,
-            release_latest: None,
-            overall_latest: None,
-            checked_versions: 0,
-            error: Some(error),
-        });
-    }
-
-    let mut remote_versions: Vec<String> = mise::parse_remote_versions(&remote.stdout)
+    remote_stdout: &str,
+) -> PluginUpdateInfo {
+    let mut remote_versions: Vec<String> = mise::parse_remote_versions(remote_stdout)
         .into_iter()
         .filter(|version| include_channels || starts_with_digit(version))
         .filter(|version| is_stable_version(&plugin, version))
@@ -153,7 +136,7 @@ pub async fn check_plugin_updates(
         )
     });
 
-    Ok(PluginUpdateInfo {
+    PluginUpdateInfo {
         checked_versions: unique.len(),
         plugin,
         base_version,
@@ -161,7 +144,34 @@ pub async fn check_plugin_updates(
         release_latest,
         overall_latest,
         error: None,
-    })
+    }
+}
+
+#[tauri::command]
+pub async fn check_plugin_updates(
+    state: State<'_, MiseState>,
+    plugin: String,
+    base_version: String,
+    include_channels: bool,
+) -> Result<PluginUpdateInfo, String> {
+    let remote = mise::run(&state, &["ls-remote", &plugin, "--json"]).await?;
+    if remote.exit_code != 0 {
+        let error = mise::err_or(
+            &remote.stderr,
+            &format!("failed to fetch remote versions for {plugin}"),
+        );
+        return Ok(PluginUpdateInfo {
+            plugin,
+            base_version,
+            same_major_latest: None,
+            release_latest: None,
+            overall_latest: None,
+            checked_versions: 0,
+            error: Some(error),
+        });
+    }
+
+    Ok(plan_plugin_update(plugin, base_version, include_channels, &remote.stdout))
 }
 
 #[tauri::command]
@@ -171,13 +181,12 @@ pub async fn use_global_plugin(
     target_version: String,
 ) -> Result<UpdateResult, String> {
     let spec = format!("{plugin}@{target_version}");
-    let result = mise::run(&state, &["use", "-g", "-y", &spec]).await?;
-    if result.exit_code != 0 {
-        return Err(mise::err_or(
-            &result.stderr,
-            &format!("failed to set global version for {spec}"),
-        ));
-    }
+    let result = mise::run_ok(
+        &state,
+        &["use", "-g", "-y", &spec],
+        &format!("failed to set global version for {spec}"),
+    )
+    .await?;
     Ok(UpdateResult {
         plugin,
         target_version,
@@ -192,10 +201,12 @@ pub async fn install_plugin(
     target_version: String,
 ) -> Result<UpdateResult, String> {
     let spec = format!("{plugin}@{target_version}");
-    let result = mise::run(&state, &["install", "-y", &spec]).await?;
-    if result.exit_code != 0 {
-        return Err(mise::err_or(&result.stderr, &format!("failed to install {spec}")));
-    }
+    let result = mise::run_ok(
+        &state,
+        &["install", "-y", &spec],
+        &format!("failed to install {spec}"),
+    )
+    .await?;
     Ok(UpdateResult {
         plugin,
         target_version,
@@ -215,10 +226,12 @@ pub async fn delete_plugin_version(
     }
 
     let spec = format!("{plugin}@{target_version}");
-    let result = mise::run(&state, &["uninstall", "-y", &spec]).await?;
-    if result.exit_code != 0 {
-        return Err(mise::err_or(&result.stderr, &format!("failed to uninstall {spec}")));
-    }
+    let result = mise::run_ok(
+        &state,
+        &["uninstall", "-y", &spec],
+        &format!("failed to uninstall {spec}"),
+    )
+    .await?;
     Ok(UpdateResult {
         plugin,
         target_version,
@@ -256,10 +269,12 @@ pub async fn install_plugin_definition(
         args.push(url.clone());
     }
 
-    let result = mise::run(&state, &args).await?;
-    if result.exit_code != 0 {
-        return Err(mise::err_or(&result.stderr, &format!("failed to install plugin '{plugin}'")));
-    }
+    let result = mise::run_ok(
+        &state,
+        &args,
+        &format!("failed to install plugin '{plugin}'"),
+    )
+    .await?;
 
     let stdout = result.stdout.trim().to_string();
     if let Some(url) = &trimmed_git_url {
@@ -286,10 +301,12 @@ pub async fn uninstall_plugin_definition(
     state: State<'_, MiseState>,
     plugin: String,
 ) -> Result<PluginInstallResult, String> {
-    let result = mise::run(&state, &["plugins", "uninstall", "-y", &plugin]).await?;
-    if result.exit_code != 0 {
-        return Err(mise::err_or(&result.stderr, &format!("failed to uninstall plugin '{plugin}'")));
-    }
+    let result = mise::run_ok(
+        &state,
+        &["plugins", "uninstall", "-y", &plugin],
+        &format!("failed to uninstall plugin '{plugin}'"),
+    )
+    .await?;
     Ok(PluginInstallResult {
         plugin,
         stdout: result.stdout.trim().to_string(),
@@ -340,4 +357,54 @@ pub fn get_platform() -> String {
         other => other,
     }
     .to_string()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn plan(plugin: &str, base: &str, include_channels: bool, stdout: &str) -> PluginUpdateInfo {
+        plan_plugin_update(plugin.to_string(), base.to_string(), include_channels, stdout)
+    }
+
+    #[test]
+    fn computes_same_major_release_and_pre_release_columns() {
+        let info = plan("node", "20.1.0", false, "20.2.0\n21.0.0\n22.0.0-rc1\nlts\n20.1.0");
+        // "lts" is dropped without include_channels; 22.0.0-rc1 > base so it surfaces.
+        assert_eq!(info.same_major_latest.as_deref(), Some("20.2.0"));
+        assert_eq!(info.release_latest.as_deref(), Some("21.0.0"));
+        assert_eq!(info.overall_latest.as_deref(), Some("22.0.0-rc1"));
+        assert_eq!(info.checked_versions, 4);
+        assert!(info.error.is_none());
+    }
+
+    #[test]
+    fn python_pre_releases_are_filtered_out_entirely() {
+        let info = plan("python", "3.12.0", false, "3.13.0a1\n3.12.1\n3.13.0");
+        assert_eq!(info.release_latest.as_deref(), Some("3.13.0"));
+        assert_eq!(info.overall_latest, None);
+        assert_eq!(info.checked_versions, 2);
+    }
+
+    #[test]
+    fn pre_release_not_newer_than_semver_base_stays_hidden() {
+        let info = plan("node", "22.0.0", false, "21.0.0\n22.0.0-rc1\n22.0.0");
+        assert_eq!(info.release_latest.as_deref(), Some("22.0.0"));
+        assert_eq!(info.overall_latest, None);
+    }
+
+    #[test]
+    fn non_semver_base_requires_pre_release_at_least_release_latest() {
+        let info = plan("java", "system", true, "17.0.0\n18-ea\n17.0.1");
+        assert_eq!(info.release_latest.as_deref(), Some("17.0.1"));
+        assert_eq!(info.overall_latest.as_deref(), Some("18-ea"));
+        assert_eq!(info.same_major_latest, None);
+    }
+
+    #[test]
+    fn accepts_json_remote_listings() {
+        let info = plan("node", "1.0.0", false, r#"["1.0.0", {"version": "1.1.0"}]"#);
+        assert_eq!(info.release_latest.as_deref(), Some("1.1.0"));
+        assert_eq!(info.checked_versions, 2);
+    }
 }
