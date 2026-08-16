@@ -1,4 +1,5 @@
 <script lang="ts">
+	import appIcon from "../assets/app-icon.png";
 	import { state, setBusy } from "../core/state.svelte";
 	import { getMiseStatusSnapshot, normalizeVersionToken } from "../core/miseStatus";
 	import {
@@ -56,7 +57,7 @@
 </script>
 
 <aside class="sidebar">
-	<div class="brand"><span class="brand-ico">⛰</span><span class="lbl">Mise Manager</span></div>
+	<div class="brand"><img class="brand-ico" src={appIcon} alt="" /><span class="lbl">Mise Manager</span></div>
 	<nav>
 		<button class:on={state.activeTab === "overview"} onclick={openOverview}>
 			<span class="ico">⌂</span><span class="lbl">Overview</span>

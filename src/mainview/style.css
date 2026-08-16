@@ -107,8 +107,9 @@ input:focus-visible {
 }
 
 .brand-ico {
-	font-size: 1.05rem;
-	line-height: 1;
+	width: 24px;
+	height: 24px;
+	flex: none;
 }
 
 .sidebar nav button {
