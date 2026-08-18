@@ -48,7 +48,7 @@
 
 ## Data Sources
 - Current mise version: `mise --version`
-- Latest mise release: `https://api.github.com/repos/jdx/mise/releases/latest`
+- Latest mise release: `https://mise.jdx.dev/VERSION` (fallback: `https://api.github.com/repos/jdx/mise/releases/latest`)
 - Installed tool versions: `mise ls --installed --json`
 - Active global versions: `mise ls --global --json`
 - Installed user plugins: `mise plugins ls --user`, `mise plugins ls --user --urls`

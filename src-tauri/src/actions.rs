@@ -29,28 +29,40 @@ pub async fn get_mise_version(state: State<'_, MiseState>) -> Result<Option<Stri
     mise_version(&state).await
 }
 
-#[tauri::command]
-pub async fn get_latest_mise_release() -> Result<Option<String>, String> {
+async fn http_text(url: &str) -> Result<String, String> {
     let response = reqwest::Client::new()
-        .get("https://api.github.com/repos/jdx/mise/releases/latest")
+        .get(url)
         .header("User-Agent", "mise-manager")
-        .header("Accept", "application/vnd.github+json")
         .send()
         .await
         .map_err(|error| error.to_string())?;
     if !response.status().is_success() {
-        return Err(format!(
-            "failed to fetch latest mise release (status={})",
-            response.status().as_u16()
-        ));
+        return Err(format!("{url} returned status {}", response.status().as_u16()));
     }
-    let parsed: serde_json::Value = response.json().await.map_err(|error| error.to_string())?;
-    Ok(parsed
-        .get("tag_name")
-        .and_then(|v| v.as_str())
-        .map(str::trim)
-        .filter(|tag| !tag.is_empty())
-        .map(String::from))
+    response.text().await.map_err(|error| error.to_string())
+}
+
+/// `mise` isn't in its own tool registry, so there is no CLI way to ask for the
+/// latest release. https://mise.jdx.dev/VERSION is what mise's own install.sh
+/// reads: plain text, no GitHub API quota. The Releases API stays as a fallback
+/// but costs one of the 60 unauthenticated requests/hour shared with self-update.
+#[tauri::command]
+pub async fn get_latest_mise_release() -> Result<Option<String>, String> {
+    let tag = match http_text("https://mise.jdx.dev/VERSION").await {
+        Ok(text) => text,
+        Err(version_error) => {
+            let body = http_text("https://api.github.com/repos/jdx/mise/releases/latest")
+                .await
+                .map_err(|api_error| format!("{version_error}; {api_error}"))?;
+            serde_json::from_str::<serde_json::Value>(&body)
+                .map_err(|error| error.to_string())?
+                .get("tag_name")
+                .and_then(|value| value.as_str())
+                .unwrap_or_default()
+                .to_string()
+        }
+    };
+    Ok(Some(tag.trim().to_string()).filter(|tag| !tag.is_empty()))
 }
 
 #[tauri::command]
