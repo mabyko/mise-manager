@@ -1,1 +1,0 @@
-- [x] Plugins Updater 탭에서 각 Plugin 버전을 Delete 하면 상태 표시를 Updating에서 Deleting으로 수정함

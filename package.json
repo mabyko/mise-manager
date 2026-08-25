@@ -3,6 +3,7 @@
 	"version": "0.1.2",
 	"type": "module",
 	"description": "Desktop app for mise plugin version management",
+	"license": "MIT",
 	"scripts": {
 		"ui:build": "vite build",
 		"ui:dev": "vite --port 5173",

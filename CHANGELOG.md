@@ -64,8 +64,7 @@
 - `Logs` 탭:
   - 작업 로그 조회 및 `Clear Logs`
 - 문서:
-  - `README.md` 문서 역할/사용 가이드 강화
-  - `PRD.md`, `PLANNING.md`, `DEVELOPMENT_STAGES.md` 최신 구조 반영
+  - 프로젝트 문서와 사용 가이드를 당시 최신 구조에 맞춰 정리
 
 ### Changed
 - 아키텍처 리팩토링:

@@ -89,7 +89,7 @@ pub async fn self_update_mise(state: State<'_, MiseState>) -> Result<MiseSelfUpd
     })
 }
 
-/// PRD rules for the Plugins Updater columns, separated from the mise call so
+/// Update rules for the Plugins Updater columns, separated from the mise call so
 /// they are testable without a mise binary. Input is the raw `ls-remote` stdout.
 pub(crate) fn plan_plugin_update(
     plugin: String,
@@ -124,7 +124,7 @@ pub(crate) fn plan_plugin_update(
             .filter(|v| !is_pre_release_version(v)),
     );
 
-    // PRD rules: pre-release only counts as "overall latest" when
+    // A pre-release only counts as "overall latest" when
     // (semver base) it is newer than the base, or
     // (non-semver base) it is at least the release latest.
     let is_base_semver = starts_with_digit(&base_version);
