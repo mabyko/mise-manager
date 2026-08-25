@@ -4,3 +4,6 @@ build/
 artifacts/
 .DS_Store
 *.log
+
+# Personal Tauri identifier override; apply explicitly with --config.
+src-tauri/tauri.local.conf.json

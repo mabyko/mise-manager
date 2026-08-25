@@ -73,6 +73,21 @@ bun install
 bun run dev   # tauri dev (Vite HMR 포함)
 ```
 
+공개 저장소의 기본 빌드는 `forked.misemanager.local`을 사용합니다. 개인 Apple 개발 빌드는 git에서 제외된
+`src-tauri/tauri.local.conf.json`에 개인 ID를 넣고 명시적으로 적용합니다.
+
+```json
+{
+  "identifier": "<personal-bundle-id>"
+}
+```
+
+```bash
+bun run dev -- --config src-tauri/tauri.local.conf.json
+```
+
+공식 bundle ID와 서명 값은 공개 저장소 밖에서 관리합니다.
+
 ## Build
 ```bash
 bun run build   # tauri build (.app/.dmg)
