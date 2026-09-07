@@ -1,31 +1,16 @@
 <script lang="ts">
 	import { state } from "../core/state.svelte";
+	import { modal } from "../core/dialog";
 	import { confirmMajorUpdate } from "../features/updater";
-
-	// Escape closes; Enter deliberately does nothing on a consequential confirm.
-	function handleKeydown(event: KeyboardEvent) {
-		if (state.pendingMajorUpdate && event.key === "Escape") {
-			state.pendingMajorUpdate = null;
-		}
-	}
 </script>
 
-<svelte:window onkeydown={handleKeydown} />
-
 {#if state.pendingMajorUpdate}
-	<div class="modal-overlay">
-		<div class="modal-card">
-			<h3>{state.pendingMajorUpdate.pluginName} {state.pendingMajorUpdate.targetVersion} (Major) 로 전환</h3>
-			<p>
-				<b>{state.pendingMajorUpdate.fromVersion ?? "현재 버전"} → {state.pendingMajorUpdate.targetVersion}</b> 은 major 업데이트입니다.<br />
-				설치 후 전역(Use Global) 버전이 즉시 전환되며, <code>.mise.toml</code>이 없는
-				모든 셸/프로젝트에 적용됩니다.<br />
-				기존 버전은 그대로 유지되므로 Plugins Updater에서 언제든 되돌릴 수 있습니다.
-			</p>
-			<div class="modal-actions">
-				<button class="mini-btn" onclick={() => (state.pendingMajorUpdate = null)}>Cancel</button>
-				<button class="mini-btn primary" disabled={state.busy} onclick={() => void confirmMajorUpdate()}>Install &amp; Use Global</button>
-			</div>
-		</div>
-	</div>
+	<dialog class="modal-card" use:modal oncancel={() => (state.pendingMajorUpdate = null)} aria-labelledby="major-dialog-title">
+		<span class="eyebrow">새 major · 호환성 확인 필요</span>
+		<h2 id="major-dialog-title">{state.pendingMajorUpdate.pluginName}의 새 major로 전환할까요?</h2>
+		<p class="dialog-version mono">{state.pendingMajorUpdate.fromVersion ?? "전역 미선택"} → {state.pendingMajorUpdate.targetVersion}</p>
+		<p>설치 후 전역 버전을 전환합니다. 프로젝트가 새 major를 지원하는지 확인하세요. 프로젝트별 mise 설정이 있으면 그 설정이 우선합니다.</p>
+		<p>기존 버전은 보관됩니다. 내 도구에서 이전 버전을 다시 선택할 수 있습니다.</p>
+		<div class="modal-actions"><button class="btn" onclick={() => (state.pendingMajorUpdate = null)}>취소</button><button class="btn primary" disabled={state.busy} onclick={() => void confirmMajorUpdate()}>설치 후 전역 전환</button></div>
+	</dialog>
 {/if}

@@ -1,95 +1,47 @@
 <script lang="ts">
 	import appIcon from "../assets/app-icon.png";
-	import { state, setBusy } from "../core/state.svelte";
+	import { state } from "../core/state.svelte";
 	import { getMiseStatusSnapshot, normalizeVersionToken } from "../core/miseStatus";
-	import {
-		checkLatestMiseRelease,
-		checkMiseInstallationStatus,
-		loadPlatform,
-		reloadMiseVersion,
-	} from "../features/mise";
-	import { ensureUpdaterData } from "../features/updater";
 	import { reloadPluginDefinitions } from "../features/installs";
+	import type { ActiveTab } from "../core/types";
 
 	const status = $derived(getMiseStatusSnapshot(state));
-	const currentVersion = $derived(normalizeVersionToken(state.miseVersion) ?? "–");
-	const latestVersion = $derived(normalizeVersionToken(state.miseLatestVersion));
-	const hasUpdate = $derived(status.key === "update_available");
+	const currentVersion = $derived(normalizeVersionToken(state.miseVersion) ?? "확인 중");
+	const icons = {
+		updater: "M4 7h16v13H4z M9 7V4h6v3 M4 12h16 M10 12v3h4v-3",
+		installs: "M12 4v16 M4 12h16",
+		logs: "m4 7 5 5-5 5 M13 17h7",
+	};
 
-	function openOverview(): void {
-		state.activeTab = "overview";
-		ensureUpdaterData();
-	}
-
-	function openMiseTab(): void {
-		state.activeTab = "mise";
-		void (async () => {
-			if (state.platform === "unknown") {
-				await loadPlatform();
-			}
-			if (!state.miseInstalledChecked) {
-				await checkMiseInstallationStatus();
-			}
-			if (state.miseIsInstalled && (!state.miseLoaded || !state.miseLatestLoaded)) {
-				await reloadMiseVersion();
-				await checkLatestMiseRelease();
-			}
-		})();
-	}
-
-	function openUpdaterTab(): void {
-		state.activeTab = "updater";
-		ensureUpdaterData();
-	}
-
-	function openInstallsTab(): void {
-		state.activeTab = "installs";
-		if (!state.installsLoaded) {
+	function navigate(tab: ActiveTab) {
+		state.activeTab = tab;
+		if (tab === "installs" && !state.installsLoaded && !state.busy) {
 			void reloadPluginDefinitions();
-		}
-	}
-
-	function notifySettingsPending(): void {
-		if (!state.busy) {
-			setBusy(false, "설정 화면은 준비 중입니다 ⚙");
 		}
 	}
 </script>
 
 <aside class="sidebar">
-	<div class="brand"><img class="brand-ico" src={appIcon} alt="" /><span class="lbl">Mise Manager</span></div>
-	<nav>
-		<button class:on={state.activeTab === "overview"} onclick={openOverview}>
-			<span class="ico">⌂</span><span class="lbl">Overview</span>
-		</button>
-		<button class:on={state.activeTab === "mise"} onclick={openMiseTab}>
-			<span class="ico">◉</span><span class="lbl">Mise Version</span>
-			{#if hasUpdate}<span class="cnt">!</span>{/if}
-		</button>
-		<button class:on={state.activeTab === "updater"} onclick={openUpdaterTab}>
-			<span class="ico">⇅</span><span class="lbl">Plugins Updater</span>
-			{#if state.plugins.length > 0}<span class="cnt">{state.plugins.length}</span>{/if}
-		</button>
-		<button class:on={state.activeTab === "installs"} onclick={openInstallsTab}>
-			<span class="ico">＋</span><span class="lbl">Plugin Installs</span>
-		</button>
-		<button class:on={state.activeTab === "logs"} onclick={() => (state.activeTab = "logs")}>
-			<span class="ico">≡</span><span class="lbl">Logs</span>
-			{#if state.logs.length > 0}<span class="cnt">{state.logs.length}</span>{/if}
-		</button>
+	<div class="brand"><img class="brand-ico" src={appIcon} alt="" /><span>Mise Manager</span></div>
+	<nav aria-label="주 메뉴">
+		{#each [{ tab: "updater", label: "내 도구" }, { tab: "installs", label: "플러그인 관리" }, { tab: "logs", label: "작업 기록" }] as item (item.tab)}
+			<button
+				class:on={state.activeTab === item.tab}
+				aria-current={state.activeTab === item.tab ? "page" : undefined}
+				disabled={item.tab === "installs" && state.busy && !state.installsLoaded}
+				onclick={() => navigate(item.tab as ActiveTab)}
+			>
+				<svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d={icons[item.tab as keyof typeof icons]} /></svg>
+				<span>{item.label}</span>
+				{#if item.tab === "updater" && state.toolsLoaded}<span class="cnt">{state.plugins.length}</span>{/if}
+			</button>
+		{/each}
 	</nav>
 	<div class="side-foot">
-		<button
-			class="foot-item"
-			title="Settings — 준비 중"
-			aria-label="Settings"
-			onclick={notifySettingsPending}
-		>
-			<span class="ico">⚙</span>
-			<span class="lbl">mise <span class="v">{currentVersion}</span></span>
-			{#if hasUpdate}
-				<span class="foot-dot" title="mise {currentVersion} → {latestVersion} Update Available"></span>
-			{/if}
+		<span class="side-status"><span class="dot {state.miseCurrentError || !state.miseIsInstalled ? 'err' : 'ok'}"></span>{!state.miseInstalledChecked ? "mise 확인 중" : state.miseIsInstalled ? "mise 연결됨" : "mise 설치 필요"}</span>
+		<span class="mono">{currentVersion}</span>
+		<button class="foot-item" onclick={() => navigate("mise")} aria-current={state.activeTab === "mise" ? "page" : undefined}>
+			{status.canUpdate ? "새 버전 있음 · 확인 →" : "mise 관리 →"}
 		</button>
 	</div>
 </aside>

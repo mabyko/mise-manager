@@ -66,12 +66,12 @@ describe("installs", () => {
 
 		const html = renderComponent(InstallsTab);
 
-		expect(html).toContain("Install Custom Plugin");
+		expect(html).toContain("사용자 플러그인 추가");
 		expect(html).toContain("icon-btn");
-		expect(html).toContain('aria-label="Reload Plugins"');
+		expect(html).toContain('aria-label="목록 새로고침"');
 		expect(html).toContain("↻");
-		expect(html.indexOf("Install Custom Plugin")).toBeLessThan(
-			html.indexOf("Reload Plugins"),
+		expect(html.indexOf("사용자 플러그인 추가")).toBeLessThan(
+			html.indexOf("목록 새로고침"),
 		);
 	});
 
@@ -81,7 +81,7 @@ describe("installs", () => {
 
 		const html = renderComponent(InstallsTab);
 
-		expect(html).toContain("Install Custom Plugin");
+		expect(html).toContain("사용자 플러그인 추가");
 		expect(html).toContain("검색 결과가 없습니다.");
 	});
 
@@ -92,7 +92,7 @@ describe("installs", () => {
 
 		expect(html).toContain('class="actions"');
 		expect(html).toContain('class="row-actions"');
-		expect(html).toContain("Install Plugin");
+		expect(html).toContain("플러그인 설치");
 	});
 
 	test("normalizes custom install shorthand and clears busy after reload", async () => {

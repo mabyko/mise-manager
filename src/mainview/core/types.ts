@@ -4,7 +4,7 @@ import type {
 	PluginSummary,
 } from "../../shared/contracts";
 
-export type ActiveTab = "overview" | "mise" | "updater" | "logs" | "installs";
+export type ActiveTab = "mise" | "updater" | "logs" | "installs";
 
 export interface PluginRow extends PluginSummary {
 	sameMajorLatest: string | null;
@@ -17,6 +17,11 @@ export interface PluginRow extends PluginSummary {
 
 export interface MainViewState {
 	activeTab: ActiveTab;
+	selectedToolName: string | null;
+	toolSearchQuery: string;
+	toolUpdatesOnly: boolean;
+	toolsLoaded: boolean;
+	toolsError: string | null;
 	miseVersion: string | null;
 	miseLoaded: boolean;
 	miseCurrentError: string | null;
@@ -27,7 +32,6 @@ export interface MainViewState {
 	miseNeedsReload: boolean;
 	miseLastResult: string;
 	pendingMiseUpdateConfirm: boolean;
-	updaterAutoChecked: boolean;
 	plugins: PluginRow[];
 	logs: string[];
 	busy: boolean;
@@ -37,7 +41,7 @@ export interface MainViewState {
 	/** Latest subprocess output line streamed from the backend while busy. */
 	liveOutputLine: string;
 	pendingDelete: { pluginName: string; version: string } | null;
-	/** Major update awaiting confirmation (Overview action). */
+	/** Major update awaiting confirmation. */
 	pendingMajorUpdate: { pluginName: string; fromVersion: string | null; targetVersion: string } | null;
 	remotePluginNames: string[];
 	installedPluginNames: string[];

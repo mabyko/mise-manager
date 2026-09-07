@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { modal } from "../core/dialog";
 	import { state } from "../core/state.svelte";
 	import { closePluginUrlDialog, submitPluginUrlDialog } from "../features/installs";
 
@@ -6,7 +7,7 @@
 	const isEdit = $derived(dialog?.mode === "edit");
 	const isCustomInstall = $derived(dialog?.mode === "custom-install");
 	const title = $derived(
-		isCustomInstall ? "Install Custom Plugin" : isEdit ? "Edit Plugin URL" : "Install Plugin",
+		isCustomInstall ? "사용자 플러그인 추가" : isEdit ? "플러그인 URL 수정" : "플러그인 추가",
 	);
 	const description = $derived(
 		isCustomInstall
@@ -23,56 +24,35 @@
 			? "https://github.com/owner/repo.git"
 			: "https://github.com/owner/repo.git (optional)",
 	);
-
-	function focusOnMount(node: HTMLElement, enabled: boolean = true) {
-		if (enabled) {
-			node.focus();
-		}
-	}
-
-	function handleKeydown(event: KeyboardEvent) {
-		if (!state.pendingPluginUrlDialog) {
-			return;
-		}
-		if (event.key === "Escape") {
-			closePluginUrlDialog();
-		} else if (event.key === "Enter" && !state.busy) {
-			event.preventDefault();
-			void submitPluginUrlDialog();
-		}
-	}
 </script>
 
-<svelte:window onkeydown={handleKeydown} />
 
 {#if dialog}
-	<div class="modal-overlay">
-		<div class="modal-card">
-			<h3>{title}</h3>
+	<dialog class="modal-card" use:modal oncancel={closePluginUrlDialog} aria-labelledby="plugin-dialog-title">
+		<form onsubmit={(event) => { event.preventDefault(); if (!state.busy) void submitPluginUrlDialog(); }}>
+			<h2 id="plugin-dialog-title">{title}</h2>
 			<p>
 				{#if !isCustomInstall}Plugin: <strong>{pluginName}</strong><br />{/if}
 				{description}
 			</p>
 			{#if isCustomInstall}
-				<input
+				<label class="modal-field">플러그인 이름<input
 					class="modal-input"
 					placeholder="Plugin name"
 					bind:value={state.pendingPluginNameValue}
-					use:focusOnMount
-				/>
+				/></label>
 			{/if}
-			<input
+			<label class="modal-field">Git URL<input
 				class="modal-input"
 				placeholder={urlPlaceholder}
 				bind:value={state.pendingPluginUrlValue}
-				use:focusOnMount={!isCustomInstall}
-			/>
+			/></label>
 			<div class="modal-actions">
-				<button class="mini-btn" onclick={closePluginUrlDialog}>Cancel</button>
-				<button class="mini-btn primary" disabled={state.busy} onclick={() => void submitPluginUrlDialog()}>
-					{isEdit ? "Save URL" : "Install"}
+				<button type="button" class="mini-btn" onclick={closePluginUrlDialog}>취소</button>
+				<button type="submit" class="mini-btn primary" disabled={state.busy}>
+					{isEdit ? "URL 저장" : "설치"}
 				</button>
 			</div>
-		</div>
-	</div>
+		</form>
+	</dialog>
 {/if}

@@ -1,9 +1,12 @@
 import type { MainViewState } from "./types";
 
-export const checkModeActiveOnly = true;
-
 export const state: MainViewState = $state({
-	activeTab: "overview",
+	activeTab: "updater",
+	selectedToolName: null,
+	toolSearchQuery: "",
+	toolUpdatesOnly: false,
+	toolsLoaded: false,
+	toolsError: null,
 	miseVersion: null,
 	miseLoaded: false,
 	miseCurrentError: null,
@@ -14,7 +17,6 @@ export const state: MainViewState = $state({
 	miseNeedsReload: false,
 	miseLastResult: "",
 	pendingMiseUpdateConfirm: false,
-	updaterAutoChecked: false,
 	plugins: [],
 	logs: [],
 	busy: false,
