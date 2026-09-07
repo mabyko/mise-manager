@@ -15,15 +15,16 @@ macOS is currently the only supported platform.
 
 ## Screenshots
 
-Click a screenshot to view the full-size image.
+Captured from the actual app UI in browser preview with the light theme. Tool names and versions use sample data. Click a screenshot to view the full-size image.
 
-| Overview | Plugins Updater | Plugin Installs |
+| Overview | My Tools | Plugins |
 | :---: | :---: | :---: |
-| <a href="./docs/images/mise-manager-overview.png"><img src="./docs/images/mise-manager-overview.png" alt="Mise Manager Overview" width="260"></a> | <a href="./docs/images/mise-manager-plugin-updater.png"><img src="./docs/images/mise-manager-plugin-updater.png" alt="Mise Manager Plugins Updater" width="260"></a> | <a href="./docs/images/mise-manager-plugin-installs.png"><img src="./docs/images/mise-manager-plugin-installs.png" alt="Mise Manager Plugin Installs" width="260"></a> |
+| <a href="./docs/images/mise-manager-overview.png"><img src="./docs/images/mise-manager-overview.png" alt="Mise Manager Overview" width="260"></a> | <a href="./docs/images/mise-manager-my-tools.png"><img src="./docs/images/mise-manager-my-tools.png" alt="Mise Manager My Tools" width="260"></a> | <a href="./docs/images/mise-manager-plugin-installs.png"><img src="./docs/images/mise-manager-plugin-installs.png" alt="Mise Manager Plugins" width="260"></a> |
 
 ## Features
 
-- See the current mise version, installed tools, active global versions, available updates, and recent activity at a glance.
+- Use **Overview** to see tool updates, states that need attention, and recent activity, with a dedicated card for updating mise itself.
+- Use **My Tools** to search or filter for updates, then review the current global version and proposed changes in the detail pane beside the list.
 - Compare same-major, latest stable, and pre-release candidates for every installed tool.
 - Install tool versions, switch the global version, or remove unused versions.
 - Update a tool in one action while keeping the previous version available for rollback.

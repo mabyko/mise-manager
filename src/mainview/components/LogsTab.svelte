@@ -4,9 +4,9 @@
 </script>
 
 <div class="page-head">
-	<h1>Logs</h1>
+	<div><h1>작업 기록</h1><p class="page-subtitle">버전 확인과 실행 결과를 확인합니다</p></div>
 	<div class="page-actions">
-		<button class="btn" onclick={clearLogs}>Clear Logs</button>
+		<button class="btn" onclick={clearLogs}>기록 지우기</button>
 	</div>
 </div>
 

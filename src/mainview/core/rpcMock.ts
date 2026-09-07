@@ -7,22 +7,24 @@ import type { RequestClient } from "./rpc";
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
+// Fixed example versions keep UI reviews reproducible; these are not live releases.
+let miseVersion = "2026.8.12 macos-arm64";
 const plugins: PluginSummary[] = [
-	{ name: "bun", activeGlobalVersion: "1.3.14", installedVersions: ["1.3.14"] },
-	{ name: "flutter", activeGlobalVersion: "stable", installedVersions: ["stable"] },
-	{ name: "node", activeGlobalVersion: "24.19.0", installedVersions: ["24.19.0", "22.11.0"] },
-	{ name: "python", activeGlobalVersion: "3.14.7", installedVersions: ["3.14.7"] },
-	{ name: "ruby", activeGlobalVersion: "4.0.6", installedVersions: ["4.0.6"] },
-	{ name: "rust", activeGlobalVersion: "1.97.1", installedVersions: ["1.97.1"] },
+	{ name: "node", activeGlobalVersion: "22.14.0", installedVersions: ["22.14.0", "20.19.0"] },
+	{ name: "python", activeGlobalVersion: "3.12.8", installedVersions: ["3.12.8", "3.11.11"] },
+	{ name: "bun", activeGlobalVersion: "1.2.4", installedVersions: ["1.2.4"] },
+	{ name: "rust", activeGlobalVersion: "1.85.0", installedVersions: ["1.85.0"] },
+	{ name: "go", activeGlobalVersion: "1.24.0", installedVersions: ["1.24.0"] },
+	{ name: "ruby", activeGlobalVersion: "3.4.2", installedVersions: ["3.4.2"] },
 ];
 
 const updates: Record<string, Omit<PluginUpdateInfo, "plugin" | "baseVersion">> = {
-	bun: { sameMajorLatest: "1.3.14", releaseLatest: "1.3.14", overallLatest: null, checkedVersions: 214 },
-	flutter: { sameMajorLatest: null, releaseLatest: "1.12.13+hotfix.9-stable", overallLatest: "3.47.0-stable", checkedVersions: 312 },
-	node: { sameMajorLatest: "24.19.0", releaseLatest: "26.7.0", overallLatest: null, checkedVersions: 860 },
-	python: { sameMajorLatest: "3.14.7", releaseLatest: "3.14.7", overallLatest: null, checkedVersions: 248 },
-	ruby: { sameMajorLatest: null, releaseLatest: null, overallLatest: null, checkedVersions: 0, error: "ls-remote failed: registry timeout" },
-	rust: { sameMajorLatest: "1.97.1", releaseLatest: "1.97.1", overallLatest: null, checkedVersions: 152 },
+	node: { sameMajorLatest: "22.15.0", releaseLatest: "24.0.0", overallLatest: "25.0.0-rc.1", checkedVersions: 860 },
+	python: { sameMajorLatest: "3.13.2", releaseLatest: "3.13.2", overallLatest: null, checkedVersions: 248 },
+	bun: { sameMajorLatest: "1.2.4", releaseLatest: "1.2.4", overallLatest: null, checkedVersions: 214 },
+	rust: { sameMajorLatest: "1.85.0", releaseLatest: "1.85.0", overallLatest: null, checkedVersions: 152 },
+	go: { sameMajorLatest: "1.24.0", releaseLatest: "1.24.0", overallLatest: null, checkedVersions: 130 },
+	ruby: { sameMajorLatest: "3.4.2", releaseLatest: "3.4.2", overallLatest: null, checkedVersions: 133 },
 };
 
 const remoteNames = [
@@ -36,18 +38,20 @@ const remoteNames = [
 export const mockRequest: RequestClient = {
 	getMiseVersion: async () => {
 		await delay(120);
-		return "2026.8.6 macos-arm64 (2026-08-14)";
+		return miseVersion;
 	},
 	getLatestMiseRelease: async () => {
 		await delay(250);
-		return "v2026.8.7";
+		return "v2026.8.13";
 	},
 	selfUpdateMise: async () => {
 		await delay(1200);
+		const beforeVersion = miseVersion;
+		miseVersion = "2026.8.13 macos-arm64";
 		return {
-			beforeVersion: "2026.8.6 macos-arm64 (2026-08-14)",
-			afterVersion: "2026.8.7 macos-arm64 (2026-08-16)",
-			stdout: "mise self-update\ndownloading mise-v2026.8.7-macos-arm64.tar.gz\ninstalled mise 2026.8.7",
+			beforeVersion,
+			afterVersion: miseVersion,
+			stdout: "mise self-update\ndownloading mise-v2026.8.13-macos-arm64.tar.gz\ninstalled mise 2026.8.13",
 			stderr: "",
 		};
 	},
@@ -56,7 +60,7 @@ export const mockRequest: RequestClient = {
 		return structuredClone(plugins);
 	},
 	checkPluginUpdates: async ({ plugin, baseVersion }) => {
-		await delay(300 + Math.floor(Math.random() * 500));
+		await delay(300);
 		const found = updates[plugin] ?? {
 			sameMajorLatest: null,
 			releaseLatest: null,

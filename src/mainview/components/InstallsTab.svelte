@@ -54,19 +54,19 @@
 </script>
 
 <div class="page-head">
-	<h1>Plugin Installs</h1>
+	<div><h1>플러그인 관리</h1><p class="page-subtitle">도구를 설치하는 데 사용하는 플러그인 정의를 관리합니다</p></div>
 	<div class="page-actions">
 		<input
 			class="search-input"
-			placeholder="Search plugin name..."
-			aria-label="Search plugin name"
+			placeholder="플러그인 이름으로 검색"
+			aria-label="플러그인 검색"
 			bind:value={state.pluginSearchQuery}
 		/>
-		<button class="btn" onclick={openCustomPluginDialog} disabled={state.busy}>Install Custom Plugin</button>
+		<button class="btn" onclick={openCustomPluginDialog} disabled={state.busy}>사용자 플러그인 추가</button>
 		<button
 			class="btn icon-btn"
-			title="Reload Plugins"
-			aria-label="Reload Plugins"
+			title="목록 새로고침"
+			aria-label="목록 새로고침"
 			onclick={() => void reloadPluginDefinitions()}
 			disabled={state.busy}
 		>↻</button>
@@ -75,14 +75,14 @@
 <div class="page-meta">Remote Plugin Definitions: {state.remotePluginNames.length} / Core Plugins: {state.corePluginNames.length} / User Plugins: {state.installedPluginNames.length} / Installed Tools: {state.installedToolNames.length}</div>
 
 <section class="panel">
-	<h2>Installed</h2>
+	<h2>사용 가능한 플러그인</h2>
 	<section class="table-wrap">
 		<table>
 			<thead>
 				<tr>
-					<th>Plugin</th>
-					<th>State</th>
-					<th class="th-actions">Actions</th>
+					<th>플러그인</th>
+					<th>상태</th>
+					<th class="th-actions">관리</th>
 				</tr>
 			</thead>
 			<tbody>
@@ -110,12 +110,12 @@
 									<button
 										disabled={state.busy || row.corePlugin}
 										onclick={() => openEditPluginDialog(row.plugin)}
-									>Edit Plugin</button>
+									>URL 수정</button>
 									<button
 										title="User plugin definition 제거"
 										disabled={state.busy}
 										onclick={() => void uninstallPluginDefinition(row.plugin)}
-									>Remove Plugin</button>
+									>플러그인 제거</button>
 								</div>
 							{:else}
 								<span class="version-meta">{row.corePlugin ? "Core — 제거 불가" : "Tool only"}</span>
@@ -136,9 +136,9 @@
 		<table>
 			<thead>
 				<tr>
-					<th>Plugin</th>
+					<th>플러그인</th>
 					<th>Source</th>
-					<th class="th-actions">Actions</th>
+					<th class="th-actions">관리</th>
 				</tr>
 			</thead>
 			<tbody>
@@ -154,12 +154,12 @@
 						</td>
 						<td class="actions">
 							<div class="row-actions">
-								<button disabled={state.busy} onclick={() => openInstallPluginDialog(row.plugin)}>Install Plugin</button>
+								<button disabled={state.busy} onclick={() => openInstallPluginDialog(row.plugin)}>플러그인 설치</button>
 							</div>
 						</td>
 					</tr>
 				{:else}
-					<tr><td colspan="3" class="empty-row">검색 결과가 없습니다. <button class="mini-btn" disabled={state.busy} onclick={openCustomPluginDialog}>Install Custom Plugin</button></td></tr>
+					<tr><td colspan="3" class="empty-row">검색 결과가 없습니다. <button class="mini-btn" disabled={state.busy} onclick={openCustomPluginDialog}>사용자 플러그인 추가</button></td></tr>
 				{/each}
 				{#if notInstalledHidden > 0}
 					<tr><td colspan="3" class="empty-row">+{notInstalledHidden}개 더 있음 — 검색으로 좁혀보세요.</td></tr>

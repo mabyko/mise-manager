@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import { buildOverviewRows } from "./overview";
+import { buildOverviewRows, getToolStatus } from "./overview";
 import type { PluginRow } from "./types";
 
 // Overview rules agreed in the design prototype: same-major is the primary
@@ -87,4 +87,18 @@ describe("buildOverviewRows", () => {
 		expect(rows[0].current).toBe("0.12.0");
 		expect(rows[0].primary).toBe("0.13.0");
 	});
+});
+
+
+test("tool status never treats stale, failed, channel, or missing comparisons as current", () => {
+	const candidate = row({ name: "node", activeGlobalVersion: "22.14.0", sameMajorLatest: "22.15.0" });
+	expect(getToolStatus(candidate)).toBe("업데이트");
+	for (const status of ["idle", "checking", "updating", "deleting"] as const) {
+		expect(buildOverviewRows([{ ...candidate, status }])).toEqual([]);
+		expect(getToolStatus({ ...candidate, status })).not.toBe("최신 안정 버전");
+	}
+	expect(getToolStatus({ ...candidate, status: "error" })).toBe("확인 실패");
+	expect(getToolStatus(row({ name: "flutter", activeGlobalVersion: "stable" }))).toBe("채널 버전");
+	expect(getToolStatus(row({ name: "node", activeGlobalVersion: "22.14.0" }))).toBe("비교 정보 없음");
+	expect(getToolStatus(row({ name: "node", activeGlobalVersion: "22.14.0", releaseLatest: "22.14.0" }))).toBe("최신 안정 버전");
 });

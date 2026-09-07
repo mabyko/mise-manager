@@ -4,6 +4,12 @@ export const checkModeActiveOnly = true;
 
 export const state: MainViewState = $state({
 	activeTab: "overview",
+	selectedToolName: null,
+	toolSearchQuery: "",
+	toolUpdatesOnly: false,
+	toolsLoaded: false,
+	toolsError: null,
+	toolsCheckedAt: null,
 	miseVersion: null,
 	miseLoaded: false,
 	miseCurrentError: null,

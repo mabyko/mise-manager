@@ -34,11 +34,11 @@
 </script>
 
 <div class="page-head">
-	<h1>Mise Version</h1>
+	<div><h1>mise 관리</h1><p class="page-subtitle">mise 자체 버전과 설치 상태, 실행 기록</p></div>
 	<div class="page-actions">
-		<button class="btn" onclick={() => void reloadMiseVersion()} disabled={state.busy}>Reload Current</button>
-		<button class="btn" onclick={() => void checkLatestMiseRelease()} disabled={state.busy}>Check Latest</button>
-		<button class="btn primary" onclick={openMiseUpdateDialog} title={status.buttonHint} disabled={state.busy || !status.canUpdate}>Update Mise…</button>
+		<button class="btn" onclick={() => void reloadMiseVersion()} disabled={state.busy}>현재 버전 확인</button>
+		<button class="btn" onclick={() => void checkLatestMiseRelease()} disabled={state.busy}>최신 버전 확인</button>
+		<button class="btn primary" onclick={openMiseUpdateDialog} title={status.buttonHint} disabled={state.busy || !status.canUpdate}>mise 업데이트…</button>
 	</div>
 </div>
 
@@ -54,7 +54,7 @@
 	<section class="panel">
 		<div class="panel-header">
 			<div>
-				<h2>mise Not Detected</h2>
+				<h2>mise를 찾지 못했습니다</h2>
 				<p>
 					mise가 설치되어 있지 않습니다.{#if isWindows}<br />Windows에서는 공식 사이트에서 설치 방법을 확인하세요.{:else if isMac}<br />아래 방법 중 하나로 설치할 수 있습니다.{/if}
 				</p>
@@ -62,7 +62,7 @@
 		</div>
 		{#if isWindows}
 			<div style="margin-top: 16px;">
-				<button class="primary-btn" onclick={visitOfficialSite}>Visit Official Site</button>
+				<button class="primary-btn" onclick={visitOfficialSite}>공식 설치 안내</button>
 			</div>
 		{:else if state.miseInstalling}
 			<div class="log-card" style="margin-top: 12px;">
@@ -77,7 +77,7 @@
 				<button class="primary-btn" onclick={() => void startMiseInstall("brew")}>
 					Homebrew Install
 				</button>
-				<button class="mini-btn" onclick={visitOfficialSite}>Visit Official Site</button>
+				<button class="mini-btn" onclick={visitOfficialSite}>공식 설치 안내</button>
 			</div>
 			<div class="log-card" style="margin-top: 12px;">
 				<strong>Quick Install (sh):</strong> <code>curl https://mise.run | sh</code><br />
@@ -85,7 +85,7 @@
 			</div>
 		{:else}
 			<div style="margin-top: 16px;">
-				<button class="primary-btn" onclick={visitOfficialSite}>Visit Official Site</button>
+				<button class="primary-btn" onclick={visitOfficialSite}>공식 설치 안내</button>
 			</div>
 		{/if}
 	</section>
@@ -94,7 +94,7 @@
 <section class="panel">
 	<div class="panel-header">
 		<div>
-			<h2>Mise Version Status</h2>
+			<h2>버전 상태</h2>
 			<p>
 				현재 설치된 mise 버전과 GitHub 최신 릴리스를 비교합니다.
 				업데이트는 <code>mise self-update -y</code>로 실행됩니다.
@@ -102,15 +102,15 @@
 		</div>
 	</div>
 	<div class="mise-summary-grid">
-		{@render card("Current", current, "local: mise --version")}
-		{@render card("Latest", latest, "GitHub latest release")}
-		{@render card("Status", status.label, checkedAt)}
+		{@render card("현재 버전", current, "local: mise --version")}
+		{@render card("최신 릴리스", latest, "GitHub latest release")}
+		{@render card("상태", status.label, checkedAt)}
 	</div>
 	<div class="mise-status-note" style="margin-top: 12px;">
-		<strong>Status Guide:</strong> {status.description}
+		<strong>상태 안내:</strong> {status.description}
 	</div>
 	{#if state.miseNeedsReload}
-		<div class="log-card" style="margin-top: 12px;"><strong>Update applied.</strong> 앱을 재시작하거나 화면을 다시 로드해 새 환경을 반영하세요.</div>
+		<div class="log-card" style="margin-top: 12px;"><strong>업데이트가 적용되었습니다.</strong> 앱을 재시작하거나 화면을 다시 로드해 새 환경을 반영하세요.</div>
 	{/if}
 	{#if state.miseLastResult}
 		<div class="log-card" style="margin-top: 12px;"><pre>{state.miseLastResult}</pre></div>

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { tick } from "svelte";
 	import { state } from "./core/state.svelte";
 	import { handleNativeInputShortcutFallback } from "./core/inputShortcuts";
 	import Sidebar from "./components/Sidebar.svelte";
@@ -12,13 +13,24 @@
 	import PluginUrlDialog from "./components/PluginUrlDialog.svelte";
 	import MiseUpdateDialog from "./components/MiseUpdateDialog.svelte";
 	import MajorUpdateDialog from "./components/MajorUpdateDialog.svelte";
+
+	let content: HTMLElement;
+	$effect(() => {
+		const tab = state.activeTab;
+		void tick().then(() => {
+			if (state.activeTab !== tab) return;
+			const heading = content?.querySelector('h1');
+			heading?.setAttribute('tabindex', '-1');
+			heading?.focus();
+		});
+	});
 </script>
 
 <svelte:window onkeydown={handleNativeInputShortcutFallback} />
 
 <div class="shell">
 	<Sidebar />
-	<main class="content">
+	<main class="content" bind:this={content}>
 		{#if state.activeTab === "overview"}
 			<OverviewTab />
 		{:else if state.activeTab === "mise"}

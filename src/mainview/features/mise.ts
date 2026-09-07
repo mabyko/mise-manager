@@ -3,6 +3,7 @@ import { getMiseStatusSnapshot } from "../core/miseStatus";
 import { rpc } from "../core/rpc";
 import { state, setBusy } from "../core/state.svelte";
 import { addLog } from "./logs";
+import { reloadAndCheckTools } from "./updater";
 
 export async function loadPlatform(): Promise<void> {
 	try {
@@ -142,6 +143,8 @@ export async function startMiseInstall(method: "sh" | "brew"): Promise<void> {
 			if (state.miseIsInstalled) {
 				addLog("mise installation verified. Loading version...");
 				await reloadMiseVersion();
+				await checkLatestMiseRelease();
+				await reloadAndCheckTools();
 			} else {
 				addLog("mise installation completed but not yet detected in PATH. You may need to restart the app.");
 			}

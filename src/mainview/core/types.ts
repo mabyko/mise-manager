@@ -17,6 +17,12 @@ export interface PluginRow extends PluginSummary {
 
 export interface MainViewState {
 	activeTab: ActiveTab;
+	selectedToolName: string | null;
+	toolSearchQuery: string;
+	toolUpdatesOnly: boolean;
+	toolsLoaded: boolean;
+	toolsError: string | null;
+	toolsCheckedAt: string | null;
 	miseVersion: string | null;
 	miseLoaded: boolean;
 	miseCurrentError: string | null;

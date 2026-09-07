@@ -1,118 +1,102 @@
 <script lang="ts">
-	import { onMount } from "svelte";
-
+	import appIcon from "../assets/app-icon.png";
 	import { state } from "../core/state.svelte";
 	import { getMiseStatusSnapshot, normalizeVersionToken } from "../core/miseStatus";
-	import { buildOverviewRows } from "../core/overview";
-	import { openMiseUpdateDialog } from "../features/mise";
-	import {
-		checkUpdates,
-		ensureUpdaterData,
-		requestMajorUpdate,
-		retryCheck,
-		updateToVersion,
-	} from "../features/updater";
-
-	onMount(ensureUpdaterData);
+	import { buildOverviewRows, getToolStatus } from "../core/overview";
+	import { checkLatestMiseRelease, reloadMiseVersion, openMiseUpdateDialog } from "../features/mise";
+	import { checkUpdates, reloadAndCheckTools } from "../features/updater";
 
 	const status = $derived(getMiseStatusSnapshot(state));
 	const current = $derived(normalizeVersionToken(state.miseVersion));
 	const latest = $derived(normalizeVersionToken(state.miseLatestVersion));
 	const rows = $derived(buildOverviewRows(state.plugins));
-	const updatable = $derived(rows.filter((row) => row.primary || row.major).length);
-	const errorCount = $derived(state.plugins.filter((p) => p.status === "error").length);
-	const checkedCount = $derived(state.plugins.filter((p) => p.status === "done").length);
-	// Logs carry a long localized timestamp prefix — the activity card shows just the message.
-	const recentLines = $derived(
-		state.logs.slice(0, 5).map((line) => line.replace(/^\[[^\]]*\]\s*/, "")),
-	);
+	const updateRows = $derived(rows.filter(row => row.primary || row.major));
+	const errors = $derived(state.plugins.filter(p => p.status === "error"));
+	const currentCount = $derived(state.plugins.filter(p => getToolStatus(p) === "최신 안정 버전").length);
+	const unverifiedCount = $derived(state.plugins.length - updateRows.length - currentCount - errors.length);
+	const recentLines = $derived(state.logs.slice(0, 3).map(line => line.replace(/^\[[^\]]*\]\s*/, "")));
+	const miseLabels = {
+		loading: "확인 중", check_failed: "확인 실패", not_checked: "비교 불가", updating: "업데이트 중",
+		updated_needs_reload: "업데이트 완료", update_available: "새 버전", up_to_date: "최신 상태", ahead_or_custom: "최신 이상 / 커스텀",
+	};
+
+	function openTool(name: string) {
+		state.selectedToolName = name;
+		state.toolSearchQuery = "";
+		state.toolUpdatesOnly = false;
+		state.activeTab = "updater";
+	}
+
+	async function checkEnvironment() {
+		if (state.busy) return;
+		await reloadMiseVersion();
+		await checkLatestMiseRelease();
+		if (!state.toolsLoaded || state.toolsError || !state.plugins.length) await reloadAndCheckTools();
+		else await checkUpdates();
+	}
 </script>
 
 <div class="page-head">
-	<h1>Overview</h1>
-	<div class="page-actions">
-		<button class="btn" onclick={() => void checkUpdates()} disabled={state.busy || state.plugins.length === 0}>Check Updates</button>
-		<button class="btn primary" onclick={openMiseUpdateDialog} title={status.buttonHint} disabled={state.busy || !status.canUpdate}>Update Mise…</button>
-	</div>
+	<div><h1 tabindex="-1">요약</h1><p class="page-subtitle">개발 환경의 상태와 필요한 작업을 한눈에</p></div>
+	<div class="page-actions"><button class="btn primary" onclick={() => void checkEnvironment()} disabled={state.busy || !state.miseIsInstalled}>업데이트 확인</button></div>
 </div>
 
-<div class="stat-grid">
-	<div class="panel stat">
-		<div class="k">Mise Runtime</div>
-		<div class="v">{current ?? "–"}{#if status.key === "update_available"} <span class="pill up">→ {latest}</span>{/if}</div>
-		<div class="h">{status.label} · {state.miseLatestCheckedAt ?? "최신 릴리스 미확인"}</div>
-	</div>
-	<div class="panel stat">
-		<div class="k">Plugins</div>
-		<div class="v">{state.plugins.length} <span class="v-sub">installed</span></div>
-		<div class="h">{checkedCount} checked{errorCount > 0 ? ` · ${errorCount} error` : ""}</div>
-	</div>
-	<div class="panel stat">
-		<div class="k">Updates Available</div>
-		<div class="v accent">{updatable}</div>
-		<div class="h">
-			{#if state.busy}{state.progressLabel}{#if state.progress !== null} · {Math.round(state.progress)}%{/if}{:else}install 가능한 후보{/if}
-		</div>
-	</div>
+<section class="overview-intro">
+	<h2>{#if !state.miseIsInstalled}먼저 mise를 설치해 주세요.{:else if !state.toolsLoaded}개발 도구를 불러오고 있어요.{:else if state.toolsError}도구 목록을 불러오지 못했어요.{:else if state.busy}개발 환경을 확인하고 있어요.{:else if updateRows.length}도구 {updateRows.length}개를 업데이트할 수 있어요.{:else if errors.length || unverifiedCount}확인이 필요한 도구가 있어요.{:else if !state.plugins.length}설치된 도구가 없어요.{:else}설치된 도구가 최신 상태예요.{/if}</h2>
+	<p>{state.toolsError ?? (errors.length ? `${errors.length}개 도구를 확인하지 못했습니다. 상세 화면에서 다시 확인할 수 있습니다.` : "변경 내용을 확인한 뒤, 필요한 도구부터 업데이트하세요.")}</p>
+	{#if state.toolsCheckedAt}<span class="checked-at">마지막 도구 확인 · {state.toolsCheckedAt}</span>{/if}
+</section>
+<div class="overview-counts" aria-label="도구 상태 요약">
+	<span><strong>{state.plugins.length}</strong> 설치된 도구</span>
+	<span><strong>{updateRows.length}</strong> 도구 업데이트</span>
+	<span><strong>{currentCount}</strong> 최신 안정 버전</span>
+	{#if errors.length}<span class="error-text"><strong>{errors.length}</strong> 확인 실패</span>{/if}
+	{#if unverifiedCount}<span><strong>{unverifiedCount}</strong> 확인 필요</span>{/if}
 </div>
 
-<div class="cols2">
-	<div class="panel">
-		<div class="k" style="margin-bottom: 6px;">Available Updates</div>
-		{#if rows.length === 0}
+<div class="overview-grid">
+	<section class="overview-panel">
+		<div class="panel-heading"><div><h2>도구 업데이트</h2><p>변경 내용을 확인하고 도구별로 관리하세요.</p></div><button class="text-btn" onclick={() => (state.activeTab = "updater")}>내 도구 →</button></div>
+		{#each rows as row (row.plugin)}
+			<button class="overview-tool" onclick={() => openTool(row.plugin)}>
+				<span class="tool-glyph" aria-hidden="true">{row.plugin.slice(0, 2)}</span>
+				<span class="overview-tool-info"><strong>{row.plugin}</strong>
+					{#if row.error}<span class="error-text">확인 실패 · 상세에서 다시 확인</span>
+					{:else}<span class="mono version-flow-small">{row.current ?? "미선택"} → {row.primary ?? row.major}</span><span class="subtle">{row.primary ? "같은 major" : "새 major · 호환성 확인 필요"}{row.primary && row.major ? ` · 새 major ${row.major}도 있음` : ""}</span>{/if}
+				</span><span class="go-detail">상세 보기 →</span>
+			</button>
+		{:else}
 			<div class="empty-note">
-				{state.plugins.length === 0 ? "플러그인을 불러오는 중이거나 설치된 플러그인이 없습니다." : "모든 플러그인이 최신입니다 ✓"}
+				{#if state.toolsError}<p>{state.toolsError}</p><button class="btn" onclick={() => void reloadAndCheckTools()} disabled={state.busy}>다시 불러오기</button>
+				{:else if !state.toolsLoaded || state.busy}도구 정보를 확인하고 있습니다.
+				{:else if !state.plugins.length}설치된 도구가 없습니다. <button class="text-btn" onclick={() => (state.activeTab = "updater")}>도구 목록 확인 →</button>
+				{:else if unverifiedCount}채널 버전 또는 비교 정보가 없는 도구는 내 도구에서 확인하세요.
+				{:else}현재 확인된 안정 버전 업데이트가 없습니다.{/if}
 			</div>
-		{:else}
-			<table class="ov-table">
-				<tbody>
-					{#each rows as row (row.plugin)}
-						<tr>
-							<td class="plugin"><span class="dot {row.error ? 'err' : 'ok'}"></span>{row.plugin}</td>
-							{#if row.error}
-								<td class="ov-error">{row.error}</td>
-								<td class="ov-actions">
-									<button class="mini-btn" disabled={state.busy} onclick={() => void retryCheck(row.plugin)}>Retry</button>
-								</td>
-							{:else}
-								<td>{#if row.current}<span class="chip active">{row.current}</span>{/if}</td>
-								<td class="ov-actions">
-									{#if row.primary}
-										<button
-											class="upbtn"
-											disabled={state.busy}
-											title="{row.primary} 설치 후 전역(Use Global) 전환"
-											onclick={() => void updateToVersion(row.plugin, row.primary!)}
-										><span class="l">Update to {row.primary}</span><span class="s">{row.primary}</span></button>
-									{/if}
-									{#if row.major}
-										<button
-											class="ghostbtn"
-											disabled={state.busy}
-											title="Major 업데이트 — 확인 후 설치 + 전역 전환"
-											onclick={() => requestMajorUpdate(row.plugin, row.major!)}
-										><span class="l">Update to {row.major} (major)…</span><span class="s">{row.major} major…</span></button>
-									{/if}
-								</td>
-							{/if}
-						</tr>
-					{/each}
-				</tbody>
-			</table>
-			<div class="ov-caption">Update = 설치 후 전역(Use Global) 전환 · 이전 버전은 삭제되지 않아 언제든 되돌릴 수 있습니다</div>
-		{/if}
-	</div>
-	<div class="panel">
-		<div class="k" style="margin-bottom: 8px;">Recent Activity</div>
-		{#if state.logs.length === 0}
-			<div class="empty-note">로그가 없습니다.</div>
-		{:else}
-			<div class="activity">
-				{#each recentLines as line, index (index)}
-					<div class="act-line">{line}</div>
-				{/each}
-			</div>
-		{/if}
-		<button class="mini-btn" style="margin-top: 8px;" onclick={() => (state.activeTab = "logs")}>View all logs →</button>
-	</div>
+		{/each}
+		<div class="panel-bottom">업데이트 시 이전 버전은 보관됩니다. 프리릴리스는 내 도구에서 별도로 확인하세요.</div>
+	</section>
+
+	<section class="mise-card" aria-label="mise 자체 업데이트">
+		<div class="row"><span class="eyebrow">mise 관리</span><span class="pill" class:up={status.canUpdate} class:error-pill={status.key === "check_failed"}>{!state.miseIsInstalled ? "설치 필요" : miseLabels[status.key]}</span></div>
+		<div class="mise-brand"><img src={appIcon} alt="" /><h2>mise</h2></div>
+		<p>도구 관리 프로그램 자체의 업데이트입니다.</p>
+		<div class="mise-versions"><div><span>현재</span><strong class="mono">{current ?? "미확인"}</strong></div>{#if latest && latest !== current}<span aria-hidden="true">→</span><div><span>최신 릴리스</span><strong class="mono">{latest}</strong></div>{/if}</div>
+		{#if !state.miseIsInstalled}
+			<p>mise를 찾지 못했습니다. 설치 방법을 확인해 주세요.</p>
+		{:else if state.miseNeedsReload}
+			<p>업데이트를 적용했습니다. 새 환경을 반영하려면 앱을 다시 시작하세요.</p>
+		{:else if state.miseCurrentError || state.miseLatestError}
+			<p class="error-text">{state.miseCurrentError ?? state.miseLatestError}</p>
+		{:else if state.miseLastResult.startsWith("ERROR:")}
+			<p class="error-text">업데이트에 실패했습니다. 상세 기록을 확인한 뒤 다시 시도하세요.</p>
+		{:else}<p>도구의 전역 버전은 그대로 유지됩니다.</p>{/if}
+		{#if status.canUpdate && state.miseIsInstalled}<button class="btn mise-update" onclick={openMiseUpdateDialog} disabled={state.busy}>mise 업데이트…</button>{/if}
+		<button class="text-btn" onclick={() => (state.activeTab = "mise")}>{!state.miseIsInstalled ? "설치 안내 →" : "버전 및 실행 기록 →"}</button>
+	</section>
 </div>
+
+<section class="recent-panel">
+	<div class="row"><h2>최근 작업</h2><button class="text-btn" onclick={() => (state.activeTab = "logs")}>기록 보기 →</button></div>
+	{#each recentLines as line, index (index)}<p class="activity-line">{line}</p>{:else}<p>아직 작업 기록이 없습니다.</p>{/each}
+</section>

@@ -82,7 +82,14 @@ export async function checkUpdates(): Promise<void> {
 	});
 	await Promise.all(workers);
 
+	state.toolsCheckedAt = new Date().toLocaleString("ko-KR", { hour12: false });
 	setBusy(false, "Check complete", 100);
+}
+
+export async function reloadAndCheckTools(): Promise<void> {
+	if (state.busy) return;
+	await reloadPlugins();
+	if (!state.toolsError) await checkUpdates();
 }
 
 /** One-shot load + check when the Overview/Updater surface is first shown. */
@@ -91,12 +98,7 @@ export function ensureUpdaterData(): void {
 		return;
 	}
 	state.updaterAutoChecked = true;
-	void (async () => {
-		if (state.plugins.length === 0) {
-			await reloadPlugins();
-		}
-		await checkUpdates();
-	})();
+	void reloadAndCheckTools();
 }
 
 export async function retryCheck(pluginName: string): Promise<void> {
@@ -236,6 +238,7 @@ export async function deleteInstalledVersion(
 		return;
 	}
 
+	setBusy(true, `Deleting ${pluginName}@${version}`);
 	updatePluginInState(pluginName, { status: "deleting" });
 	try {
 		await rpc.request.deletePluginVersion({ plugin: pluginName, targetVersion: version });

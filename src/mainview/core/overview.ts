@@ -1,4 +1,4 @@
-import { compareVersions } from "../../shared/version";
+import { compareVersions, getMajor, isPreReleaseVersion } from "../../shared/version";
 import { resolveBaseVersion } from "./helpers";
 import type { PluginRow } from "./types";
 
@@ -31,7 +31,11 @@ export function buildOverviewRows(plugins: PluginRow[]): OverviewRow[] {
 			});
 			continue;
 		}
-		if (!base) {
+		// Old candidates remain cached during a new check; don't present them as verified.
+		if (plugin.status !== "done") {
+			continue;
+		}
+		if (!base || getMajor(base) === null) {
 			continue;
 		}
 
@@ -50,4 +54,17 @@ export function buildOverviewRows(plugins: PluginRow[]): OverviewRow[] {
 		}
 	}
 	return rows;
+}
+
+export function getToolStatus(plugin: PluginRow): string {
+	if (plugin.status === "error") return "확인 실패";
+	if (plugin.status === "checking") return "확인 중";
+	if (plugin.status === "updating") return "변경 중";
+	if (plugin.status === "deleting") return "삭제 중";
+	if (plugin.status !== "done") return "미확인";
+	if (getMajor(resolveBaseVersion(plugin) ?? "") === null) return "채널 버전";
+	if (buildOverviewRows([plugin]).length) return "업데이트";
+	if (!plugin.sameMajorLatest && !plugin.releaseLatest) return "비교 정보 없음";
+	if (isPreReleaseVersion(resolveBaseVersion(plugin)!)) return "프리릴리스 사용";
+	return "최신 안정 버전";
 }
