@@ -4,7 +4,6 @@
 	import { handleNativeInputShortcutFallback } from "./core/inputShortcuts";
 	import Sidebar from "./components/Sidebar.svelte";
 	import StatusBar from "./components/StatusBar.svelte";
-	import OverviewTab from "./components/OverviewTab.svelte";
 	import MiseTab from "./components/MiseTab.svelte";
 	import UpdaterTab from "./components/UpdaterTab.svelte";
 	import InstallsTab from "./components/InstallsTab.svelte";
@@ -31,9 +30,7 @@
 <div class="shell">
 	<Sidebar />
 	<main class="content" bind:this={content}>
-		{#if state.activeTab === "overview"}
-			<OverviewTab />
-		{:else if state.activeTab === "mise"}
+		{#if state.activeTab === "mise"}
 			<MiseTab />
 		{:else if state.activeTab === "updater"}
 			<UpdaterTab />

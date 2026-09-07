@@ -1,4 +1,4 @@
-import { checkModeActiveOnly, state } from "./state.svelte";
+import { state } from "./state.svelte";
 import type { PluginRow } from "./types";
 import type { PluginSummary } from "../../shared/contracts";
 import { sortVersionsDesc } from "./utils";
@@ -29,10 +29,7 @@ export function updatePluginInState(pluginName: string, patch: Partial<PluginRow
 }
 
 export function resolveBaseVersion(plugin: PluginRow): string | null {
-	if (checkModeActiveOnly) {
-		return plugin.activeGlobalVersion ?? plugin.installedVersions.at(0) ?? null;
-	}
-	return plugin.installedVersions.at(0) ?? plugin.activeGlobalVersion;
+	return plugin.activeGlobalVersion ?? plugin.installedVersions.at(0) ?? null;
 }
 
 export function toPluginRow(summary: PluginSummary): PluginRow {

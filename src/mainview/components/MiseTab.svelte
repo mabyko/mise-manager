@@ -96,14 +96,14 @@
 		<div>
 			<h2>버전 상태</h2>
 			<p>
-				현재 설치된 mise 버전과 GitHub 최신 릴리스를 비교합니다.
+				현재 설치된 mise 버전과 공식 최신 릴리스를 비교합니다.
 				업데이트는 <code>mise self-update -y</code>로 실행됩니다.
 			</p>
 		</div>
 	</div>
 	<div class="mise-summary-grid">
 		{@render card("현재 버전", current, "local: mise --version")}
-		{@render card("최신 릴리스", latest, "GitHub latest release")}
+		{@render card("최신 릴리스", latest, "공식 최신 릴리스")}
 		{@render card("상태", status.label, checkedAt)}
 	</div>
 	<div class="mise-status-note" style="margin-top: 12px;">

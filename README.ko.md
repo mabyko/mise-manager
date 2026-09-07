@@ -17,14 +17,14 @@ Mise Manager는 `mise` CLI 위에 집중된 인터페이스를 제공합니다. 
 
 밝은 테마의 실제 앱 UI를 브라우저 미리보기에서 촬영했습니다. 표시된 도구와 버전은 샘플 데이터입니다. 스크린샷을 누르면 원본 크기로 볼 수 있습니다.
 
-| 요약 | 내 도구 | 플러그인 관리 |
+| 내 도구 | 플러그인 관리 | mise 관리 |
 | :---: | :---: | :---: |
-| <a href="./docs/images/mise-manager-overview.png"><img src="./docs/images/mise-manager-overview.png" alt="Mise Manager Overview" width="260"></a> | <a href="./docs/images/mise-manager-my-tools.png"><img src="./docs/images/mise-manager-my-tools.png" alt="Mise Manager 내 도구 화면" width="260"></a> | <a href="./docs/images/mise-manager-plugin-installs.png"><img src="./docs/images/mise-manager-plugin-installs.png" alt="Mise Manager 플러그인 관리 화면" width="260"></a> |
+| <a href="./docs/images/mise-manager-my-tools.png"><img src="./docs/images/mise-manager-my-tools.png" alt="Mise Manager 내 도구 화면" width="260"></a> | <a href="./docs/images/mise-manager-plugin-installs.png"><img src="./docs/images/mise-manager-plugin-installs.png" alt="Mise Manager 플러그인 관리 화면" width="260"></a> | <a href="./docs/images/mise-manager-mise.png"><img src="./docs/images/mise-manager-mise.png" alt="mise 관리 화면" width="260"></a> |
 
 ## 주요 기능
 
-- **요약**에서 도구 업데이트, 확인이 필요한 상태, 최근 작업을 한눈에 확인하고, 별도 카드에서 mise 자체를 업데이트합니다.
-- **내 도구**에서 이름 검색과 업데이트 필터로 도구를 찾고, 목록 옆 상세 화면에서 현재 전역 버전과 변경 내용을 확인합니다.
+- 시작 화면인 **내 도구**에서 이름 검색과 업데이트 필터로 도구를 찾고, 목록 옆 상세 화면에서 현재 전역 버전과 변경 내용을 확인합니다.
+- 사이드바 아래 **mise 관리**에서 mise 자체를 확인·업데이트하고, **작업 기록**에서 최근 실행 내용을 확인합니다.
 - 설치된 각 도구의 같은 major 최신 버전, 최신 안정 버전, pre-release 후보를 비교합니다.
 - 도구 버전을 설치하고 전역 버전을 전환하거나 사용하지 않는 버전을 삭제합니다.
 - 이전 버전을 롤백용으로 유지하면서 한 번에 도구를 업데이트합니다.

@@ -8,7 +8,6 @@
 	const status = $derived(getMiseStatusSnapshot(state));
 	const currentVersion = $derived(normalizeVersionToken(state.miseVersion) ?? "확인 중");
 	const icons = {
-		overview: "M3 3h7v7H3z M14 3h7v7h-7z M3 14h7v7H3z M14 14h7v7h-7z",
 		updater: "M4 7h16v13H4z M9 7V4h6v3 M4 12h16 M10 12v3h4v-3",
 		installs: "M12 4v16 M4 12h16",
 		logs: "m4 7 5 5-5 5 M13 17h7",
@@ -25,7 +24,7 @@
 <aside class="sidebar">
 	<div class="brand"><img class="brand-ico" src={appIcon} alt="" /><span>Mise Manager</span></div>
 	<nav aria-label="주 메뉴">
-		{#each [{ tab: "overview", label: "요약" }, { tab: "updater", label: "내 도구" }, { tab: "installs", label: "플러그인 관리" }, { tab: "logs", label: "작업 기록" }] as item (item.tab)}
+		{#each [{ tab: "updater", label: "내 도구" }, { tab: "installs", label: "플러그인 관리" }, { tab: "logs", label: "작업 기록" }] as item (item.tab)}
 			<button
 				class:on={state.activeTab === item.tab}
 				aria-current={state.activeTab === item.tab ? "page" : undefined}

@@ -17,14 +17,14 @@ macOS is currently the only supported platform.
 
 Captured from the actual app UI in browser preview with the light theme. Tool names and versions use sample data. Click a screenshot to view the full-size image.
 
-| Overview | My Tools | Plugins |
+| My Tools | Plugins | mise Management |
 | :---: | :---: | :---: |
-| <a href="./docs/images/mise-manager-overview.png"><img src="./docs/images/mise-manager-overview.png" alt="Mise Manager Overview" width="260"></a> | <a href="./docs/images/mise-manager-my-tools.png"><img src="./docs/images/mise-manager-my-tools.png" alt="Mise Manager My Tools" width="260"></a> | <a href="./docs/images/mise-manager-plugin-installs.png"><img src="./docs/images/mise-manager-plugin-installs.png" alt="Mise Manager Plugins" width="260"></a> |
+| <a href="./docs/images/mise-manager-my-tools.png"><img src="./docs/images/mise-manager-my-tools.png" alt="Mise Manager My Tools" width="260"></a> | <a href="./docs/images/mise-manager-plugin-installs.png"><img src="./docs/images/mise-manager-plugin-installs.png" alt="Mise Manager Plugins" width="260"></a> | <a href="./docs/images/mise-manager-mise.png"><img src="./docs/images/mise-manager-mise.png" alt="mise Management" width="260"></a> |
 
 ## Features
 
-- Use **Overview** to see tool updates, states that need attention, and recent activity, with a dedicated card for updating mise itself.
-- Use **My Tools** to search or filter for updates, then review the current global version and proposed changes in the detail pane beside the list.
+- Start in **My Tools** to search or filter for updates, then review the current global version and proposed changes in the detail pane beside the list.
+- Open **mise Management** from the sidebar footer to check or update mise itself, and use **Logs** for recent activity.
 - Compare same-major, latest stable, and pre-release candidates for every installed tool.
 - Install tool versions, switch the global version, or remove unused versions.
 - Update a tool in one action while keeping the previous version available for rollback.

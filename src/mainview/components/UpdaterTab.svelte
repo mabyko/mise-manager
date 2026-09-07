@@ -1,31 +1,23 @@
 <script lang="ts">
 	import { tick } from "svelte";
 	import { state } from "../core/state.svelte";
-	import { buildOverviewRows, getToolStatus } from "../core/overview";
+	import { getToolUpdate, getToolStatus } from "../core/toolStatus";
 	import type { PluginRow } from "../core/types";
 	import { isPreReleaseVersion } from "../../shared/version";
-	import { checkUpdates, reloadAndCheckTools, retryCheck, requestMajorUpdate, runTargetAction, updateToVersion, useInstalledVersion } from "../features/updater";
+	import { checkUpdates, reloadAndCheckTools, retryCheck, requestMajorUpdate, installVersion, updateToVersion, useInstalledVersion } from "../features/updater";
 
-	const updates = $derived(buildOverviewRows(state.plugins).filter(row => row.primary || row.major));
+	const updates = $derived(state.plugins.filter(plugin => getToolUpdate(plugin)));
 	const filtered = $derived(state.plugins.filter(plugin =>
 		plugin.name.toLowerCase().includes(state.toolSearchQuery.trim().toLowerCase()) &&
-		(!state.toolUpdatesOnly || updates.some(row => row.plugin === plugin.name)),
+		(!state.toolUpdatesOnly || updates.includes(plugin)),
 	));
 	const selected = $derived(filtered.find(p => p.name === state.selectedToolName) ?? filtered[0] ?? null);
-	const update = $derived(selected ? updates.find(row => row.plugin === selected.name) : undefined);
+	const update = $derived(selected ? getToolUpdate(selected) : null);
 	let searchInput: HTMLInputElement;
 
 	function candidatesFor(plugin: PluginRow) {
-		const seen = new Set<string>();
-		return ([
-			{ version: plugin.sameMajorLatest, mode: "same" as const },
-			{ version: plugin.releaseLatest, mode: "release" as const },
-			{ version: plugin.overallLatest, mode: "latest" as const },
-		]).filter((candidate): candidate is { version: string; mode: "same" | "release" | "latest" } => {
-			if (!candidate.version || candidate.version === plugin.activeGlobalVersion || seen.has(candidate.version)) return false;
-			seen.add(candidate.version);
-			return true;
-		});
+		return [...new Set([plugin.sameMajorLatest, plugin.releaseLatest, plugin.overallLatest])]
+			.filter((version): version is string => !!version && version !== plugin.activeGlobalVersion);
 	}
 
 	async function clearSearch() {
@@ -77,7 +69,7 @@
 					<p>같은 major 안에서 업데이트합니다. 프로젝트 호환성을 확인하세요.</p>
 					<div class="update-impact"><span>설치 후 전역 전환</span><span>기존 설치 버전 보관</span></div>
 					<div class="row wrap"><button class="btn primary" disabled={state.busy} onclick={() => void updateToVersion(selected.name, update!.primary!)}>{update.primary}으로 업데이트</button>
-						{#if !selected.installedVersions.includes(update.primary)}<button class="text-btn" disabled={state.busy} onclick={() => void runTargetAction(selected.name, "same", "install")}>설치만</button>{/if}
+						{#if !selected.installedVersions.includes(update.primary)}<button class="text-btn" disabled={state.busy} onclick={() => void installVersion(selected.name, update!.primary!)}>설치만</button>{/if}
 					</div>
 				</div>
 			{:else if getToolStatus(selected) === "최신 안정 버전"}<div class="detail-note"><h3>현재 확인된 안정 버전 업데이트가 없습니다.</h3><p>다른 버전과 프리릴리스는 아래에서 확인할 수 있습니다.</p></div>
@@ -93,20 +85,20 @@
 			{:else}<p class="subtle">설치된 버전이 없습니다.</p>{/each}
 
 			{#if update?.major}
-				<div class="major-notice"><div><span class="pill up">새 major</span> <strong class="mono">{update.major}</strong><p>호환성 확인이 필요한 별도 업데이트입니다.</p></div><div class="version-actions"><button class="btn" disabled={state.busy} onclick={() => requestMajorUpdate(selected.name, update!.major!)}>변경 검토…</button>{#if !selected.installedVersions.includes(update.major)}<button class="text-btn" disabled={state.busy} onclick={() => void runTargetAction(selected.name, "release", "install")}>설치만</button>{/if}</div></div>
+				<div class="major-notice"><div><span class="pill up">새 major</span> <strong class="mono">{update.major}</strong><p>호환성 확인이 필요한 별도 업데이트입니다.</p></div><div class="version-actions"><button class="btn" disabled={state.busy} onclick={() => requestMajorUpdate(selected.name, update!.major!)}>변경 검토…</button>{#if !selected.installedVersions.includes(update.major)}<button class="text-btn" disabled={state.busy} onclick={() => void installVersion(selected.name, update!.major!)}>설치만</button>{/if}</div></div>
 			{/if}
 			<details class="other-versions"><summary>다른 버전 및 프리릴리스</summary>
 				<p class="subtle">설치는 전역 버전을 바꾸지 않습니다. 설치 후 목록에서 전역 버전을 선택할 수 있습니다.</p>
-				{#each candidatesFor(selected) as candidate (candidate.version)}
-					<div class="installed-version"><div><strong class="mono">{candidate.version}</strong><span class="subtle candidate-kind">{isPreReleaseVersion(candidate.version) ? "프리릴리스" : "릴리스 후보"}</span></div>
-						{#if selected.installedVersions.includes(candidate.version)}<span class="pill">설치됨</span>{:else}<button class="mini-btn" disabled={state.busy || selected.status !== "done"} onclick={() => void runTargetAction(selected.name, candidate.mode, "install")}>설치</button>{/if}
+				{#each candidatesFor(selected) as version (version)}
+					<div class="installed-version"><div><strong class="mono">{version}</strong><span class="subtle candidate-kind">{isPreReleaseVersion(version) ? "프리릴리스" : "릴리스 후보"}</span></div>
+						{#if selected.installedVersions.includes(version)}<span class="pill">설치됨</span>{:else}<button class="mini-btn" disabled={state.busy || selected.status !== "done"} onclick={() => void installVersion(selected.name, version)}>설치</button>{/if}
 					</div>
 				{:else}<p class="subtle">확인된 다른 후보가 없습니다.</p>{/each}
 			</details>
 		{:else}
 			<div class="empty-detail">
 				<h2>{!state.toolsLoaded ? "도구를 불러오는 중입니다." : !state.plugins.length ? "설치된 도구가 없습니다." : "조건에 맞는 도구가 없어요."}</h2>
-				<p>{state.plugins.length ? "다른 이름으로 검색하거나 업데이트 필터를 해제하세요." : "mise로 도구를 설치한 뒤 목록을 새로고침하세요."}</p>
+				<p>{!state.toolsLoaded ? "설치된 도구를 확인하고 있습니다." : state.plugins.length ? "다른 이름으로 검색하거나 업데이트 필터를 해제하세요." : "mise로 도구를 설치한 뒤 목록을 새로고침하세요."}</p>
 				{#if state.toolSearchQuery || state.toolUpdatesOnly}<button class="btn" onclick={() => void clearSearch()}>검색·필터 초기화</button>{:else}<button class="btn" disabled={state.busy || !state.miseIsInstalled} onclick={() => void reloadAndCheckTools()}>목록 새로고침</button>{/if}
 			</div>
 		{/if}

@@ -7,7 +7,7 @@ import App from "./App.svelte";
 import { state, setBusy } from "./core/state.svelte";
 import { checkLatestMiseRelease, reloadMiseVersion, loadPlatform, checkMiseInstallationStatus } from "./features/mise";
 
-import { ensureUpdaterData } from "./features/updater";
+import { reloadAndCheckTools } from "./features/updater";
 
 const target = document.getElementById("app");
 
@@ -33,5 +33,5 @@ void (async () => {
 	}
 	await reloadMiseVersion();
 	await checkLatestMiseRelease();
-	ensureUpdaterData();
+	await reloadAndCheckTools();
 })();
