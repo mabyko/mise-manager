@@ -6,6 +6,9 @@ import SwiftUI
 /// does not follow, and an outside click or Esc closes it. Shows over full-screen apps.
 final class TrayPanel: NSPanel {
     static let size = CGSize(width: 440, height: 620)
+    /// Screen rect of the status item; clicks there belong to its action, not to "outside".
+    var ownerFrame: @MainActor () -> CGRect? = { nil }
+    private(set) var lastClosedAt = Date.distantPast
     private var outsideClickMonitor: Any?
 
     init(state: AppState) {
@@ -47,8 +50,14 @@ final class TrayPanel: NSPanel {
         orderFrontRegardless()
         makeKey()
         if outsideClickMonitor == nil {
+            // macOS 26 routes status-item clicks through the Control Center proxy, so they arrive here
+            // as another app's click; closing on them would let the click's own action reopen the panel.
             outsideClickMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] _ in
-                Task { @MainActor in self?.close() }
+                Task { @MainActor in
+                    guard let self else { return }
+                    if let owner = self.ownerFrame(), owner.contains(NSEvent.mouseLocation) { return }
+                    self.close()
+                }
             }
         }
     }
@@ -56,6 +65,7 @@ final class TrayPanel: NSPanel {
     override func close() {
         if let outsideClickMonitor { NSEvent.removeMonitor(outsideClickMonitor) }
         outsideClickMonitor = nil
+        if isVisible { lastClosedAt = Date() }
         super.close()
     }
 

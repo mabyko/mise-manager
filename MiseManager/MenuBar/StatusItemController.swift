@@ -15,6 +15,7 @@ final class StatusItemController {
     init(state: AppState) {
         self.state = state
         panel = TrayPanel(state: state)
+        panel.ownerFrame = { [weak self] in self?.item?.button?.window?.frame }
         observe()
     }
 
@@ -63,7 +64,13 @@ final class StatusItemController {
     }
 
     @objc private func toggle() {
-        if panel.isVisible { panel.close() } else { show() }
+        if panel.isVisible {
+            panel.close()
+            return
+        }
+        // The same click that just closed the panel (key loss, outside-click monitor) must not reopen it.
+        guard Date().timeIntervalSince(panel.lastClosedAt) > 0.3 else { return }
+        show()
     }
 
     /// `cursor` picks the display (the clicked one); tests and debug hooks can pass a point.
