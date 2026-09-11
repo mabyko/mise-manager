@@ -1,0 +1,4 @@
+// Tracked defaults: sacrificial bundle ID, no signing team.
+// Personal IDs and the signing team live in Local.xcconfig (git-ignored). See docs/swiftui-migration-plan.md §5.
+MISEMANAGER_BUNDLE_ID = forked.misemanager.local
+#include? "Local.xcconfig"

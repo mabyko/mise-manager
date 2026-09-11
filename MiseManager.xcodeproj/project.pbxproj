@@ -1,0 +1,476 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		AB17EFFBE630667B3D78BF90 /* MiseCore in Frameworks */ = {isa = PBXBuildFile; productRef = BB439A1A69997878228FF517 /* MiseCore */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		CEADBC74FA05BF6C279CCA0A /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 572711F0AED95A3ADF27169A /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 7CBD04FAA74774C3AE77CE8E;
+			remoteInfo = MiseManager;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		05770D4C18079EC3852C2ADE /* Base.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Base.xcconfig; sourceTree = "<group>"; };
+		0CD1ADE1A6F4FA60A0526CC2 /* MiseCore */ = {isa = PBXFileReference; lastKnownFileType = folder; name = MiseCore; path = Packages/MiseCore; sourceTree = SOURCE_ROOT; };
+		899BA0DF2395185D314ADFCD /* MiseManagerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MiseManagerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		CADB4FF72C065A9A20176A54 /* MiseManager.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MiseManager.app; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		17B68B4805775940F39FDF93 /* MiseManagerTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			explicitFileTypes = {
+			};
+			explicitFolders = (
+			);
+			path = MiseManagerTests;
+			sourceTree = "<group>";
+		};
+		F70E2E915A5BD410B6EE2522 /* MiseManager */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			explicitFileTypes = {
+			};
+			explicitFolders = (
+			);
+			path = MiseManager;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		319D00E41F83967C58CA14C7 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AB17EFFBE630667B3D78BF90 /* MiseCore in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		70A6FD1AD7407646A60960E3 /* Packages */ = {
+			isa = PBXGroup;
+			children = (
+				0CD1ADE1A6F4FA60A0526CC2 /* MiseCore */,
+			);
+			path = Packages;
+			sourceTree = "<group>";
+		};
+		92D19EB56D2781F4CF865B44 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				CADB4FF72C065A9A20176A54 /* MiseManager.app */,
+				899BA0DF2395185D314ADFCD /* MiseManagerTests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		9632DB7CE01D21DEC380E505 /* Config */ = {
+			isa = PBXGroup;
+			children = (
+				05770D4C18079EC3852C2ADE /* Base.xcconfig */,
+			);
+			path = Config;
+			sourceTree = "<group>";
+		};
+		A784E0C31C98D12FFF478EDC = {
+			isa = PBXGroup;
+			children = (
+				9632DB7CE01D21DEC380E505 /* Config */,
+				F70E2E915A5BD410B6EE2522 /* MiseManager */,
+				17B68B4805775940F39FDF93 /* MiseManagerTests */,
+				70A6FD1AD7407646A60960E3 /* Packages */,
+				92D19EB56D2781F4CF865B44 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		7CBD04FAA74774C3AE77CE8E /* MiseManager */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 2B939BE75EF11FEDE4F5FCD0 /* Build configuration list for PBXNativeTarget "MiseManager" */;
+			buildPhases = (
+				212D2A2C7EB16E110884D46C /* Sources */,
+				357929681D889F4F5727AD65 /* Resources */,
+				319D00E41F83967C58CA14C7 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				F70E2E915A5BD410B6EE2522 /* MiseManager */,
+			);
+			name = MiseManager;
+			packageProductDependencies = (
+				BB439A1A69997878228FF517 /* MiseCore */,
+			);
+			productName = MiseManager;
+			productReference = CADB4FF72C065A9A20176A54 /* MiseManager.app */;
+			productType = "com.apple.product-type.application";
+		};
+		AE2CD64EC6E24FEAEE49A1B0 /* MiseManagerTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = F10A8ACF2765B6A91DD61E41 /* Build configuration list for PBXNativeTarget "MiseManagerTests" */;
+			buildPhases = (
+				8EFD4D84A16C6491EAAB0FB5 /* Sources */,
+				FAFCE236C0645876E72D885B /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				161B259A0CCCE671ABF37C9A /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				17B68B4805775940F39FDF93 /* MiseManagerTests */,
+			);
+			name = MiseManagerTests;
+			packageProductDependencies = (
+			);
+			productName = MiseManagerTests;
+			productReference = 899BA0DF2395185D314ADFCD /* MiseManagerTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		572711F0AED95A3ADF27169A /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					7CBD04FAA74774C3AE77CE8E = {
+						ProvisioningStyle = Automatic;
+					};
+					AE2CD64EC6E24FEAEE49A1B0 = {
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = 6A1238CD5AEF7822433D7489 /* Build configuration list for PBXProject "MiseManager" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = A784E0C31C98D12FFF478EDC;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				F00517ABF6A7E0CC05CCDA31 /* XCLocalSwiftPackageReference "Packages/MiseCore" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 92D19EB56D2781F4CF865B44 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				7CBD04FAA74774C3AE77CE8E /* MiseManager */,
+				AE2CD64EC6E24FEAEE49A1B0 /* MiseManagerTests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		357929681D889F4F5727AD65 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		FAFCE236C0645876E72D885B /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		212D2A2C7EB16E110884D46C /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		8EFD4D84A16C6491EAAB0FB5 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		161B259A0CCCE671ABF37C9A /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 7CBD04FAA74774C3AE77CE8E /* MiseManager */;
+			targetProxy = CEADBC74FA05BF6C279CCA0A /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		22859F96E0896A251ED170D3 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 05770D4C18079EC3852C2ADE /* Base.xcconfig */;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MARKETING_VERSION = 0.2.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+		285A8C4FD8F7B65411E5CCE7 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "$(MISEMANAGER_BUNDLE_ID).tests";
+				SDKROOT = macosx;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Mise Manager.app/Contents/MacOS/Mise Manager";
+			};
+			name = Release;
+		};
+		2A260DC7F994FF67279DD006 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "$(MISEMANAGER_BUNDLE_ID).tests";
+				SDKROOT = macosx;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Mise Manager.app/Contents/MacOS/Mise Manager";
+			};
+			name = Debug;
+		};
+		4E76265FBD137F2514FDE78E /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "Mise Manager";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.developer-tools";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "$(MISEMANAGER_BUNDLE_ID)";
+				PRODUCT_MODULE_NAME = MiseManager;
+				PRODUCT_NAME = "Mise Manager";
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		87F9A7A74F80FC9CF64008A9 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = "AppIcon-Dev";
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "Mise Manager Dev";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.developer-tools";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "$(MISEMANAGER_BUNDLE_ID)";
+				PRODUCT_MODULE_NAME = MiseManager;
+				PRODUCT_NAME = "Mise Manager";
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		8AEE6E8771C07332D4978543 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 05770D4C18079EC3852C2ADE /* Base.xcconfig */;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MARKETING_VERSION = 0.2.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		2B939BE75EF11FEDE4F5FCD0 /* Build configuration list for PBXNativeTarget "MiseManager" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				87F9A7A74F80FC9CF64008A9 /* Debug */,
+				4E76265FBD137F2514FDE78E /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		6A1238CD5AEF7822433D7489 /* Build configuration list for PBXProject "MiseManager" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				8AEE6E8771C07332D4978543 /* Debug */,
+				22859F96E0896A251ED170D3 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		F10A8ACF2765B6A91DD61E41 /* Build configuration list for PBXNativeTarget "MiseManagerTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				2A260DC7F994FF67279DD006 /* Debug */,
+				285A8C4FD8F7B65411E5CCE7 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		F00517ABF6A7E0CC05CCDA31 /* XCLocalSwiftPackageReference "Packages/MiseCore" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/MiseCore;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		BB439A1A69997878228FF517 /* MiseCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = MiseCore;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 572711F0AED95A3ADF27169A /* Project object */;
+}

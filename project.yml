@@ -1,0 +1,55 @@
+# XcodeGen spec. Regenerate with `xcodegen` after editing; source folders are
+# Xcode 16 synchronized groups, so adding files needs no regeneration.
+name: MiseManager
+options:
+  deploymentTarget:
+    macOS: "14.0"
+configFiles:
+  Debug: Config/Base.xcconfig
+  Release: Config/Base.xcconfig
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    MARKETING_VERSION: 0.2.0
+    CURRENT_PROJECT_VERSION: 1
+    CODE_SIGN_STYLE: Automatic
+packages:
+  MiseCore:
+    path: Packages/MiseCore
+targets:
+  MiseManager:
+    type: application
+    platform: macOS
+    sources:
+      - path: MiseManager
+        type: syncedFolder
+    dependencies:
+      - package: MiseCore
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: $(MISEMANAGER_BUNDLE_ID)
+        PRODUCT_NAME: Mise Manager
+        PRODUCT_MODULE_NAME: MiseManager
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_CFBundleDisplayName: Mise Manager
+        INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.developer-tools
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+      configs:
+        Debug:
+          INFOPLIST_KEY_CFBundleDisplayName: Mise Manager Dev
+          ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon-Dev
+    scheme:
+      testTargets: [MiseManagerTests]
+  MiseManagerTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - path: MiseManagerTests
+        type: syncedFolder
+    dependencies:
+      - target: MiseManager
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: $(MISEMANAGER_BUNDLE_ID).tests
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_HOST: $(BUILT_PRODUCTS_DIR)/Mise Manager.app/Contents/MacOS/Mise Manager
