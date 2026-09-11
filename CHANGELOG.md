@@ -2,7 +2,24 @@
 
 이 프로젝트의 주요 변경 사항을 기록합니다.
 
-## [Unreleased] - Tauri 2 + Svelte 5 포팅 (2026-08-16)
+## [0.2.0] - 2026-09-11 - SwiftUI 네이티브 전환
+
+### Changed
+- 앱 전체를 **SwiftUI + AppKit(Swift 6, macOS 14+)** 으로 다시 작성. Tauri 2 + Svelte 5 소스는 `v0.1.2-tauri` 태그에 남김
+  - `Packages/MiseCore`(UI 없는 Swift 패키지): mise 실행(`actor MiseCLI`, 줄 단위 출력 스트리밍), PATH 보강·`MISE_BIN`, 파서, 버전·업데이트 규칙, `[tool_alias]` 줄 단위 편집기, 릴리스 확인(`URLSession`), `@Observable AppState`와 기능 흐름. Rust 25개 + vitest 39개 테스트를 Swift Testing으로 이식
+  - 메인 창은 `NavigationSplitView` 사이드바 + 탭 6개 + 하단 상태바 + 다이얼로그 4개, 메뉴바는 `NSStatusItem` + 비활성화 `NSPanel`. 창과 메뉴바가 같은 상태 객체를 관찰하므로 main↔tray 메시지 브리지 제거
+  - 진행 라벨을 한국어로 통일, 설정은 `UserDefaults`(`mise-manager.*`)로 이동(기존 설정은 이전하지 않음)
+  - 번들 ID는 추적 파일에 희생용 `forked.misemanager.local`만 두고 개인 ID·팀은 `Config/Local.xcconfig`(무시)로 분리. Debug는 `Mise Manager Dev`로 나란히 설치
+- 빌드 체인을 bun/vite/cargo에서 Xcode(`xcodegen` 스펙 `project.yml`)로 교체. `scripts/test.sh`, `scripts/release.sh`(DMG)
+
+### Removed
+- Windows 알파 지원, 브라우저 미리보기(mock RPC), 디자인 프로토타입, 메뉴바 아이콘 우클릭 메뉴(종료는 메뉴바 창 안에 있음)
+
+### Known
+- Developer ID 서명·공증과 앱 자동 업데이트는 미구현. 릴리스 빌드는 로컬 서명(Apple Development 또는 ad-hoc)
+- 설치 스크린샷은 0.1.x 웹 UI 기준
+
+## [0.1.2] - Tauri 2 + Svelte 5 포팅 (2026-08-16)
 
 ### Changed
 - 데스크톱 셸을 Electrobun에서 **Tauri 2**로 전면 포팅:
