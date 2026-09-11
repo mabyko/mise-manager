@@ -3,6 +3,8 @@ import { flushSync, mount, unmount } from "svelte";
 
 const rpcRequest = vi.hoisted(() => ({
 	installPluginDefinition: vi.fn<(params: unknown) => Promise<unknown>>(),
+	updatePluginDefinition: vi.fn<(params: unknown) => Promise<unknown>>(),
+	listOutdatedPluginDefinitions: vi.fn<() => Promise<unknown>>(),
 	uninstallPluginDefinition: vi.fn<(params: unknown) => Promise<unknown>>(),
 	listInstalledPluginNames: vi.fn<() => Promise<unknown>>(),
 	listInstalledUserPluginInfos: vi.fn<() => Promise<unknown>>(),
@@ -15,7 +17,7 @@ const rpcRequest = vi.hoisted(() => ({
 vi.mock("../core/rpc", () => ({ rpc: { request: rpcRequest } }));
 
 import { state } from "../core/state.svelte";
-import { resolvePluginInstallPlan, submitPluginUrlDialog } from "./installs";
+import { resolvePluginInstallPlan, submitPluginUrlDialog, checkPluginDefinitionUpdates, updatePluginDefinition } from "./installs";
 import InstallsTab from "../components/InstallsTab.svelte";
 
 function renderComponent(component: unknown): string {
@@ -32,6 +34,10 @@ describe("installs", () => {
 		document.body.innerHTML = "";
 		Object.assign(state, {
 			busy: false,
+			outdatedPluginNames: [],
+			pluginUpdatesError: null,
+			pluginUpdatesCheckedAt: null,
+			pluginUpdateResult: null,
 			activeTab: "installs",
 			pluginSearchQuery: "",
 			remotePluginNames: [],
@@ -59,6 +65,26 @@ describe("installs", () => {
 		rpcRequest.listInstalledToolNames.mockResolvedValue([]);
 		rpcRequest.listRemotePluginNames.mockResolvedValue([]);
 		rpcRequest.listRemotePluginInfos.mockResolvedValue([]);
+	});
+
+	test("plugin checks expose failures and use the dedicated update command for one outdated plugin", async () => {
+		rpcRequest.listOutdatedPluginDefinitions.mockResolvedValue(["flutter"]);
+		await checkPluginDefinitionUpdates();
+		expect(state.outdatedPluginNames).toEqual(["flutter"]);
+		rpcRequest.updatePluginDefinition.mockResolvedValue({ plugin: "flutter", stdout: "updated" });
+		rpcRequest.listOutdatedPluginDefinitions.mockResolvedValue([]);
+		await updatePluginDefinition("flutter");
+		expect(rpcRequest.updatePluginDefinition).toHaveBeenCalledWith({ plugin: "flutter" });
+		expect(rpcRequest.installPluginDefinition).not.toHaveBeenCalled();
+		expect(state.outdatedPluginNames).toEqual([]);
+		expect(state.pluginUpdateResult).toContain("업데이트했습니다");
+		rpcRequest.listOutdatedPluginDefinitions.mockRejectedValue(new Error("remote unreachable"));
+		await checkPluginDefinitionUpdates();
+		expect(state.pluginUpdatesError).toBe("remote unreachable");
+		expect(state.busy).toBe(false);
+		expect(renderComponent(InstallsTab)).toContain("확인 실패");
+		await updatePluginDefinition("flutter");
+		expect(rpcRequest.updatePluginDefinition).toHaveBeenCalledTimes(1);
 	});
 
 	test("shows custom plugin install action beside plugin search controls", () => {

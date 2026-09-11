@@ -24,32 +24,44 @@ fn versions_from_entry(value: &serde_json::Value) -> Vec<String> {
 }
 
 /// Not a command — used by delete_plugin_version's guard and the summaries below.
-/// Mirrors TS behavior: any failure yields an empty map.
-pub async fn list_global_plugins(state: &MiseState) -> HashMap<String, String> {
-    let Ok(result) = mise::run(state, &["ls", "--global", "--json"]).await else {
-        return HashMap::new();
-    };
-    if result.exit_code != 0 {
-        return HashMap::new();
-    }
-    let Ok(parsed) = serde_json::from_str::<serde_json::Value>(result.stdout.trim()) else {
-        return HashMap::new();
-    };
-    let Some(entries) = parsed.as_object() else {
-        return HashMap::new();
-    };
+/// Fail closed: an unreadable global config must never authorize deletion.
+pub async fn list_global_plugins(
+    state: &MiseState,
+) -> Result<HashMap<String, Vec<String>>, String> {
+    let result = mise::run_ok(
+        state,
+        &["ls", "--global", "--json"],
+        "cannot read global tool versions",
+    )
+    .await?;
+    parse_global_plugins(&result.stdout)
+}
 
+fn parse_global_plugins(stdout: &str) -> Result<HashMap<String, Vec<String>>, String> {
+    let parsed: serde_json::Value = serde_json::from_str(stdout.trim())
+        .map_err(|error| format!("cannot parse global tool versions: {error}"))?;
+    let entries = parsed
+        .as_object()
+        .ok_or("unexpected global tool JSON shape")?;
     entries
         .iter()
-        .filter_map(|(plugin, raw)| {
-            let versions = versions_from_entry(raw);
-            mise::pick_preferred_version(&versions).map(|preferred| (plugin.clone(), preferred))
+        .map(|(plugin, raw)| {
+            let rows = raw.as_array().ok_or("unexpected global version list")?;
+            if rows
+                .iter()
+                .any(|row| row.get("version").and_then(|v| v.as_str()).is_none())
+            {
+                return Err("missing global tool version".to_string());
+            }
+            Ok((plugin.clone(), versions_from_entry(raw)))
         })
         .collect()
 }
 
 #[tauri::command]
-pub async fn list_installed_plugins(state: State<'_, MiseState>) -> Result<Vec<PluginSummary>, String> {
+pub async fn list_installed_plugins(
+    state: State<'_, MiseState>,
+) -> Result<Vec<PluginSummary>, String> {
     let result = mise::run_ok(
         &state,
         &["ls", "--installed", "--json"],
@@ -63,7 +75,7 @@ pub async fn list_installed_plugins(state: State<'_, MiseState>) -> Result<Vec<P
         .as_object()
         .ok_or_else(|| "unexpected installed tool JSON shape from mise".to_string())?;
 
-    let global_map = list_global_plugins(&state).await;
+    let global_map = list_global_plugins(&state).await?;
     let mut summaries: Vec<PluginSummary> = Vec::new();
     let mut touched: HashSet<String> = HashSet::new();
 
@@ -78,20 +90,22 @@ pub async fn list_installed_plugins(state: State<'_, MiseState>) -> Result<Vec<P
         }
         summaries.push(PluginSummary {
             name: plugin.clone(),
-            active_global_version: global_map.get(plugin).cloned(),
+            active_global_version: global_map
+                .get(plugin)
+                .and_then(|versions| versions.first().cloned()),
             installed_versions: installed,
         });
         touched.insert(plugin.clone());
     }
 
-    for (plugin, active) in &global_map {
-        if touched.contains(plugin) {
+    for (plugin, versions) in &global_map {
+        if touched.contains(plugin) || versions.is_empty() {
             continue;
         }
         summaries.push(PluginSummary {
             name: plugin.clone(),
-            active_global_version: Some(active.clone()),
-            installed_versions: vec![active.clone()],
+            active_global_version: versions.first().cloned(),
+            installed_versions: vec![],
         });
     }
 
@@ -115,7 +129,78 @@ async fn list_trimmed_lines(
 }
 
 #[tauri::command]
-pub async fn list_installed_plugin_names(state: State<'_, MiseState>) -> Result<Vec<String>, String> {
+pub async fn list_outdated_plugin_definitions(
+    state: State<'_, MiseState>,
+) -> Result<Vec<String>, String> {
+    let result = mise::run_ok(
+        &state,
+        &["plugins", "ls", "--user", "--outdated"],
+        "cannot check plugin updates; this mise version may not support --outdated",
+    )
+    .await?;
+    parse_outdated_plugins(&result.stdout, &result.stderr)
+}
+
+fn parse_outdated_plugins(stdout: &str, stderr: &str) -> Result<Vec<String>, String> {
+    // An unreachable remote only emits a warning in mise. Its normal "all up
+    // to date" message is also on stderr; allow that message, not warnings.
+    if stderr
+        .lines()
+        .any(|line| !line.trim().is_empty() && line.trim() != "mise All plugins are up to date")
+    {
+        return Err(stderr.trim().to_string());
+    }
+    // Piped mise output is a headerless table: name, URL, ref, local SHA, remote SHA.
+    Ok(stdout
+        .lines()
+        .filter_map(|line| line.split_whitespace().next())
+        .map(String::from)
+        .collect())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn plugin_check_parses_tables_but_does_not_hide_remote_failures() {
+        assert_eq!(
+            parse_outdated_plugins(
+                "node https://example.com/node main abc def\npython url main 123 456\n",
+                ""
+            )
+            .unwrap(),
+            ["node", "python"]
+        );
+        assert!(
+            parse_outdated_plugins("", "mise All plugins are up to date\n")
+                .unwrap()
+                .is_empty()
+        );
+        assert!(parse_outdated_plugins(
+            "",
+            "mise WARN plugin: remote unavailable\nmise All plugins are up to date\n"
+        )
+        .is_err());
+    }
+
+    #[test]
+    fn global_versions_preserve_every_selection_and_reject_unreadable_data() {
+        let globals =
+            parse_global_plugins(r#"{"node":[{"version":"26.0.0"},{"version":"24.20.0"}]}"#)
+                .unwrap();
+        assert_eq!(globals["node"], ["26.0.0", "24.20.0"]);
+        for invalid in ["invalid", "[]", r#"{"node":{}}"#, r#"{"node":[{}]}"#] {
+            assert!(parse_global_plugins(invalid).is_err());
+        }
+        assert!(parse_global_plugins("{}").unwrap().is_empty());
+    }
+}
+
+#[tauri::command]
+pub async fn list_installed_plugin_names(
+    state: State<'_, MiseState>,
+) -> Result<Vec<String>, String> {
     let mut names = list_trimmed_lines(
         &state,
         &["plugins", "ls", "--user"],

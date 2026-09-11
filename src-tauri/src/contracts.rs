@@ -16,6 +16,7 @@ pub struct PluginUpdateInfo {
     pub plugin: String,
     pub base_version: String,
     pub same_major_latest: Option<String>,
+    pub latest_by_major: std::collections::BTreeMap<String, String>,
     pub release_latest: Option<String>,
     pub overall_latest: Option<String>,
     pub checked_versions: usize,

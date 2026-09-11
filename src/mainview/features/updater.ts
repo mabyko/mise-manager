@@ -8,12 +8,16 @@ import {
 	updatePluginInState,
 } from "../core/helpers";
 import { addLog } from "./logs";
+import { getInstalledSeries } from "../core/toolStatus";
+import { getMajor } from "../../shared/version";
+import { settings } from "../core/settings.svelte";
 
 // ---- tool list -------------------------------------------------------------
 
 /** Reloads the tool list from mise. Resolves false (with toolsError set) when mise could not be read. */
 async function loadPlugins(): Promise<boolean> {
 	setBusy(true, "Loading plugins");
+	state.toolsCheckedAt = null;
 	state.toolsError = null;
 	try {
 		const installed = await rpc.request.listInstalledPlugins();
@@ -53,6 +57,7 @@ const baseMoved = (before: PluginRow, after: PluginRow) =>
 	resolveBaseVersion(before) !== resolveBaseVersion(after);
 
 const noCandidates = {
+	latestByMajor: {},
 	sameMajorLatest: null,
 	releaseLatest: null,
 	overallLatest: null,
@@ -80,6 +85,7 @@ async function checkPlugin(plugin: PluginRow): Promise<void> {
 			includeChannels: false,
 		});
 		updatePluginInState(plugin.name, {
+			latestByMajor: result.latestByMajor ?? {},
 			sameMajorLatest: result.sameMajorLatest,
 			releaseLatest: result.releaseLatest,
 			overallLatest: result.overallLatest,
@@ -118,13 +124,14 @@ export async function checkUpdates(): Promise<void> {
 		}),
 	);
 
+	state.toolsCheckedAt = new Date().toLocaleString("ko-KR", { hour12: false });
 	setBusy(false, "Check complete", 100);
 }
 
 /** Full refresh: reload the tool list, then check every tool. Safe to await from app start-up. */
-export async function reloadAndCheckTools(): Promise<void> {
+export async function reloadAndCheckTools(check = true): Promise<void> {
 	if (state.busy) return;
-	if (await loadPlugins()) await checkUpdates();
+	if (await loadPlugins() && check) await checkUpdates();
 }
 
 /** Row-level retry: reconcile the row's versions from mise first (an earlier refresh may have failed), then check it. */
@@ -176,7 +183,7 @@ async function runToolAction(
 	failLog: string | (() => string),
 ): Promise<void> {
 	const before = state.plugins.find((entry) => entry.name === pluginName);
-	if (state.busy || !before) return;
+	if (state.busy || state.updateCheckRunning || !before) return;
 	setBusy(true, label);
 	updatePluginInState(pluginName, { status });
 	try {
@@ -216,6 +223,18 @@ export function installVersion(pluginName: string, version: string): Promise<voi
 		`installed ${version}.`,
 		"install failed",
 	);
+}
+
+export function seriesUpdateSwitchesGlobal(plugin: PluginRow, version: string): boolean {
+	return settings.switchGlobalAfterUpdate && plugin.activeGlobalVersion !== null
+		&& getMajor(plugin.activeGlobalVersion) === getMajor(version);
+}
+
+export async function updateInstalledSeries(pluginName: string, version: string): Promise<void> {
+	const plugin = state.plugins.find(entry => entry.name === pluginName);
+	if (state.busy || !plugin || !getInstalledSeries(plugin).some(series => series.update === version)) return;
+	if (seriesUpdateSwitchesGlobal(plugin, version)) await updateToVersion(pluginName, version);
+	else await installVersion(pluginName, version);
 }
 
 export function useInstalledVersion(pluginName: string, version: string): Promise<void> {

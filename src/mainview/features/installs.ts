@@ -11,6 +11,7 @@ import { addLog } from "./logs";
 
 export async function reloadPluginDefinitions(): Promise<void> {
 	setBusy(true, "Loading plugin definitions");
+	state.installsError = null;
 	try {
 		const [userPluginInfos, corePlugins, installedTools, remoteInfos] = await Promise.all([
 			rpc.request.listInstalledUserPluginInfos(),
@@ -30,9 +31,49 @@ export async function reloadPluginDefinitions(): Promise<void> {
 		addLog(`Loaded install sources: remotePlugins=${state.remotePluginNames.length}, userPlugins=${state.installedPluginNames.length}, corePlugins=${state.corePluginNames.length}, installedTools=${state.installedToolNames.length}.`);
 		setBusy(false);
 	} catch (error) {
+		state.installsError = (error as Error).message;
 		addLog(`Failed to load plugin definitions: ${(error as Error).message}`);
 		setBusy(false, "Load failed");
 	}
+}
+
+export async function checkPluginDefinitionUpdates(): Promise<void> {
+	if (state.busy) return;
+	setBusy(true, "플러그인 업데이트 확인 중");
+	state.pluginUpdatesError = null;
+	try {
+		state.outdatedPluginNames = await rpc.request.listOutdatedPluginDefinitions();
+		addLog(`Plugin updates: ${state.outdatedPluginNames.length} available.`);
+	} catch (error) {
+		state.outdatedPluginNames = [];
+		state.pluginUpdatesError = (error as Error).message;
+		addLog(`Plugin update check failed: ${state.pluginUpdatesError}`);
+	} finally {
+		state.pluginUpdatesCheckedAt = new Date().toLocaleString("ko-KR", { hour12: false });
+		setBusy(false);
+	}
+}
+
+export async function updatePluginDefinition(plugin: string): Promise<void> {
+	if (state.busy || state.updateCheckRunning || state.pluginUpdatesError || !state.outdatedPluginNames.includes(plugin)) return;
+	setBusy(true, `${plugin} 플러그인 업데이트 중`);
+	state.pluginUpdateResult = null;
+	let updated = false;
+	try {
+		await rpc.request.updatePluginDefinition({ plugin });
+		updated = true;
+		state.pluginUpdateResult = `${plugin} 플러그인을 업데이트했습니다.`;
+		// A plugin can change its remote version list; discard all old candidates.
+		state.plugins = state.plugins.map(row => ({ ...row, status: "idle" }));
+		state.toolsCheckedAt = null;
+		addLog(state.pluginUpdateResult);
+	} catch (error) {
+		state.pluginUpdateResult = `${plugin} 업데이트 실패: ${(error as Error).message}`;
+		addLog(state.pluginUpdateResult);
+	} finally {
+		setBusy(false);
+	}
+	if (updated) await checkPluginDefinitionUpdates();
 }
 
 export async function installPluginDefinition(

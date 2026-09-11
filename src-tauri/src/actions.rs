@@ -32,12 +32,16 @@ pub async fn get_mise_version(state: State<'_, MiseState>) -> Result<Option<Stri
 async fn http_text(url: &str) -> Result<String, String> {
     let response = reqwest::Client::new()
         .get(url)
+        .timeout(std::time::Duration::from_secs(20))
         .header("User-Agent", "mise-manager")
         .send()
         .await
         .map_err(|error| error.to_string())?;
     if !response.status().is_success() {
-        return Err(format!("{url} returned status {}", response.status().as_u16()));
+        return Err(format!(
+            "{url} returned status {}",
+            response.status().as_u16()
+        ));
     }
     response.text().await.map_err(|error| error.to_string())
 }
@@ -71,8 +75,8 @@ pub async fn self_update_mise(state: State<'_, MiseState>) -> Result<MiseSelfUpd
 
     let result = mise::run_ok(
         &state,
-        &["self-update", "-y"],
-        "failed to run 'mise self-update -y'",
+        &["self-update", "-y", "--no-plugins"],
+        "mise self-update failed; package-manager installations must be updated through their package manager",
     )
     .await?;
 
@@ -111,12 +115,8 @@ pub(crate) fn plan_plugin_update(
         .filter(|v| starts_with_digit(v))
         .collect();
 
-    let pre_release_latest = pick_latest(
-        semver
-            .iter()
-            .copied()
-            .filter(|v| is_pre_release_version(v)),
-    );
+    let pre_release_latest =
+        pick_latest(semver.iter().copied().filter(|v| is_pre_release_version(v)));
     let release_latest = pick_latest(
         semver
             .iter()
@@ -139,20 +139,26 @@ pub(crate) fn plan_plugin_update(
         })
         .map(String::from);
 
-    let same_major_latest = get_major(&base_version).and_then(|major| {
-        pick_latest(
-            semver
-                .iter()
-                .copied()
-                .filter(|v| get_major(v) == Some(major)),
-        )
-    });
+    // The remote list is fetched once per tool, regardless of installed majors.
+    let mut latest_by_major = std::collections::BTreeMap::new();
+    for version in semver
+        .iter()
+        .copied()
+        .filter(|v| !is_pre_release_version(v))
+    {
+        if let Some(major) = get_major(version) {
+            latest_by_major.insert(major.to_string(), version.to_string());
+        }
+    }
+    let same_major_latest =
+        get_major(&base_version).and_then(|major| latest_by_major.get(&major.to_string()).cloned());
 
     PluginUpdateInfo {
         checked_versions: unique.len(),
         plugin,
         base_version,
         same_major_latest,
+        latest_by_major,
         release_latest,
         overall_latest,
         error: None,
@@ -176,6 +182,7 @@ pub async fn check_plugin_updates(
             plugin,
             base_version,
             same_major_latest: None,
+            latest_by_major: Default::default(),
             release_latest: None,
             overall_latest: None,
             checked_versions: 0,
@@ -183,7 +190,12 @@ pub async fn check_plugin_updates(
         });
     }
 
-    Ok(plan_plugin_update(plugin, base_version, include_channels, &remote.stdout))
+    Ok(plan_plugin_update(
+        plugin,
+        base_version,
+        include_channels,
+        &remote.stdout,
+    ))
 }
 
 #[tauri::command]
@@ -232,8 +244,11 @@ pub async fn delete_plugin_version(
     plugin: String,
     target_version: String,
 ) -> Result<UpdateResult, String> {
-    let global_map = catalog::list_global_plugins(&state).await;
-    if global_map.get(&plugin).map(String::as_str) == Some(target_version.as_str()) {
+    let global_map = catalog::list_global_plugins(&state).await?;
+    if global_map
+        .get(&plugin)
+        .is_some_and(|versions| versions.contains(&target_version))
+    {
         return Err("cannot delete active global version".to_string());
     }
 
@@ -257,6 +272,39 @@ fn append_log_line(stdout: String, extra: String) -> String {
     } else {
         format!("{stdout}\n{extra}")
     }
+}
+
+#[tauri::command]
+pub async fn update_plugin_definition(
+    state: State<'_, MiseState>,
+    plugin: String,
+) -> Result<PluginInstallResult, String> {
+    // Empty input to `plugins update` means ALL plugins; require one installed name.
+    if plugin.is_empty() || plugin.starts_with('-') || plugin.contains('#') {
+        return Err("invalid plugin name".to_string());
+    }
+    let installed = mise::run_ok(
+        &state,
+        &["plugins", "ls", "--user"],
+        "cannot read installed plugins",
+    )
+    .await?;
+    if !installed.stdout.lines().any(|line| line.trim() == plugin) {
+        return Err(
+            "only installed external plugins can be updated; update mise for core plugins"
+                .to_string(),
+        );
+    }
+    let result = mise::run_ok(
+        &state,
+        &["plugins", "update", &plugin],
+        "plugin update failed",
+    )
+    .await?;
+    Ok(PluginInstallResult {
+        plugin,
+        stdout: result.stdout.trim().to_string(),
+    })
 }
 
 #[tauri::command]
@@ -380,12 +428,22 @@ mod tests {
     use super::*;
 
     fn plan(plugin: &str, base: &str, include_channels: bool, stdout: &str) -> PluginUpdateInfo {
-        plan_plugin_update(plugin.to_string(), base.to_string(), include_channels, stdout)
+        plan_plugin_update(
+            plugin.to_string(),
+            base.to_string(),
+            include_channels,
+            stdout,
+        )
     }
 
     #[test]
     fn computes_same_major_release_and_pre_release_columns() {
-        let info = plan("node", "20.1.0", false, "20.2.0\n21.0.0\n22.0.0-rc1\nlts\n20.1.0");
+        let info = plan(
+            "node",
+            "20.1.0",
+            false,
+            "20.2.0\n21.0.0\n22.0.0-rc1\nlts\n20.1.0",
+        );
         // "lts" is dropped without include_channels; 22.0.0-rc1 > base so it surfaces.
         assert_eq!(info.same_major_latest.as_deref(), Some("20.2.0"));
         assert_eq!(info.release_latest.as_deref(), Some("21.0.0"));
@@ -422,5 +480,26 @@ mod tests {
         let info = plan("node", "1.0.0", false, r#"["1.0.0", {"version": "1.1.0"}]"#);
         assert_eq!(info.release_latest.as_deref(), Some("1.1.0"));
         assert_eq!(info.checked_versions, 2);
+    }
+
+    #[test]
+    fn tracks_each_major_without_promoting_prereleases() {
+        let info = plan(
+            "node",
+            "26.0.0",
+            false,
+            r#"["24.20.0","26.0.0","24.21.0","26.1.0","24.22.0-rc.1","27.0.0-rc.1"]"#,
+        );
+        assert_eq!(
+            info.latest_by_major.get("24").map(String::as_str),
+            Some("24.21.0")
+        );
+        assert_eq!(
+            info.latest_by_major.get("26").map(String::as_str),
+            Some("26.1.0")
+        );
+        assert!(!info.latest_by_major.contains_key("27"));
+        assert_eq!(info.same_major_latest.as_deref(), Some("26.1.0"));
+        assert_eq!(info.release_latest.as_deref(), Some("26.1.0"));
     }
 }

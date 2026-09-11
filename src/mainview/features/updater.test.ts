@@ -12,6 +12,7 @@ vi.mock("../core/rpc", () => ({ rpc: { request: rpcRequest } }));
 import { state } from "../core/state.svelte";
 import type { PluginRow } from "../core/types";
 import { getToolUpdate } from "../core/toolStatus";
+import { settings } from "../core/settings.svelte";
 import {
 	deleteInstalledVersion,
 	installVersion,
@@ -19,10 +20,12 @@ import {
 	retryCheck,
 	updateToVersion,
 	useInstalledVersion,
+	updateInstalledSeries,
 } from "./updater";
 
 const row = (patch: Partial<PluginRow> = {}): PluginRow => ({
 	name: "node",
+	latestByMajor: {},
 	activeGlobalVersion: "22.14.0",
 	installedVersions: ["22.14.0"],
 	sameMajorLatest: "22.15.0",
@@ -36,6 +39,7 @@ const node = () => state.plugins.find((plugin) => plugin.name === "node");
 
 describe("updater", () => {
 	beforeEach(() => {
+		settings.switchGlobalAfterUpdate = false;
 		Object.assign(state, {
 			busy: false,
 			progress: null,
@@ -58,6 +62,30 @@ describe("updater", () => {
 		rpcRequest.checkPluginUpdates.mockResolvedValue({
 			sameMajorLatest: "22.15.0", releaseLatest: "24.0.0", overallLatest: null, checkedVersions: 3,
 		});
+	});
+
+	test("updating an older installed major preserves the global version even with automatic switching enabled", async () => {
+		settings.switchGlobalAfterUpdate = true;
+		state.plugins = [row({ activeGlobalVersion: "26.0.0", installedVersions: ["26.0.0", "24.20.0"], latestByMajor: { 24: "24.21.0", 26: "26.1.0" } })];
+		rpcRequest.listInstalledPlugins.mockResolvedValue([{ name: "node", activeGlobalVersion: "26.0.0", installedVersions: ["26.0.0", "24.21.0", "24.20.0"] }]);
+		await updateInstalledSeries("node", "24.21.0");
+		expect(rpcRequest.installPlugin).toHaveBeenCalledWith({ plugin: "node", targetVersion: "24.21.0" });
+		expect(rpcRequest.useGlobalPlugin).not.toHaveBeenCalled();
+		expect(node()?.activeGlobalVersion).toBe("26.0.0");
+		expect(node()?.installedVersions).toContain("24.20.0");
+		await updateInstalledSeries("node", "24.21.0");
+		await updateInstalledSeries("node", "27.0.0");
+		expect(rpcRequest.installPlugin).toHaveBeenCalledTimes(1);
+	});
+
+	test("series updates install only by default and switch the active major only when enabled", async () => {
+		state.plugins = [row({ latestByMajor: { 22: "22.15.0" } })];
+		await updateInstalledSeries("node", "22.15.0");
+		expect(rpcRequest.useGlobalPlugin).not.toHaveBeenCalled();
+		state.plugins = [row({ latestByMajor: { 22: "22.15.0" } })];
+		settings.switchGlobalAfterUpdate = true;
+		await updateInstalledSeries("node", "22.15.0");
+		expect(rpcRequest.useGlobalPlugin).toHaveBeenCalledWith({ plugin: "node", targetVersion: "22.15.0" });
 	});
 
 	test("update keeps the installed version visible when switching global fails", async () => {

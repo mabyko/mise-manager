@@ -4,9 +4,10 @@ import type {
 	PluginSummary,
 } from "../../shared/contracts";
 
-export type ActiveTab = "mise" | "updater" | "logs" | "installs";
+export type ActiveTab = "mise" | "updater" | "updates" | "logs" | "installs" | "settings";
 
 export interface PluginRow extends PluginSummary {
+	latestByMajor: Record<string, string>;
 	sameMajorLatest: string | null;
 	releaseLatest: string | null;
 	overallLatest: string | null;
@@ -16,10 +17,16 @@ export interface PluginRow extends PluginSummary {
 }
 
 export interface MainViewState {
+	toolsCheckedAt: string | null;
+	updateCheckRunning: boolean;
+	outdatedPluginNames: string[];
+	pluginUpdatesCheckedAt: string | null;
+	pluginUpdatesError: string | null;
+	pluginUpdateResult: string | null;
+	installsError: string | null;
 	activeTab: ActiveTab;
 	selectedToolName: string | null;
 	toolSearchQuery: string;
-	toolUpdatesOnly: boolean;
 	toolsLoaded: boolean;
 	toolsError: string | null;
 	miseVersion: string | null;

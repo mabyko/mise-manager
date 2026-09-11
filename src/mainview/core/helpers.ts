@@ -35,6 +35,7 @@ export function resolveBaseVersion(plugin: PluginRow): string | null {
 export function toPluginRow(summary: PluginSummary): PluginRow {
 	return {
 		...summary,
+		latestByMajor: {},
 		sameMajorLatest: null,
 		releaseLatest: null,
 		overallLatest: null,

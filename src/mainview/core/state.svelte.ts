@@ -1,10 +1,16 @@
 import type { MainViewState } from "./types";
 
 export const state: MainViewState = $state({
+	toolsCheckedAt: null,
+	updateCheckRunning: false,
+	outdatedPluginNames: [],
+	pluginUpdatesCheckedAt: null,
+	pluginUpdatesError: null,
+	pluginUpdateResult: null,
+	installsError: null,
 	activeTab: "updater",
 	selectedToolName: null,
 	toolSearchQuery: "",
-	toolUpdatesOnly: false,
 	toolsLoaded: false,
 	toolsError: null,
 	miseVersion: null,

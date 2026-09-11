@@ -17,6 +17,7 @@ export interface PluginUpdateInfo {
 	plugin: string;
 	baseVersion: string;
 	sameMajorLatest: string | null;
+	latestByMajor: Record<string, string>;
 	releaseLatest: string | null;
 	overallLatest: string | null;
 	checkedVersions: number;
@@ -57,6 +58,8 @@ export interface MiseInstallResult {
 // serde structs). Keys are camelCase command names; the rpc proxy converts them
 // to the snake_case Rust command names.
 export interface AppRequests {
+	listOutdatedPluginDefinitions: { params: undefined; response: string[] };
+	updatePluginDefinition: { params: { plugin: string }; response: PluginInstallResult };
 	getMiseVersion: {
 		params: undefined;
 		response: string | null;

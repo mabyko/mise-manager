@@ -12,14 +12,14 @@ vi.mock("./rpc", () => ({ rpc: { request: requests } }));
 let app: ReturnType<typeof mount>;
 const tool = (name: string, current: string, target = current): PluginRow => ({
 	name, activeGlobalVersion: current, installedVersions: [current], sameMajorLatest: target,
-	releaseLatest: target, overallLatest: null, checkedVersions: 10, status: "done",
+	releaseLatest: target, overallLatest: null, checkedVersions: 10, status: "done", latestByMajor: {},
 });
 const button = (label: string) => [...document.querySelectorAll<HTMLButtonElement>("button")].find(b => b.textContent?.trim() === label)!;
 
 beforeEach(async () => {
 	vi.clearAllMocks();
 	Object.assign(state, {
-		activeTab: "updater", selectedToolName: null, toolSearchQuery: "", toolUpdatesOnly: false,
+		activeTab: "updater", selectedToolName: null, toolSearchQuery: "",
 		busy: false, progress: null, progressLabel: "Ready", toolsLoaded: true, toolsError: null,
 		installsLoaded: true, logs: [],
 		miseIsInstalled: true, miseInstalledChecked: true, miseLoaded: true, miseLatestLoaded: true,
@@ -45,31 +45,22 @@ test("the initial tool screen waits for discovery before suggesting installation
 	expect(document.querySelector(".empty-detail")?.textContent).not.toContain("mise로 도구를 설치");
 });
 
-test("tools open directly; searches have no stale actions and survive navigation", async () => {
-	expect(document.querySelector("main h1")?.textContent).toBe("내 도구");
-	expect([...document.querySelectorAll("nav button")].some(b => b.textContent?.includes("요약"))).toBe(false);
-	(document.querySelectorAll<HTMLButtonElement>(".tool-item")[1]).click();
-	flushSync(); await tick();
-	expect(document.querySelector(".tool-detail h2")?.textContent).toBe("python");
-	const bun = [...document.querySelectorAll<HTMLButtonElement>(".tool-item")].find(b => b.textContent?.includes("bun"))!;
-	bun.focus(); bun.click(); flushSync();
-	expect(document.activeElement).toBe(bun);
-	expect(document.querySelector(".tool-detail h2")?.textContent).toBe("bun");
-
-	const search = document.querySelector<HTMLInputElement>("#tool-search")!;
-	search.value = "bun"; search.dispatchEvent(new Event("input", { bubbles: true }));
-	const filter = document.querySelector<HTMLInputElement>('input[type="checkbox"]')!;
-	filter.click(); flushSync();
-	expect(state.toolSearchQuery).toBe("bun");
-	expect(document.querySelector(".tool-detail")?.textContent).toContain("조건에 맞는 도구가 없어요");
-	expect(document.querySelector(".tool-detail")?.textContent).not.toContain("으로 업데이트");
-	button("작업 기록").click(); flushSync(); await tick();
-	(document.querySelectorAll<HTMLButtonElement>("nav button")[0]).click(); flushSync(); await tick();
-	expect(document.querySelector<HTMLInputElement>("#tool-search")?.value).toBe("bun");
-	expect(document.querySelector<HTMLInputElement>('input[type="checkbox"]')?.checked).toBe(true);
-	button("검색·필터 초기화").click(); flushSync(); await tick();
-	expect(document.querySelector(".tool-detail h2")?.textContent).toBe("bun");
-	await vi.waitFor(() => expect(document.activeElement?.id).toBe("tool-search"));
+test("the object sidebar preserves selection and search across updates and settings", async () => {
+ expect(document.querySelector("main h1")?.textContent).toBe("node");
+ const bun = [...document.querySelectorAll<HTMLButtonElement>(".tool-item")].find(b => b.textContent?.includes("bun"))!;
+ bun.focus(); bun.click(); flushSync();
+ expect(document.activeElement).toBe(bun);
+ expect(document.querySelector(".tool-detail h2")?.textContent).toBe("bun");
+ const search = document.querySelector<HTMLInputElement>("#tool-search")!;
+ search.value = "bun"; search.dispatchEvent(new Event("input", { bubbles: true })); flushSync();
+ expect(document.querySelectorAll(".tool-item")).toHaveLength(1);
+ document.querySelector<HTMLButtonElement>('nav[aria-label="업데이트"] button')!.click(); flushSync(); await tick();
+ expect(document.querySelector("main h1")?.textContent).toContain("업데이트");
+ expect(document.querySelector('[aria-label="node 22.x 22.15.0 설치"]')).not.toBeNull();
+ document.querySelector<HTMLButtonElement>('nav[aria-label="앱 설정"] button')!.click(); flushSync(); await tick();
+ expect(document.querySelector<HTMLInputElement>("#tool-search")?.value).toBe("bun");
+ document.querySelector<HTMLButtonElement>(".tool-item")!.click(); flushSync(); await tick();
+ expect(document.querySelector(".tool-detail h2")?.textContent).toBe("bun");
 });
 
 test("major and mise actions require confirmation; active global versions have no delete action", async () => {
