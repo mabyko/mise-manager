@@ -12,6 +12,7 @@
   - 번들 ID는 추적 파일에 희생용 `forked.misemanager.local`만 두고 개인 ID·팀은 `Config/Local.xcconfig`(무시)로 분리. Debug는 `Mise Manager Dev`로 나란히 설치
 - 빌드 체인을 bun/vite/cargo에서 Xcode(`xcodegen` 스펙 `project.yml`)로 교체. `scripts/test.sh`, `scripts/release.sh`(유니버설 DMG)
 - mise 설치 스크립트(sh/brew)도 앱의 보강된 PATH로 실행해 GUI 환경에서 `brew`를 찾는다
+- 메뉴바 창 "내 도구"는 mise 카드를 맨 위에 두고 도구당 한 줄로 접는다. 업데이트가 있는 계열만 설치 버튼과 함께 바로 보이고, 펼치면 설치된 버전을 전환할 수 있다
 - 앱 아이콘은 0.1.2의 Lift·Graphite를 그대로 쓴다(`assets/icon.iconset` 마스터 교체). Debug 빌드는 DEV 배지가 붙은 변형
 - Debug 빌드에만 검증용 훅(`DebugHooks.swift`: 분산 알림으로 탭 전환·렌더링·접근성 덤프)이 들어 있다
 

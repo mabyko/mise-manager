@@ -77,69 +77,74 @@ struct TrayPanelView: View {
     }
 
     @ViewBuilder private var tools: some View {
+        miseCard
         if state.plugins.isEmpty {
             Text(state.toolsLoaded ? "설치된 도구가 없습니다." : "도구를 불러오는 중…").foregroundStyle(.secondary)
         }
-        ForEach(state.plugins, id: \.name) { tool in toolSection(tool) }
-
-        SectionLabel(text: "mise · 플러그인")
-        let rest = summary.items.filter { $0.kind == .mise || $0.kind == .plugin }
-        UpdateList(state: state, items: rest)
-        if !rest.contains(where: { $0.kind == .mise }) {
-            Button { open(.mise) } label: {
-                HStack {
-                    Text("mise").bold()
-                    Text(state.miseVersion ?? "미확인").font(.callout.monospaced()).foregroundStyle(.secondary)
-                    Spacer()
-                    Text("관리 →").foregroundStyle(.secondary)
-                }
-                .padding(10)
-                .background(.quaternary.opacity(0.4), in: RoundedRectangle(cornerRadius: 10))
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
+        ForEach(state.plugins, id: \.name) { tool in
+            TrayToolBlock(
+                state: state, tool: tool,
+                updates: summary.items.filter { $0.name == tool.name && ($0.kind == .series || $0.kind == .major) },
+                open: open)
         }
     }
 
-    @ViewBuilder private func toolSection(_ tool: PluginRow) -> some View {
-        let updates = summary.items.filter { $0.name == tool.name && ($0.kind == .series || $0.kind == .major) }
-        if !updates.isEmpty { UpdateList(state: state, items: updates) }
-        ForEach(ToolStatus.installedSeries(tool).filter { series in !updates.contains { $0.to == series.update } }, id: \.major) { series in
+    /// mise itself first: short version, status, and the plugin-update count.
+    private var miseCard: some View {
+        let status = state.miseStatus
+        let (text, tint) = Self.miseStatusText(status.key)
+        let outdated = state.outdatedPluginNames.count
+        return VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 10) {
-                ToolGlyph(name: tool.name)
+                Image(systemName: "shippingbox.fill")
+                    .frame(width: 28, height: 28)
+                    .background(.tint.opacity(0.15), in: RoundedRectangle(cornerRadius: 7))
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("\(tool.name) \(series.major).x").bold()
-                    Text(series.current).font(.callout.monospaced())
+                    Text("mise").bold()
+                    Text(MiseStatus.normalizeVersionToken(state.miseVersion) ?? state.miseVersion ?? "미확인")
+                        .font(.caption.monospaced()).foregroundStyle(.secondary)
                 }
                 Spacer()
-                Text(series.latest != nil ? "설치됨" : ToolStatus.label(tool)).font(.caption).foregroundStyle(.secondary)
-            }
-            .padding(.vertical, 2)
-        }
-        DisclosureGroup {
-            VStack(alignment: .leading, spacing: 6) {
-                ForEach(tool.installedVersions, id: \.self) { version in
-                    HStack {
-                        Text(version).font(.callout.monospaced())
-                        Spacer()
-                        if tool.activeGlobalVersion == version {
-                            Text("사용 중").font(.caption).foregroundStyle(.secondary)
-                        } else {
-                            Button("전역으로 사용") { Task { await state.run(.use(name: tool.name, version: version)) } }
-                                .controlSize(.small).disabled(checking)
-                        }
-                    }
+                if let tint { Pill(text: text, tint: tint) } else { Text(text).font(.caption).foregroundStyle(.secondary) }
+                if status.canUpdate {
+                    Button("검토…") { close(); Task { await state.run(.apply(id: "mise")) } }
+                        .controlSize(.small).disabled(checking)
                 }
-                Button("앱에서 자세히 보기 →") { open(.updater, name: tool.name) }.buttonStyle(.link)
+                Image(systemName: "chevron.right").font(.caption).foregroundStyle(.tertiary)
             }
-            .padding(.top, 4)
-        } label: {
-            HStack(spacing: 6) {
-                Text("\(tool.name) 버전 관리")
-                Text("전역 \(tool.activeGlobalVersion ?? "미선택")").font(.caption.monospaced()).foregroundStyle(.secondary)
+            .contentShape(Rectangle())
+            .onTapGesture { open(.mise) }
+            if outdated > 0 {
+                Button { open(.updates) } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "puzzlepiece.extension")
+                        Text("플러그인 업데이트 \(outdated)개")
+                        Spacer()
+                        Image(systemName: "chevron.right").font(.caption).foregroundStyle(.tertiary)
+                    }
+                    .font(.callout)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+            } else if state.pluginUpdatesError != nil {
+                Text("플러그인 확인 실패 · 앱에서 확인").font(.caption).foregroundStyle(.red)
             }
         }
-        .font(.callout)
+        .padding(10)
+        .background(.quaternary.opacity(0.4), in: RoundedRectangle(cornerRadius: 10))
+    }
+
+    static func miseStatusText(_ key: MiseStatusKey) -> (String, Color?) {
+        switch key {
+        case .upToDate: ("최신", nil)
+        case .updateAvailable: ("업데이트 가능", .orange)
+        case .checkFailed: ("확인 실패", .red)
+        case .loading: ("확인 중", nil)
+        case .updating: ("업데이트 중", nil)
+        case .updatedNeedsReload: ("재시작 필요", .orange)
+        case .notChecked: ("비교 불가", nil)
+        case .aheadOrCustom: ("커스텀 빌드", nil)
+        }
     }
 
     private var footer: some View {
@@ -156,5 +161,79 @@ struct TrayPanelView: View {
     private func open(_ tab: ActiveTab, name: String? = nil) {
         close()
         Task { await state.run(.open(tab: tab, name: name)) }
+    }
+}
+
+/// One tool: a summary row, its pending series/major updates with their actions, and on demand the
+/// installed versions with global switching.
+private struct TrayToolBlock: View {
+    var state: AppState
+    let tool: PluginRow
+    let updates: [UpdateItem]
+    let open: (ActiveTab, String?) -> Void
+    @State private var expanded = false
+
+    private var checking: Bool { state.busy || state.updateCheckRunning }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Button { withAnimation(.easeOut(duration: 0.15)) { expanded.toggle() } } label: {
+                HStack(spacing: 10) {
+                    ToolGlyph(name: tool.name)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(tool.name).bold()
+                        Text("전역 \(tool.activeGlobalVersion ?? "미선택") · 설치 \(tool.installedVersions.count)개")
+                            .font(.caption.monospacedDigit()).foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    status
+                    Image(systemName: "chevron.right")
+                        .font(.caption).foregroundStyle(.tertiary)
+                        .rotationEffect(.degrees(expanded ? 90 : 0))
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("\(tool.name) \(ToolStatus.label(tool))")
+
+            if !updates.isEmpty { UpdateList(state: state, items: updates) }
+
+            if expanded {
+                VStack(alignment: .leading, spacing: 6) {
+                    ForEach(tool.installedVersions, id: \.self) { version in
+                        HStack {
+                            Text(version).font(.callout.monospaced())
+                            Spacer()
+                            if tool.activeGlobalVersion == version {
+                                Text("사용 중").font(.caption).foregroundStyle(.secondary)
+                            } else {
+                                Button("전역으로 사용") { Task { await state.run(.use(name: tool.name, version: version)) } }
+                                    .controlSize(.small).disabled(checking)
+                            }
+                        }
+                    }
+                    if tool.installedVersions.isEmpty { Text("설치된 버전이 없습니다.").font(.caption).foregroundStyle(.secondary) }
+                    Button("앱에서 자세히 보기 →") { open(.updater, tool.name) }.buttonStyle(.link).font(.callout)
+                }
+                .padding(.leading, 38)
+            }
+        }
+        .padding(.vertical, 2)
+    }
+
+    @ViewBuilder private var status: some View {
+        let label = ToolStatus.label(tool)
+        switch tool.status {
+        case .error: Pill(text: label, tint: .red)
+        case .checking, .updating, .deleting: Pill(text: label)
+        default:
+            if !updates.isEmpty {
+                Pill(text: "업데이트 \(updates.count)", tint: .orange)
+            } else if label == Strings.ToolStatus.latestStable {
+                Text("최신").font(.caption).foregroundStyle(.secondary)
+            } else {
+                Pill(text: label)
+            }
+        }
     }
 }
