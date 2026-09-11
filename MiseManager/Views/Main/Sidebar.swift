@@ -47,42 +47,57 @@ struct Sidebar: View {
     }
 
     var body: some View {
-        List(selection: selection) {
+        VStack(spacing: 0) {
             HStack(spacing: 8) {
-                Image("BrandIcon").resizable().frame(width: 20, height: 20)
+                Image("BrandIcon").resizable().frame(width: 22, height: 22)
                 Text("Mise Manager").font(.headline)
+                Spacer()
             }
-            .selectionDisabled()
-            .listRowInsets(EdgeInsets(top: 4, leading: 8, bottom: 8, trailing: 8))
+            .padding(.horizontal, 16)
+            .padding(.top, 6)
+            .padding(.bottom, 10)
 
-            Label("업데이트", systemImage: "arrow.down.circle")
-                .badge(countBadge)
-                .tag(SidebarItem.updates)
+            HStack(spacing: 6) {
+                Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
+                TextField("도구 검색", text: $state.toolSearchQuery)
+                    .textFieldStyle(.plain)
+                    .accessibilityLabel("도구 검색")
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 5)
+            .background(.quaternary.opacity(0.6), in: RoundedRectangle(cornerRadius: 7))
+            .padding(.horizontal, 12)
+            .padding(.bottom, 6)
 
-            Section("설치된 도구 \(state.plugins.count)") {
-                ForEach(tools, id: \.name) { tool in
-                    toolRow(tool).tag(SidebarItem.tool(tool.name))
+            List(selection: selection) {
+                Label("업데이트", systemImage: "arrow.down.circle")
+                    .badge(countBadge)
+                    .tag(SidebarItem.updates)
+
+                Section("설치된 도구 \(state.plugins.count)") {
+                    ForEach(tools, id: \.name) { tool in
+                        toolRow(tool).tag(SidebarItem.tool(tool.name))
+                    }
+                    if tools.isEmpty {
+                        Text(state.toolSearchQuery.isEmpty ? (state.toolsLoaded ? "설치된 도구 없음" : "불러오는 중…") : "검색 결과가 없습니다.")
+                            .foregroundStyle(.secondary)
+                            .selectionDisabled()
+                    }
                 }
-                if tools.isEmpty {
-                    Text(state.toolSearchQuery.isEmpty ? (state.toolsLoaded ? "설치된 도구 없음" : "불러오는 중…") : "검색 결과가 없습니다.")
-                        .foregroundStyle(.secondary)
-                        .selectionDisabled()
+
+                Section("관리") {
+                    Label("mise", systemImage: "shippingbox").badge(Text("버전 관리자")).tag(SidebarItem.mise)
+                    Label("플러그인 관리", systemImage: "puzzlepiece.extension").tag(SidebarItem.installs)
+                        .selectionDisabled(!state.installsLoaded && (state.busy || state.updateCheckRunning))
+                    Label("작업 기록", systemImage: "doc.text").tag(SidebarItem.logs)
+                }
+
+                Section {
+                    Label("설정", systemImage: "gearshape").tag(SidebarItem.settings)
                 }
             }
-
-            Section("관리") {
-                Label("mise", systemImage: "shippingbox").badge(Text("버전 관리자")).tag(SidebarItem.mise)
-                Label("플러그인 관리", systemImage: "puzzlepiece.extension").tag(SidebarItem.installs)
-                    .selectionDisabled(!state.installsLoaded && (state.busy || state.updateCheckRunning))
-                Label("작업 기록", systemImage: "doc.text").tag(SidebarItem.logs)
-            }
-
-            Section {
-                Label("설정", systemImage: "gearshape").tag(SidebarItem.settings)
-            }
+            .listStyle(.sidebar)
         }
-        .listStyle(.sidebar)
-        .searchable(text: $state.toolSearchQuery, placement: .sidebar, prompt: "도구 검색")
         .navigationSplitViewColumnWidth(min: 200, ideal: 240, max: 320)
     }
 

@@ -1,4 +1,4 @@
-// Derives the Debug app icon from the release master: same glyph, plus a red "DEV" badge top-right.
+// Derives the Debug app icon from the release master (Lift·Graphite): same glyph, plus a red "DEV" badge top-right.
 // Usage: swift scripts/make-dev-icon.swift <master.png> <out.png>
 import AppKit
 
@@ -16,11 +16,11 @@ NSGraphicsContext.saveGraphicsState()
 NSGraphicsContext.current = NSGraphicsContext(bitmapImageRep: rep)
 master.draw(in: NSRect(x: 0, y: 0, width: size, height: size))
 
-let badge = NSRect(x: 600, y: 820, width: 340, height: 140)
+let badge = NSRect(x: 540, y: 760, width: 280, height: 110)
 NSColor(red: 0.84, green: 0.19, blue: 0.16, alpha: 1).setFill()
-NSBezierPath(roundedRect: badge, xRadius: 44, yRadius: 44).fill()
+NSBezierPath(roundedRect: badge, xRadius: 36, yRadius: 36).fill()
 let label = NSAttributedString(string: "DEV", attributes: [
-    .font: NSFont.systemFont(ofSize: 104, weight: .heavy),
+    .font: NSFont.systemFont(ofSize: 84, weight: .heavy),
     .foregroundColor: NSColor.white,
 ])
 let textSize = label.size()
