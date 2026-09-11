@@ -5,6 +5,9 @@ use tauri::{
     AppHandle, Manager, PhysicalPosition, WebviewUrl, WebviewWindowBuilder, WindowEvent,
 };
 
+#[cfg(target_os = "macos")]
+mod badge;
+
 #[tauri::command]
 pub fn show_main_window(app: AppHandle) -> Result<(), String> {
     let window = app
@@ -121,6 +124,16 @@ pub fn set_tray_status(
         )))
         .map_err(|e| e.to_string())?;
         tray.set_visible(visible).map_err(|e| e.to_string())?;
+        // Showing a hidden tray recreates NSStatusItem, so apply the badge last.
+        #[cfg(target_os = "macos")]
+        tray.with_inner_tray_icon(move |inner| {
+            let mtm =
+                objc2::MainThreadMarker::new().expect("tray callback runs on the main thread");
+            if let Some(button) = inner.ns_status_item().and_then(|item| item.button(mtm)) {
+                badge::update(&button, count > 0, checking);
+            }
+        })
+        .map_err(|e| e.to_string())?;
     }
     if !visible {
         hide_tray_window(app)?;

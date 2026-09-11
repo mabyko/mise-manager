@@ -15,11 +15,11 @@ macOS is currently the only supported platform.
 
 ## Screenshots
 
-[![Mise Manager app window and menu-bar panel showing separate updates for Node 26 and Node 24](./docs/images/mise-manager-overview.png)](./docs/images/mise-manager-overview.png)
+[![Mise Manager app window, menu-bar panel, and red update badge showing separate updates for Node 26 and Node 24](./docs/images/mise-manager-overview.png)](./docs/images/mise-manager-overview.png)
 
-**App window:** browse tools, review updates for each installed major, and manage global versions. **Menu bar:** check updates, install a new version, or switch versions from a compact panel.
+**App window:** browse tools, review updates for each installed major, and manage global versions. **Menu bar:** the red badge and count show available mise, tool, and plugin updates. Open the compact panel to check updates, install a new version, or switch versions.
 
-View full size: [App window](./docs/images/mise-manager-app.png) · [Menu-bar panel](./docs/images/mise-manager-menu-bar.png)
+View full size: [App window](./docs/images/mise-manager-app.png) · [Menu-bar icon and panel](./docs/images/mise-manager-menu-bar.png)
 
 Captured from the current app UI in the browser preview with the light theme and sample data. Window frames and the menu-bar icon are arranged for presentation.
 
@@ -27,7 +27,7 @@ Captured from the current app UI in the browser preview with the light theme and
 
 - Select installed tools directly from the searchable sidebar. The detail pane shows each installed major, its latest stable version, and global version controls.
 - Open **mise Management**, **Plugin Management**, **Logs**, or **Settings** from the sidebar.
-- **Updates** collects tool-series, mise, and external-plugin updates in one list. Its sidebar badge and the macOS menu bar share the same count; unknown and failed checks remain visible.
+- **Updates** collects tool-series, mise, and external-plugin updates in one list. Its sidebar badge and the macOS menu bar share the same count. A red dot on the menu-bar icon stays visible while updates are available and clears when none remain; unknown and failed checks remain visible separately.
 - Click the menu-bar icon for a compact tool list, per-series installs, and global version selection. **Settings → 메뉴바 아이콘 표시** controls its visibility (on by default, saved across restarts). mise and new-major updates open the main window for review. Closing the main window keeps the app running, even with the icon hidden; reopen it from the Dock or quit from the app menu. When the icon is shown, its right-click menu also offers **Mise Manager 종료**.
 - Track every installed major independently: Node 26 and Node 24 each get their own latest stable candidate from one remote lookup per tool.
 - Install tool versions, switch the global version, or remove unused versions.
@@ -98,6 +98,8 @@ cd src-tauri
 cargo test
 cargo check
 ```
+
+On macOS, run `cargo run --example tray_badge_check` from `src-tauri/` to check native badge visibility, click handling, and icon recreation.
 
 ## How It Works
 

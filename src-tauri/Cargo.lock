@@ -2274,6 +2274,9 @@ name = "mise-manager"
 version = "0.1.2"
 dependencies = [
  "log",
+ "objc2",
+ "objc2-app-kit",
+ "objc2-foundation",
  "reqwest",
  "serde",
  "serde_json",
