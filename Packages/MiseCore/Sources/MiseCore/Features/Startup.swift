@@ -1,6 +1,7 @@
 /// App launch flow (was main.ts) and the scheduled check timer (was App.svelte's setInterval).
 extension AppState {
     public func startup() async {
+        scheduleIntervalChecks()
         setBusy(true, Strings.checkingMise)
         await checkMiseInstallationStatus()
         guard miseIsInstalled else {
@@ -15,7 +16,6 @@ extension AppState {
             await reloadMiseVersion()
             await reloadAndCheckTools(check: false)
         }
-        scheduleIntervalChecks()
     }
 
     /// (Re)starts the periodic check for the current `checkIntervalHours`; 0 stops it.

@@ -3,6 +3,7 @@
 - 작성일: 2026-09-11
 - 대상: `mise-manager` 0.1.2 (Tauri 2 + Svelte 5 + Rust) → macOS 네이티브 (SwiftUI + AppKit, Swift 6)
 - 상태: Phase 0–5 구현 완료(2026-09-11, §11 권장안 적용). 남은 것은 §10 수동 체크리스트 통과, Developer ID 서명·공증, `main` 머지.
+- 구현이 이 문서와 다른 점: `State/`·`Features/`·`Rules/`와 기능 흐름 테스트는 앱 타깃이 아니라 `Packages/MiseCore`에 있다(UI 없이 `swift test`로 실행). `Series.swift`·`LogStore.swift`·`TrayRows`는 각각 `ToolStatus.swift`·`AppState`·`TrayPanelView.swift`에 흡수됐다. §5의 표시 이름·아이콘 분기는 `project.yml`의 구성별 설정에 있고 `Base.xcconfig`에는 번들 ID만 있다. `os.Logger`는 쓰지 않고 앱 내 작업 기록만 남긴다. 문구는 진행 라벨·상태 라벨만 `Strings.swift`에 모았고 화면 문장은 뷰에 있다. sh/brew 설치도 보강된 PATH로 실행한다. Debug 빌드에는 스크린샷·검증용 훅(`DebugHooks.swift`)이 있다. navigation·installs 렌더링 테스트 7개는 이식하지 않았다.
 
 ## 1. 결정 요약
 

@@ -198,8 +198,8 @@ extension AppState {
     }
 
     public func deleteInstalledVersion(_ name: String, _ version: String) async {
-        if busy { return }
-        guard let plugin = plugin(name), plugin.activeGlobalVersion != version else {
+        guard !busy, let plugin = plugin(name) else { return }
+        guard plugin.activeGlobalVersion != version else {
             addLog("\(name): cannot delete active global version \(version).")
             return
         }

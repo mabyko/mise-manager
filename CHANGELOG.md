@@ -10,7 +10,9 @@
   - 메인 창은 `NavigationSplitView` 사이드바 + 탭 6개 + 하단 상태바 + 다이얼로그 4개, 메뉴바는 `NSStatusItem` + 비활성화 `NSPanel`. 창과 메뉴바가 같은 상태 객체를 관찰하므로 main↔tray 메시지 브리지 제거
   - 진행 라벨을 한국어로 통일, 설정은 `UserDefaults`(`mise-manager.*`)로 이동(기존 설정은 이전하지 않음)
   - 번들 ID는 추적 파일에 희생용 `forked.misemanager.local`만 두고 개인 ID·팀은 `Config/Local.xcconfig`(무시)로 분리. Debug는 `Mise Manager Dev`로 나란히 설치
-- 빌드 체인을 bun/vite/cargo에서 Xcode(`xcodegen` 스펙 `project.yml`)로 교체. `scripts/test.sh`, `scripts/release.sh`(DMG)
+- 빌드 체인을 bun/vite/cargo에서 Xcode(`xcodegen` 스펙 `project.yml`)로 교체. `scripts/test.sh`, `scripts/release.sh`(유니버설 DMG)
+- mise 설치 스크립트(sh/brew)도 앱의 보강된 PATH로 실행해 GUI 환경에서 `brew`를 찾는다
+- Debug 빌드에만 검증용 훅(`DebugHooks.swift`: 분산 알림으로 탭 전환·렌더링·접근성 덤프)이 들어 있다
 
 ### Removed
 - Windows 알파 지원, 브라우저 미리보기(mock RPC), 디자인 프로토타입, 메뉴바 아이콘 우클릭 메뉴(종료는 메뉴바 창 안에 있음)

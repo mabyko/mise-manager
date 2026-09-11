@@ -175,8 +175,11 @@ import Testing
 
     @Test func deleteRefusesTheActiveGlobalVersionAndDropsAToolMiseNoLongerLists() async {
         let (runner, state) = setup()
+        await state.deleteInstalledVersion("ghost", "1.0.0")
+        #expect(state.logs.isEmpty)
         await state.deleteInstalledVersion("node", "22.14.0")
         #expect(!runner.called(prefix: "uninstall"))
+        #expect(state.logs.first?.contains("cannot delete active global version") == true)
 
         state.plugins = [row { $0.activeGlobalVersion = nil; $0.installedVersions = ["22.14.0"] }]
         runner.installed([])

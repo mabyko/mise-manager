@@ -7,24 +7,29 @@ public actor MiseCLI: CommandRunner {
     /// Single-consumer stream of all subprocess output. The app fans it out to the log and status bar.
     public nonisolated let output: AsyncStream<OutputLine>
     private let emit: AsyncStream<OutputLine>.Continuation
+    private let environment: [String: String]
     private var cachedExecutable: String?
 
-    public init() {
+    public init(environment: [String: String] = ProcessInfo.processInfo.environment) {
+        self.environment = environment
         (output, emit) = AsyncStream.makeStream()
     }
 
     public func executable() -> String {
         if let cached = cachedExecutable, FileManager.default.fileExists(atPath: cached) { return cached }
-        let resolved = PathResolver.resolveMiseExecutable()
+        let resolved = PathResolver.resolveMiseExecutable(environment: environment)
         if resolved.hasPrefix("/"), FileManager.default.fileExists(atPath: resolved) { cachedExecutable = resolved }
         return resolved
     }
 
     public func runMise(_ args: [String]) async throws -> CommandResult {
         let exe = executable()
-        let path = PathResolver.augmentedPATH()
+        let path = PathResolver.augmentedPATH(environment: environment)
+        guard FileManager.default.fileExists(atPath: exe) else {
+            throw MiseError("failed to spawn mise executable '\(exe)' (PATH='\(path)'): No such file or directory")
+        }
         do {
-            return try await Self.run(program: exe, args, path: path, emit: emit)
+            return try await Self.run(program: exe, args, path: path, environment: environment, emit: emit)
         } catch {
             throw MiseError("failed to spawn mise executable '\(exe)' (PATH='\(path)'): \(error.localizedDescription)")
         }
@@ -34,7 +39,7 @@ public actor MiseCLI: CommandRunner {
     // lacks /opt/homebrew/bin inside a GUI app, so `brew` could not be found).
     public func runShell(_ program: String, _ args: [String]) async throws -> CommandResult {
         do {
-            return try await Self.run(program: program, args, path: PathResolver.augmentedPATH(), emit: emit)
+            return try await Self.run(program: program, args, path: PathResolver.augmentedPATH(environment: environment), environment: environment, emit: emit)
         } catch {
             throw MiseError(error.localizedDescription)
         }
@@ -42,12 +47,13 @@ public actor MiseCLI: CommandRunner {
 
     /// `/usr/bin/env <program> args…` so bare names resolve against the PATH we pass in.
     static func run(
-        program: String, _ args: [String], path: String, emit: AsyncStream<OutputLine>.Continuation
+        program: String, _ args: [String], path: String, environment base: [String: String],
+        emit: AsyncStream<OutputLine>.Continuation
     ) async throws -> CommandResult {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
         process.arguments = [program] + args
-        var environment = ProcessInfo.processInfo.environment
+        var environment = base
         environment["PATH"] = path
         process.environment = environment
         let stdout = Pipe(), stderr = Pipe()

@@ -20,6 +20,14 @@ struct ToolAliasEditorTests {
         #expect(!next.contains("old.example"))
     }
 
+    @Test func updateKeepsTheTrailingCommentOnTheEditedLine() throws {
+        let input = "[tool_alias]\nnode = \"https://old.example/node.git\" # pinned source\n"
+        let next = try ToolAliasEditor.update(input, plugin: "node", gitUrl: "https://new.example/node.git")
+        #expect(next.contains("# pinned source"))
+        #expect(!next.contains("old.example"))
+        #expect(ToolAliasEditor.parse(next)["node"] == "https://new.example/node.git")
+    }
+
     @Test func updateCreatesSectionWhenMissing() throws {
         let next = try ToolAliasEditor.update("", plugin: "python", gitUrl: "https://example/py.git")
         #expect(next.contains("[tool_alias]"))

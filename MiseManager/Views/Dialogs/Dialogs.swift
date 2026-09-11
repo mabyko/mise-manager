@@ -61,7 +61,7 @@ private struct MajorUpdateSheet: View {
                 Spacer()
                 Button("취소") { state.pendingMajorUpdate = nil }.keyboardShortcut(.cancelAction)
                 Button("설치 후 전역 전환") { Task { await state.confirmMajorUpdate() } }
-                    .keyboardShortcut(.defaultAction).disabled(state.busy)
+                    .disabled(state.busy)
             }
         }
     }
@@ -78,7 +78,7 @@ private struct MiseUpdateSheet: View {
                 Spacer()
                 Button("취소") { state.cancelMiseUpdateDialog() }.keyboardShortcut(.cancelAction)
                 Button("mise 업데이트") { Task { await state.confirmMiseSelfUpdate() } }
-                    .keyboardShortcut(.defaultAction).disabled(state.busy)
+                    .disabled(state.busy)
             }
         }
     }

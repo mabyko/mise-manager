@@ -40,7 +40,8 @@ public enum ToolAliasEditor {
         }
         if let index = lines[range].firstIndex(where: { keyValue($0)?.key == plugin }) {
             let keyText = lines[index].prefix { $0 != "=" }.trimmingCharacters(in: .whitespaces)
-            lines[index] = "\(keyText) = \(quote(gitUrl))"
+            let comment = trailingComment(lines[index]).map { "  " + $0 } ?? ""
+            lines[index] = "\(keyText) = \(quote(gitUrl))\(comment)"
         } else {
             let last = lines[range].lastIndex { !$0.trimmingCharacters(in: .whitespaces).isEmpty } ?? range.lowerBound
             lines.insert(entry, at: last + 1)
@@ -138,6 +139,16 @@ public enum ToolAliasEditor {
                 guard let key = stringValue(keyText) ?? (keyText.isEmpty ? nil : keyText), !valueText.isEmpty else { return nil }
                 return (key, valueText)
             }
+        }
+        return nil
+    }
+
+    static func trailingComment(_ line: String) -> String? {
+        var quote: Character?
+        for (offset, ch) in line.enumerated() {
+            if let q = quote { if ch == q { quote = nil }; continue }
+            if ch == "\"" || ch == "'" { quote = ch; continue }
+            if ch == "#" { return String(line.dropFirst(offset)).trimmingCharacters(in: .whitespaces) }
         }
         return nil
     }

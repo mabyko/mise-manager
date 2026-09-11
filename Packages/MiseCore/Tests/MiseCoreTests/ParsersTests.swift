@@ -42,5 +42,7 @@ struct ParsersTests {
         let installed = try Parsers.parseInstalledPlugins(#"{"node":[{"version":"20.1.0"},{"version":"22.0.0"},{"version":"20.1.0"}],"odd":"x"}"#)
         #expect(installed == ["node": ["22.0.0", "20.1.0"]])
         #expect(throws: MiseError.self) { try Parsers.parseInstalledPlugins("nope") }
+        // One odd element must not drop the whole tool.
+        #expect(try Parsers.parseInstalledPlugins(#"{"node":[{"version":"1.0.0"},"junk",{"version":"2.0.0"}]}"#) == ["node": ["2.0.0", "1.0.0"]])
     }
 }

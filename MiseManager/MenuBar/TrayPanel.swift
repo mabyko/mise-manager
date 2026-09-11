@@ -46,8 +46,10 @@ final class TrayPanel: NSPanel {
         setFrame(frame, display: false)
         orderFrontRegardless()
         makeKey()
-        outsideClickMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] _ in
-            Task { @MainActor in self?.close() }
+        if outsideClickMonitor == nil {
+            outsideClickMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] _ in
+                Task { @MainActor in self?.close() }
+            }
         }
     }
 

@@ -47,8 +47,8 @@ enum Parsers {
     }
 
     static func versions(fromEntry value: Any) -> [String] {
-        guard let entries = value as? [[String: Any]] else { return [] }
-        return entries.compactMap { ($0["version"] as? String).flatMap(sanitizeVersion) }
+        guard let entries = value as? [Any] else { return [] }
+        return entries.compactMap { (($0 as? [String: Any])?["version"] as? String).flatMap(sanitizeVersion) }
     }
 
     /// `ls --global --json`. Fails closed: unreadable data must never authorize a deletion.

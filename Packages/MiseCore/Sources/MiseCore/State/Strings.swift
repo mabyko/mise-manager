@@ -1,6 +1,6 @@
 /// User-facing labels. Progress labels are Korean throughout (the Tauri UI mixed English in).
 public enum Strings {
-    public static let ready = "대기"
+    public static let ready = "준비됨"
     public static let loadingPlugins = "도구 목록 불러오는 중"
     public static let loadFailed = "불러오기 실패"
     public static let checkingUpdates = "업데이트 확인 중"

@@ -22,6 +22,7 @@ import Testing
         #expect(runner.index("__latest__")! < runner.index("ls-remote node --json")!)
         #expect(!state.updateCheckRunning)
         #expect(!state.busy)
+        #expect(state.progressLabel == Strings.checkComplete)
 
         state.busy = true
         await state.checkAllUpdates()
@@ -66,6 +67,18 @@ import Testing
         #expect(state.activeTab == .mise)
         #expect(state.progressLabel == Strings.miseRequired)
         #expect(!runner.called(prefix: "ls"))
+    }
+
+    @Test func intervalTimerIsArmedEvenWhenMiseIsMissing() async {
+        let runner = FakeRunner()
+        let state = makeState(runner)
+        state.settings.checkIntervalHours = 1
+        runner.fail("--version", "not found")
+        await state.startup()
+        #expect(state.intervalTask != nil)
+        state.settings.checkIntervalHours = 0
+        state.scheduleIntervalChecks()
+        #expect(state.intervalTask == nil)
     }
 
     @Test func startupWithoutAutomaticChecksLoadsToolsButNeverChecksRemotes() async {

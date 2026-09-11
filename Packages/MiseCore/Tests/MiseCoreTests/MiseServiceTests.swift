@@ -64,6 +64,16 @@ struct MiseCLIIntegrationTests {
         #expect(plugins.allSatisfy { !$0.name.isEmpty })
     }
 
+    @Test func unresolvableMiseFailsWithThePathDiagnostic() async {
+        let cli = MiseCLI(environment: ["MISE_BIN": "/nonexistent/mise", "PATH": "/nonexistent", "HOME": "/nonexistent"])
+        do {
+            _ = try await cli.runMise(["--version"])
+            Issue.record("expected a spawn failure")
+        } catch {
+            #expect("\(error)".hasPrefix("failed to spawn mise executable '/nonexistent/mise' (PATH='/nonexistent:"))
+        }
+    }
+
     @Test func unknownExecutableReportsSpawnFailure() async throws {
         let cli = MiseCLI()
         let result = try await cli.runShell("definitely-not-a-real-binary-xyz", [])
