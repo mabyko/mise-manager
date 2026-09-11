@@ -196,7 +196,8 @@ private struct TrayToolBlock: View {
             .buttonStyle(.plain)
             .accessibilityLabel("\(tool.name) \(ToolStatus.label(tool))")
 
-            if !updates.isEmpty { UpdateList(state: state, items: updates) }
+            // One compact line per pending update, under the tool it belongs to.
+            ForEach(updates) { item in updateLine(item) }
 
             if expanded {
                 VStack(alignment: .leading, spacing: 6) {
@@ -219,6 +220,30 @@ private struct TrayToolBlock: View {
             }
         }
         .padding(.vertical, 2)
+    }
+
+    private func updateLine(_ item: UpdateItem) -> some View {
+        let switches = item.kind == .series && state.seriesUpdateSwitchesGlobal(tool, item.to)
+        let series = item.kind == .major ? "새 major" : Version.major(of: item.to).map { "\($0).x" } ?? ""
+        let action = item.kind == .major ? "검토…" : (switches ? "설치·전환" : "설치")
+        let hint = item.kind == .major ? "호환성 확인이 필요해 앱에서 검토합니다"
+            : (switches ? "설치 후 전역 기본값을 이 버전으로 전환합니다" : "설치만 하고 전역 기본값은 유지합니다")
+        return HStack(spacing: 8) {
+            Text(series).font(.caption.bold()).foregroundStyle(.secondary).frame(width: 56, alignment: .leading)
+            HStack(spacing: 4) {
+                Text(item.from)
+                Image(systemName: "arrow.right").font(.caption2).foregroundStyle(.secondary)
+                Text(item.to).bold()
+            }
+            .font(.callout.monospaced())
+            Spacer()
+            Button(action) { Task { await state.run(.apply(id: item.id)) } }
+                .controlSize(.small)
+                .disabled(checking)
+                .help(hint)
+                .accessibilityLabel("\(tool.name) \(series) \(item.to) \(action)")
+        }
+        .padding(.leading, 38)
     }
 
     @ViewBuilder private var status: some View {
