@@ -20,7 +20,7 @@ Version 0.2.0 replaced the Tauri/Svelte app with SwiftUI and AppKit. The last Ta
 
 View full size: [App window](./docs/images/mise-manager-app.png) · [Menu-bar icon and panel](./docs/images/mise-manager-menu-bar.png)
 
-The screenshots show the 0.1.x web UI with sample data; the native app keeps the same layout and wording.
+Captured from the native app (light theme) with sample data. The menu-bar strip is arranged for presentation.
 
 ## Features
 

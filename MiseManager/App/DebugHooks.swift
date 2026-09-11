@@ -25,6 +25,12 @@ extension AppDelegate {
                 case "mise": state.pendingMiseUpdateConfirm = true
                 case "plugin": state.openCustomPluginDialog()
                 case "tray": state.showTray()
+                case "sample": self.loadSample()
+                case "trayMain":
+                    // Under the menu bar of the main display, near its right edge, whatever the cursor does.
+                    if let screen = NSScreen.main {
+                        self.statusItem?.show(cursor: CGPoint(x: screen.frame.maxX - 260, y: screen.frame.maxY - 5))
+                    }
                 case "close":
                     state.pendingMajorUpdate = nil; state.pendingDelete = nil
                     state.pendingMiseUpdateConfirm = false; state.closePluginUrlDialog()
@@ -36,6 +42,7 @@ extension AppDelegate {
                     case "render": self.render(state.activeTab, to: path)
                     case "trayrender": self.renderTray(to: path)
                     case "status": try? (self.statusItem?.debugDescription ?? "no controller").write(toFile: path, atomically: true, encoding: .utf8)
+                    case "statusitem": self.renderStatusItem(to: path)
                     default: self.snapshot(to: path)
                     }
                 }
@@ -53,6 +60,51 @@ extension AppDelegate {
         renderer.scale = 2
         guard let image = renderer.nsImage, let tiff = image.tiffRepresentation,
               let rep = NSBitmapImageRep(data: tiff) else { return }
+        try? rep.representation(using: .png, properties: [:])?.write(to: URL(fileURLWithPath: path))
+    }
+
+    /// Reproducible example state for README screenshots (same fixture the 0.1.x browser preview used).
+    private func loadSample() {
+        let now = AppState.nowLabel()
+        state.settings.theme = .light
+        state.miseVersion = "2026.8.12 macos-arm64"
+        state.miseLoaded = true
+        state.miseCurrentError = nil
+        state.miseLatestVersion = "v2026.8.13"
+        state.miseLatestLoaded = true
+        state.miseLatestError = nil
+        state.miseLatestCheckedAt = now
+        func row(_ name: String, _ global: String, _ installed: [String], _ byMajor: [String: String], _ same: String, _ release: String, _ overall: String?, _ checked: Int) -> PluginRow {
+            PluginRow(name: name, activeGlobalVersion: global, installedVersions: installed, latestByMajor: byMajor,
+                      sameMajorLatest: same, releaseLatest: release, overallLatest: overall, checkedVersions: checked, status: .done)
+        }
+        state.plugins = [
+            row("node", "26.0.0", ["26.0.0", "24.20.0", "24.19.0"], ["24": "24.21.0", "26": "26.1.0"], "26.1.0", "26.1.0", "27.0.0-rc.1", 860),
+            row("python", "3.12.8", ["3.12.8", "3.11.11"], ["3": "3.13.2"], "3.13.2", "3.13.2", nil, 248),
+            row("bun", "1.2.4", ["1.2.4"], ["1": "1.2.4"], "1.2.4", "1.2.4", nil, 214),
+            row("rust", "1.85.0", ["1.85.0"], ["1": "1.85.0"], "1.85.0", "1.85.0", nil, 152),
+            row("go", "1.24.0", ["1.24.0"], ["1": "1.24.0"], "1.24.0", "1.24.0", nil, 130),
+            row("ruby", "3.4.2", ["3.4.2"], ["3": "3.4.2"], "3.4.2", "3.4.2", nil, 133),
+        ]
+        state.toolsLoaded = true
+        state.toolsCheckedAt = now
+        state.toolsError = nil
+        state.outdatedPluginNames = ["flutter", "zoxide"]
+        state.pluginUpdatesCheckedAt = now
+        state.pluginUpdatesError = nil
+        state.selectedToolName = "node"
+        state.activeTab = .updater
+        if let window = NSApp.windows.first(where: { !($0 is NSPanel) && $0.contentView != nil && $0.isVisible }), let screen = NSScreen.main {
+            let size = CGSize(width: 1200, height: 820)
+            let origin = CGPoint(x: screen.visibleFrame.midX - size.width / 2, y: screen.visibleFrame.midY - size.height / 2)
+            window.setFrame(CGRect(origin: origin, size: size), display: true)
+        }
+    }
+
+    /// The status bar button (icon, count, badge) on a transparent background.
+    private func renderStatusItem(to path: String) {
+        guard let button = statusItem?.button, let rep = button.bitmapImageRepForCachingDisplay(in: button.bounds) else { return }
+        button.cacheDisplay(in: button.bounds, to: rep)
         try? rep.representation(using: .png, properties: [:])?.write(to: URL(fileURLWithPath: path))
     }
 

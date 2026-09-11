@@ -33,6 +33,11 @@ final class StatusItemController {
             panel.close()
             return
         }
+        panel.appearance = switch state.settings.theme {
+        case .system: nil
+        case .light: NSAppearance(named: .aqua)
+        case .dark: NSAppearance(named: .darkAqua)
+        }
         let item = self.item ?? makeItem()
         guard let button = item.button else { return }
         let summary = state.updateSummary
@@ -61,9 +66,9 @@ final class StatusItemController {
         if panel.isVisible { panel.close() } else { show() }
     }
 
-    func show() {
+    /// `cursor` picks the display (the clicked one); tests and debug hooks can pass a point.
+    func show(cursor: CGPoint = NSEvent.mouseLocation) {
         guard state.settings.showMenuBarIcon else { return }
-        let cursor = NSEvent.mouseLocation
         guard let screen = NSScreen.screens.first(where: { $0.frame.contains(cursor) }) ?? NSApp.keyWindow?.screen ?? NSScreen.main else { return }
         let icon = item?.button.flatMap { button -> CGPoint? in
             guard let window = button.window else { return nil }
@@ -77,9 +82,15 @@ final class StatusItemController {
 
     func hide() { panel.close() }
 
+    var button: NSStatusBarButton? { item?.button }
+
     var debugDescription: String {
         guard let button = item?.button else { return "status item: hidden" }
         let badge = button.subviews.compactMap { $0 as? BadgeView }.first
-        return "status item: visible title='\(button.title)' tooltip='\(button.toolTip ?? "")' badge=\(badge.map { $0.isHidden ? "hidden" : "shown" } ?? "none") panel=\(panel.isVisible)"
+        // Frames in CG (top-left origin) coordinates so `screencapture -R` can crop them.
+        let primaryHeight = NSScreen.screens.first?.frame.height ?? 0
+        func cg(_ rect: CGRect) -> String { "\(Int(rect.minX)),\(Int(primaryHeight - rect.maxY)),\(Int(rect.width)),\(Int(rect.height))" }
+        let itemFrame = button.window.map { cg($0.frame) } ?? "-"
+        return "status item: visible title='\(button.title)' tooltip='\(button.toolTip ?? "")' badge=\(badge.map { $0.isHidden ? "hidden" : "shown" } ?? "none") panel=\(panel.isVisible) itemFrame=\(itemFrame) panelFrame=\(cg(panel.frame)) windowId=\(panel.windowNumber)"
     }
 }
