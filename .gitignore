@@ -1,9 +1,10 @@
-node_modules/
-dist/
-build/
-artifacts/
 .DS_Store
 *.log
+build/
 
-# Personal Tauri identifier override; apply explicitly with --config.
-src-tauri/tauri.local.conf.json
+# Xcode / SwiftPM
+Config/Local.xcconfig
+xcuserdata/
+.build/
+.swiftpm/
+DerivedData/
