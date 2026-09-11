@@ -1,7 +1,6 @@
 use tauri::{
     image::Image,
-    menu::{Menu, MenuItem},
-    tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
+    tray::{MouseButtonState, TrayIconBuilder, TrayIconEvent},
     AppHandle, Manager, PhysicalPosition, WebviewUrl, WebviewWindowBuilder, WindowEvent,
 };
 
@@ -17,6 +16,11 @@ pub fn show_main_window(app: AppHandle) -> Result<(), String> {
     window.show().map_err(|e| e.to_string())?;
     window.set_focus().map_err(|e| e.to_string())?;
     hide_tray_window(app)
+}
+
+#[tauri::command]
+pub fn quit_app(app: AppHandle) {
+    app.exit(0);
 }
 
 #[tauri::command]
@@ -38,42 +42,42 @@ pub fn show_tray_window(app: AppHandle) -> Result<(), String> {
             .map(|tray| tray.rect())
             .transpose()?
             .flatten();
-        // Tray coordinates are physical. Tao's monitor_from_point uses logical
-        // coordinates on macOS, so compare against physical monitor bounds here.
-        let monitor = window
-            .available_monitors()?
-            .into_iter()
-            .find(|monitor| {
-                let Some(rect) = rect else { return false };
-                let origin = rect.position.to_physical::<f64>(monitor.scale_factor());
-                let position = monitor.position();
-                let size = monitor.size();
-                origin.x >= position.x as f64
-                    && origin.x < position.x as f64 + size.width as f64
-                    && origin.y >= position.y as f64
-                    && origin.y < position.y as f64 + size.height as f64
-            })
-            .or(app
-                .get_webview_window("main")
-                .and_then(|main| main.current_monitor().ok().flatten()));
+        // The status item window can sit off-screen (menu bar hiders such as Thaw,
+        // notch overflow), so pick the monitor from the cursor, which is always on
+        // the clicked display. Tao's monitor_from_point is logical on macOS and
+        // cursor_position is physical in the primary monitor's scale.
+        let primary_scale = app
+            .primary_monitor()?
+            .map(|monitor| monitor.scale_factor())
+            .unwrap_or(1.0);
+        let cursor = app.cursor_position()?.to_logical::<f64>(primary_scale);
+        let monitor = window.monitor_from_point(cursor.x, cursor.y)?.or(app
+            .get_webview_window("main")
+            .and_then(|main| main.current_monitor().ok().flatten()));
         if let Some(monitor) = monitor {
             let scale = monitor.scale_factor();
             let area = monitor.work_area();
             let width = (440.0 * scale).min(area.size.width as f64);
             let height = (620.0 * scale).min(area.size.height as f64);
-            let anchor = rect
-                .map(|rect| {
-                    let origin = rect.position.to_physical::<f64>(scale);
-                    let size = rect.size.to_physical::<f64>(scale);
-                    (
-                        origin.x + size.width / 2.0,
-                        origin.y + size.height + 6.0 * scale,
-                    )
-                })
-                .unwrap_or((
-                    area.position.x as f64 + area.size.width as f64,
-                    area.position.y as f64,
-                ));
+            let icon = rect.map(|rect| {
+                let origin = rect.position.to_physical::<f64>(scale);
+                let size = rect.size.to_physical::<f64>(scale);
+                (
+                    origin.x + size.width / 2.0,
+                    origin.y + size.height + 6.0 * scale,
+                )
+            });
+            let cursor = cursor.to_physical::<f64>(scale);
+            let anchor = anchor(
+                icon,
+                (cursor.x, area.position.y as f64),
+                (
+                    monitor.position().x as f64,
+                    monitor.position().y as f64,
+                    monitor.size().width as f64,
+                    monitor.size().height as f64,
+                ),
+            );
             let origin = clamped_origin(
                 anchor,
                 (width, height),
@@ -141,6 +145,24 @@ pub fn set_tray_status(
     Ok(())
 }
 
+// Trust each icon axis only inside the clicked monitor; otherwise fall back to the
+// cursor x and the work-area top (just below the menu bar).
+fn anchor(
+    icon: Option<(f64, f64)>,
+    fallback: (f64, f64),
+    bounds: (f64, f64, f64, f64),
+) -> (f64, f64) {
+    let (x, y, w, h) = bounds;
+    (
+        icon.map(|i| i.0)
+            .filter(|ix| (x..x + w).contains(ix))
+            .unwrap_or(fallback.0),
+        icon.map(|i| i.1)
+            .filter(|iy| (y..y + h).contains(iy))
+            .unwrap_or(fallback.1),
+    )
+}
+
 // Keep the popover within the clicked monitor, including negative desktop coordinates.
 fn clamped_origin(
     anchor: (f64, f64),
@@ -170,6 +192,15 @@ pub fn setup(app: &mut tauri::App) -> tauri::Result<()> {
     .always_on_top(true)
     .skip_taskbar(true)
     .shadow(true)
+    .transparent(true)
+    // Control Center look: native blur behind a translucent, rounded web surface.
+    .effects(
+        tauri::window::EffectsBuilder::new()
+            .effect(tauri::window::Effect::Popover)
+            .state(tauri::window::EffectState::Active)
+            .radius(12.0)
+            .build(),
+    )
     .build()?;
     let handle = app.handle().clone();
     popup.on_window_event(move |event| {
@@ -179,9 +210,6 @@ pub fn setup(app: &mut tauri::App) -> tauri::Result<()> {
             }
         }
     });
-    let open = MenuItem::with_id(app, "open-main", "Mise Manager 열기", true, None::<&str>)?;
-    let quit = MenuItem::with_id(app, "quit-app", "Mise Manager 종료", true, None::<&str>)?;
-    let menu = Menu::with_items(app, &[&open, &quit])?;
     // A small template icon; macOS supplies the correct menu-bar tint.
     let mut rgba = vec![0; 18 * 18 * 4];
     for y in [4, 8, 12] {
@@ -195,22 +223,13 @@ pub fn setup(app: &mut tauri::App) -> tauri::Result<()> {
         .icon(Image::new_owned(rgba, 18, 18))
         .icon_as_template(true)
         .tooltip("Mise Manager · 업데이트 확인 전")
-        .menu(&menu)
-        .show_menu_on_left_click(false)
-        .on_menu_event(|app, event| match event.id.as_ref() {
-            "open-main" => {
-                if let Err(error) = show_main_window(app.clone()) {
-                    log::warn!("Open main: {error}");
-                }
-            }
-            "quit-app" => app.exit(0),
-            _ => {}
-        })
+        // No native menu: macOS 26 pops `statusItem.menu` on its own for clicks
+        // routed through the Control Center proxy, so it would show on top of the
+        // popover. Open and quit live inside the popover instead.
         .on_tray_icon_event(|tray, event| {
             if matches!(
                 event,
                 TrayIconEvent::Click {
-                    button: MouseButton::Left,
                     button_state: MouseButtonState::Up,
                     ..
                 }
@@ -229,6 +248,20 @@ pub fn setup(app: &mut tauri::App) -> tauri::Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn anchor_ignores_offscreen_icon_axes() {
+        let bounds = (0.0, 0.0, 3456.0, 2234.0);
+        // Thaw parks hidden items far left; keep the menu-bar row, use the cursor x.
+        assert_eq!(
+            anchor(Some((-4690.0, 78.0)), (3000.0, 66.0), bounds),
+            (3000.0, 78.0)
+        );
+        assert_eq!(
+            anchor(Some((2800.0, 78.0)), (3000.0, 66.0), bounds),
+            (2800.0, 78.0)
+        );
+        assert_eq!(anchor(None, (3000.0, 66.0), bounds), (3000.0, 66.0));
+    }
     #[test]
     fn positions_on_small_and_negative_coordinate_monitors() {
         assert_eq!(

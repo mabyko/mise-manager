@@ -1,7 +1,7 @@
 <script lang="ts">
 	import appIcon from "../assets/app-icon.png";
 	import { state as appState } from "../core/state.svelte";
-	import { connection, dispatch, hideTray } from "../core/runtime.svelte";
+	import { connection, dispatch, hideTray, quitApp } from "../core/runtime.svelte";
 	import { getUpdateSummary } from "../core/updateSummary";
 	import { getInstalledSeries, getToolStatus } from "../core/toolStatus";
 	import UpdateList from "./UpdateList.svelte";
@@ -38,5 +38,5 @@
 			{#if appState.pluginUpdateResult}<p class="tray-result" role="status">{appState.pluginUpdateResult}</p>{/if}
 		{/if}
 	</main>
-	<footer class="tray-footer"><div role="status">{#if appState.busy || appState.updateCheckRunning}<span class="spinner" aria-hidden="true"></span>{/if}<span>{appState.busy || appState.updateCheckRunning ? appState.progressLabel : connection.error || (appState.toolsCheckedAt ? `${appState.toolsCheckedAt} 도구 확인` : "업데이트 확인 전")}</span></div><button class="text-btn" onclick={() => void dispatch({ type: "open", tab: "updates" })}>앱 열기 ↗</button></footer>
+	<footer class="tray-footer"><div role="status">{#if appState.busy || appState.updateCheckRunning}<span class="spinner" aria-hidden="true"></span>{/if}<span>{appState.busy || appState.updateCheckRunning ? appState.progressLabel : connection.error || (appState.toolsCheckedAt ? `${appState.toolsCheckedAt} 도구 확인` : "업데이트 확인 전")}</span></div><div class="tray-actions"><button class="text-btn" onclick={() => void quitApp()}>종료</button><button class="text-btn" onclick={() => void dispatch({ type: "open", tab: "updates" })}>앱 열기 ↗</button></div></footer>
 </div>

@@ -34,6 +34,7 @@ pub fn run() {
             tray::show_main_window,
             tray::show_tray_window,
             tray::hide_tray_window,
+            tray::quit_app,
             tray::set_tray_status,
             actions::get_mise_version,
             actions::get_latest_mise_release,

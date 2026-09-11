@@ -33,6 +33,7 @@ export async function showTray() {
 }
 
 export async function hideTray() { if (native) await invoke("hide_tray_window"); }
+export async function quitApp() { if (native) await invoke("quit_app"); else window.close(); }
 
 /** Commands are always checked again against the owner's live appState. */
 export async function runRuntimeAction(action: RuntimeAction) {
