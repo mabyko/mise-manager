@@ -8,6 +8,8 @@
 		openInstallPluginDialog,
 		reloadPluginDefinitions,
 		uninstallPluginDefinition,
+		checkPluginDefinitionUpdates,
+		updatePluginDefinition,
 	} from "../features/installs";
 
 	const filtered = $derived.by(() => {
@@ -72,7 +74,19 @@
 		>↻</button>
 	</div>
 </div>
-<div class="page-meta">Remote Plugin Definitions: {state.remotePluginNames.length} / Core Plugins: {state.corePluginNames.length} / User Plugins: {state.installedPluginNames.length} / Installed Tools: {state.installedToolNames.length}</div>
+<section class="panel">
+	<div class="row wrap"><div><h2>플러그인 업데이트</h2><p>플러그인의 설치 스크립트와 버전 정보를 갱신합니다. 도구 버전은 별도로 설치합니다.</p></div><button class="btn" disabled={state.busy || !state.miseIsInstalled} onclick={() => void checkPluginDefinitionUpdates()}>플러그인 업데이트 확인</button></div>
+	<p class="subtle">{state.pluginUpdatesCheckedAt ? `마지막 확인 ${state.pluginUpdatesCheckedAt}` : "아직 확인하지 않았습니다."}</p>
+	{#if state.pluginUpdatesError}<div class="inline-error" role="status">확인 실패: {state.pluginUpdatesError}<p>mise를 최신 버전으로 업데이트한 뒤 다시 확인하세요. 네트워크 오류는 연결 상태를 확인해 주세요.</p></div>
+	{:else if state.pluginUpdatesCheckedAt && !state.outdatedPluginNames.length}<p>mise가 보고한 외부 플러그인 업데이트가 없습니다.</p>{/if}
+	{#each state.outdatedPluginNames as plugin (plugin)}
+		<div class="installed-version"><strong>{plugin}</strong><button class="btn primary" disabled={state.busy || !!state.pluginUpdatesError} onclick={() => void updatePluginDefinition(plugin)}>{plugin} 업데이트</button></div>
+	{/each}
+	{#if state.pluginUpdateResult}<p role="status">{state.pluginUpdateResult}</p>{/if}
+	<p class="subtle">내장 플러그인은 mise와 함께 업데이트됩니다. 로컬 연결·압축 파일로 설치한 플러그인은 Git 업데이트 대상에서 제외될 수 있습니다.</p>
+</section>
+{#if state.installsError}<div class="panel inline-error" role="status">플러그인 목록을 불러오지 못했습니다. {state.installsError}<button class="btn" disabled={state.busy} onclick={() => void reloadPluginDefinitions()}>다시 시도</button></div>{/if}
+<div class="page-meta">설치 가능한 플러그인 {state.remotePluginNames.length}개 · 내장 {state.corePluginNames.length}개 · 외부 {state.installedPluginNames.length}개</div>
 
 <section class="panel">
 	<h2>사용 가능한 플러그인</h2>
@@ -91,9 +105,9 @@
 						<td class="plugin">{row.plugin}</td>
 						<td>
 							<div class="state-badges">
-								{#if row.userPluginInstalled}<span class="badge plugin-user" title="User plugin: mise plugins install 로 추가된 plugin definition">Plugin (User)</span>{/if}
-								{#if row.corePlugin}<span class="badge plugin-core" title="Core plugin: mise 내장 plugin definition">Plugin (Core)</span>{/if}
-								{#if row.toolInstalled}<span class="badge tool-installed" title="Tool installed: mise ls --installed 기준으로 실제 버전이 설치됨">Tool Installed</span>{/if}
+								{#if row.userPluginInstalled}<span class="badge plugin-user">외부 플러그인</span>{/if}
+								{#if row.corePlugin}<span class="badge plugin-core">mise 내장</span>{/if}
+								{#if row.toolInstalled}<span class="badge tool-installed">도구 설치됨</span>{/if}
 							</div>
 							{#if row.userPluginInstalled && row.userInfo?.url}
 								<div class="plugin-url {row.isCustomUserUrl ? 'custom' : 'default'}" title={row.userInfo.url}>
@@ -131,7 +145,7 @@
 			</tbody>
 		</table>
 	</section>
-	<h2 style="margin-top: 14px;">Not Installed</h2>
+	<h2 style="margin-top: 14px;">설치 가능한 플러그인</h2>
 	<section class="table-wrap">
 		<table>
 			<thead>

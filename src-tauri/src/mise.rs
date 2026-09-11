@@ -8,7 +8,6 @@ use std::process::{Command, Stdio};
 use std::sync::Mutex;
 
 use crate::contracts::PluginDefinitionInfo;
-use crate::version::{pick_latest, starts_with_digit};
 
 const FALLBACK_BIN_DIRS: &[&str] = &[
     ".local/bin",
@@ -133,7 +132,10 @@ pub(crate) fn run_streaming_blocking(
     app: Option<tauri::AppHandle>,
 ) -> std::io::Result<MiseResult> {
     let mut command = Command::new(program);
-    command.args(args).stdout(Stdio::piped()).stderr(Stdio::piped());
+    command
+        .args(args)
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped());
     if let Some(path_value) = path_override {
         command.env("PATH", path_value);
     }
@@ -217,7 +219,10 @@ pub fn sanitize_version_str(input: &str) -> Option<String> {
 
 pub fn dedupe(items: Vec<String>) -> Vec<String> {
     let mut seen = std::collections::HashSet::new();
-    items.into_iter().filter(|item| seen.insert(item.clone())).collect()
+    items
+        .into_iter()
+        .filter(|item| seen.insert(item.clone()))
+        .collect()
 }
 
 pub fn parse_remote_versions(stdout: &str) -> Vec<String> {
@@ -226,7 +231,9 @@ pub fn parse_remote_versions(stdout: &str) -> Vec<String> {
         return Vec::new();
     }
 
-    if let Ok(serde_json::Value::Array(entries)) = serde_json::from_str::<serde_json::Value>(trimmed) {
+    if let Ok(serde_json::Value::Array(entries)) =
+        serde_json::from_str::<serde_json::Value>(trimmed)
+    {
         return entries
             .iter()
             .filter_map(|entry| match entry {
@@ -246,22 +253,6 @@ pub fn parse_remote_versions(stdout: &str) -> Vec<String> {
         .filter(|line| !line.is_empty())
         .map(String::from)
         .collect()
-}
-
-pub fn pick_preferred_version(versions: &[String]) -> Option<String> {
-    if versions.is_empty() {
-        return None;
-    }
-    let semver: Vec<&str> = versions
-        .iter()
-        .map(String::as_str)
-        .filter(|v| starts_with_digit(v))
-        .collect();
-    if semver.is_empty() {
-        pick_latest(versions.iter().map(String::as_str))
-    } else {
-        pick_latest(semver)
-    }
 }
 
 pub fn parse_plugin_info_lines(stdout: &str) -> Vec<PluginDefinitionInfo> {
@@ -310,18 +301,14 @@ mod tests {
     }
 
     #[test]
-    fn preferred_version_prefers_semver_candidates() {
-        let versions = vec!["system".to_string(), "1.2.3".to_string(), "1.10.0".to_string()];
-        assert_eq!(pick_preferred_version(&versions), Some("1.10.0".to_string()));
-        let non_semver = vec!["system".to_string(), "latest".to_string()];
-        assert_eq!(pick_preferred_version(&non_semver), Some("system".to_string()));
-    }
-
-    #[test]
     fn parses_plugin_info_lines_with_optional_urls() {
-        let parsed = parse_plugin_info_lines("node https://example.com/node.git\ncore *builtin\nplain\n");
+        let parsed =
+            parse_plugin_info_lines("node https://example.com/node.git\ncore *builtin\nplain\n");
         assert_eq!(parsed.len(), 3);
-        assert_eq!(parsed[0].url.as_deref(), Some("https://example.com/node.git"));
+        assert_eq!(
+            parsed[0].url.as_deref(),
+            Some("https://example.com/node.git")
+        );
         assert_eq!(parsed[1].url, None);
         assert_eq!(parsed[2].url, None);
     }

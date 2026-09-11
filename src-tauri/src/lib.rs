@@ -3,6 +3,7 @@ mod catalog;
 mod config;
 mod contracts;
 mod mise;
+mod tray;
 mod version;
 
 use tauri::Manager;
@@ -26,9 +27,14 @@ pub fn run() {
             state.set_app_handle(app.handle().clone());
             // Warm the mise path cache (a handful of stat calls).
             state.executable();
+            tray::setup(app)?;
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            tray::show_main_window,
+            tray::show_tray_window,
+            tray::hide_tray_window,
+            tray::set_tray_status,
             actions::get_mise_version,
             actions::get_latest_mise_release,
             actions::self_update_mise,
@@ -38,11 +44,13 @@ pub fn run() {
             actions::delete_plugin_version,
             actions::install_plugin_definition,
             actions::uninstall_plugin_definition,
+            actions::update_plugin_definition,
             actions::check_mise_installed,
             actions::install_mise_sh,
             actions::install_mise_brew,
             actions::get_platform,
             catalog::list_installed_plugins,
+            catalog::list_outdated_plugin_definitions,
             catalog::list_installed_plugin_names,
             catalog::list_installed_user_plugin_infos,
             catalog::list_core_plugin_names,
@@ -50,6 +58,22 @@ pub fn run() {
             catalog::list_remote_plugin_names,
             catalog::list_remote_plugin_infos,
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .on_window_event(|window, event| {
+            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                api.prevent_close();
+                if let Err(error) = window.hide() {
+                    log::warn!("Hide window: {error}");
+                }
+            }
+        })
+        .build(tauri::generate_context!())
+        .expect("error while building tauri application")
+        .run(|app, event| {
+            #[cfg(target_os = "macos")]
+            if let tauri::RunEvent::Reopen { .. } = event {
+                if let Err(error) = tray::show_main_window(app.clone()) {
+                    log::warn!("Reopen: {error}");
+                }
+            }
+        });
 }
