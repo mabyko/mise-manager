@@ -1,3 +1,4 @@
+import Foundation
 import Testing
 @testable import MiseCore
 
@@ -50,6 +51,17 @@ struct ToolAliasEditorTests {
     @Test func removeWithoutSectionIsANoOp() throws {
         let input = "[tools]\nnode = \"22\"\n"
         #expect(try ToolAliasEditor.remove(input, plugin: "node") == input)
+    }
+
+    @Test func writingThroughASymlinkedConfigKeepsTheLink() throws {
+        let dir = NSTemporaryDirectory() + "mise-manager-symlink-\(UUID().uuidString)"
+        try FileManager.default.createDirectory(atPath: dir, withIntermediateDirectories: true)
+        let real = dir + "/real.toml", link = dir + "/config.toml"
+        try "[tools]\nnode = \"22\"\n".write(toFile: real, atomically: true, encoding: .utf8)
+        try FileManager.default.createSymbolicLink(atPath: link, withDestinationPath: real)
+        _ = try ToolAliasEditor.updateUserAlias(at: link, plugin: "node", gitUrl: "https://example/node.git")
+        #expect(try FileManager.default.attributesOfItem(atPath: link)[.type] as? FileAttributeType == .typeSymbolicLink)
+        #expect(ToolAliasEditor.parse(try String(contentsOfFile: real, encoding: .utf8))["node"] == "https://example/node.git")
     }
 
     @Test func updateRefusesToClobberInvalidToml() {

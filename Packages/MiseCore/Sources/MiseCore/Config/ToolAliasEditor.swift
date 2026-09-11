@@ -79,11 +79,14 @@ public enum ToolAliasEditor {
         do { return try String(contentsOfFile: path, encoding: .utf8) } catch { throw MiseError("failed to read \(path): \(error.localizedDescription)") }
     }
 
+    /// Writes through symlinks (dotfile setups keep config.toml linked): an atomic write on the link
+    /// itself would replace the link with a plain file and leave the real file untouched.
     static func write(_ content: String, to path: String) throws {
-        let dir = (path as NSString).deletingLastPathComponent
+        let target = URL(fileURLWithPath: path).resolvingSymlinksInPath().path
+        let dir = (target as NSString).deletingLastPathComponent
         do {
             try FileManager.default.createDirectory(atPath: dir, withIntermediateDirectories: true)
-            try content.write(toFile: path, atomically: true, encoding: .utf8)
+            try content.write(toFile: target, atomically: true, encoding: .utf8)
         } catch { throw MiseError("failed to write \(path): \(error.localizedDescription)") }
     }
 
