@@ -19,7 +19,7 @@ private struct AppDialogs: ViewModifier {
                 titleVisibility: .visible,
                 presenting: state.pendingDelete
             ) { pending in
-                Button("삭제", role: .destructive) { Task { await state.confirmDeleteInstalledVersion() } }.disabled(state.busy)
+                Button("삭제", role: .destructive) { Task { await state.deleteInstalledVersion(pending.pluginName, pending.version) } }.disabled(state.busy)
                 Button("취소", role: .cancel) { state.pendingDelete = nil }
             } message: { pending in
                 Text("\(pending.pluginName)@\(pending.version)\n이 버전을 로컬에서 제거합니다. 프로젝트에서 사용 중인지 확인해 주세요. 다시 사용하려면 재설치해야 합니다.")

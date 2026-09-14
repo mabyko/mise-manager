@@ -224,10 +224,4 @@ extension AppState {
     public func requestDelete(_ name: String, _ version: String) {
         pendingDelete = PendingDelete(pluginName: name, version: version)
     }
-
-    public func confirmDeleteInstalledVersion() async {
-        guard let pending = pendingDelete, !busy else { return }
-        pendingDelete = nil
-        await deleteInstalledVersion(pending.pluginName, pending.version)
-    }
 }
