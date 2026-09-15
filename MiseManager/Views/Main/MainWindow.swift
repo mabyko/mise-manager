@@ -16,6 +16,9 @@ struct MainWindow: View {
         .appDialogs(state)
         .onAppear {
             state.showMainWindow = {
+                // LSUIElement app: the Dock icon comes back only while the window is open. Activation must
+                // stay inside the user event that got us here; macOS 14+ drops it otherwise.
+                NSApp.setActivationPolicy(.regular)
                 NSApp.activate(ignoringOtherApps: true)
                 openWindow(id: "main")
             }

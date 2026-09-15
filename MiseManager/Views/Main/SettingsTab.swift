@@ -1,9 +1,12 @@
 import MiseCore
+import ServiceManagement
 import SwiftUI
 
 struct SettingsTab: View {
     var state: AppState
     @Bindable private var settings: MiseCore.Settings
+    /// The system is the source of truth (System Settings › General › Login Items can change it too).
+    @State private var launchAtLogin = SMAppService.mainApp.status == .enabled
 
     init(state: AppState) {
         self.state = state
@@ -42,6 +45,14 @@ struct SettingsTab: View {
                 Text("기존 버전은 항상 보존합니다. 예를 들어 Node 26과 24가 설치되어 있으면 26.x와 24.x의 최신 안정 버전을 각각 확인합니다. 설치만 한 버전은 도구 목록에서 전역으로 선택하거나 프로젝트 설정에 지정할 수 있습니다.")
             }
             Section {
+                Toggle(isOn: $launchAtLogin) {
+                    Text("로그인 시 시작")
+                    Text("창 없이 메뉴바에만 올라옵니다. 시스템 설정 › 일반 › 로그인 항목에서도 바꿀 수 있습니다.")
+                }
+                .onChange(of: launchAtLogin) { _, on in
+                    do { if on { try SMAppService.mainApp.register() } else { try SMAppService.mainApp.unregister() } }
+                    catch { launchAtLogin = SMAppService.mainApp.status == .enabled }
+                }
                 Toggle(isOn: $settings.showMenuBarIcon) {
                     Text("메뉴바 아이콘 표시")
                     Text("메뉴바에서 도구와 업데이트를 빠르게 확인합니다.")
@@ -63,7 +74,9 @@ struct SettingsTab: View {
             } header: {
                 Text("화면")
             } footer: {
-                Text("창을 닫아도 앱은 계속 실행됩니다. Dock에서 다시 열거나 앱 메뉴의 종료를 선택할 수 있습니다." + (settings.showMenuBarIcon ? " 메뉴바 창에서도 종료할 수 있습니다." : ""))
+                Text(settings.showMenuBarIcon
+                     ? "창을 닫으면 Dock에서는 사라지고 메뉴바에서 계속 실행됩니다. 메뉴바 창에서 다시 열거나 종료할 수 있습니다."
+                     : "메뉴바 아이콘이 없으면 Dock 아이콘을 유지합니다. 창을 닫아도 앱은 계속 실행되며 Dock에서 다시 열거나 앱 메뉴의 종료를 선택할 수 있습니다.")
             }
         }
         .formStyle(.grouped)
