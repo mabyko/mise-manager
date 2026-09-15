@@ -73,7 +73,7 @@ private struct MiseUpdateSheet: View {
         SheetFrame(eyebrow: "mise 자체 업데이트", title: "mise를 업데이트할까요?") {
             Text("\(MiseStatus.normalizeVersionToken(state.miseVersion) ?? "현재 버전") → \(MiseStatus.normalizeVersionToken(state.miseLatestVersion) ?? "최신 버전")")
                 .font(.body.monospaced())
-            Text("mise 실행 파일을 업데이트합니다. 설치된 도구와 전역 버전 설정은 변경하지 않습니다. 설치 방식에 따라 실패할 수 있으며, 적용 후 앱 재시작이 필요할 수 있습니다.")
+            Text("mise 실행 파일을 업데이트합니다. 설치된 도구와 전역 버전 설정은 변경하지 않습니다. Homebrew 등 패키지 관리자로 설치한 경우 해당 패키지 관리자로 업데이트해야 할 수 있습니다.")
             HStack {
                 Spacer()
                 Button("취소") { state.cancelMiseUpdateDialog() }.keyboardShortcut(.cancelAction)

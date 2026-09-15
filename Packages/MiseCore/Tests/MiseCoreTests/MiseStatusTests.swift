@@ -34,10 +34,33 @@ struct MiseStatusTests {
         #expect(!snapshot.canUpdate)
     }
 
-    @Test func needsReloadWinsOverEverythingElse() {
-        let snapshot = MiseStatus.snapshot(input { $0.needsReload = true })
-        #expect(snapshot.key == .updatedNeedsReload)
-        #expect(!snapshot.canUpdate)
+    @MainActor @Test func selfUpdateImmediatelyReflectsTheInstalledVersion() async {
+        let runner = FakeRunner()
+        runner.queue("--version", [
+            FakeRunner.ok("2026.9.7 macos-arm64"),
+            FakeRunner.ok("2026.9.8 macos-arm64"),
+        ])
+        let state = makeState(runner, latest: { "v2026.9.8" })
+        state.miseVersion = "2026.9.7 macos-arm64"
+        state.miseLoaded = true
+        await state.checkLatestMiseRelease()
+        #expect(state.miseStatus.canUpdate)
+
+        state.openMiseUpdateDialog()
+        await state.confirmMiseSelfUpdate()
+
+        #expect(runner.calls.suffix(3) == [["--version"], ["self-update", "-y", "--no-plugins"], ["--version"]])
+        #expect(state.miseVersion == "2026.9.8 macos-arm64")
+        #expect(state.miseStatus.key == .upToDate)
+        #expect(!state.miseStatus.canUpdate)
+        #expect(!state.pendingMiseUpdateConfirm)
+        #expect(!state.busy)
+        #expect(!state.updateSummary.items.contains { $0.kind == .mise })
+
+        await state.reloadMiseVersion()
+        #expect(state.miseStatus.key == .upToDate)
+        state.miseLatestVersion = "v2026.9.9"
+        #expect(state.miseStatus.canUpdate)
     }
 
     @Test func selfUpdateInFlightReportsUpdating() {

@@ -141,7 +141,6 @@ struct TrayPanelView: View {
         case .checkFailed: ("확인 실패", .red)
         case .loading: ("확인 중", nil)
         case .updating: ("업데이트 중", nil)
-        case .updatedNeedsReload: ("재시작 필요", .orange)
         case .notChecked: ("비교 불가", nil)
         case .aheadOrCustom: ("커스텀 빌드", nil)
         }

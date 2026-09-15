@@ -115,7 +115,6 @@ public enum PluginUrlDialog: Equatable, Sendable {
     public var miseLatestLoaded = false
     public var miseLatestError: String?
     public var miseLatestCheckedAt: String?
-    public var miseNeedsReload = false
     public var miseLastResult = ""
     public var pendingMiseUpdateConfirm = false
     public var plugins: [PluginRow] = []

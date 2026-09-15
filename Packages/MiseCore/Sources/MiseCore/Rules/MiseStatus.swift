@@ -2,7 +2,6 @@ public enum MiseStatusKey: String, Sendable {
     case loading, updating
     case checkFailed = "check_failed"
     case notChecked = "not_checked"
-    case updatedNeedsReload = "updated_needs_reload"
     case updateAvailable = "update_available"
     case upToDate = "up_to_date"
     case aheadOrCustom = "ahead_or_custom"
@@ -16,9 +15,8 @@ public struct MiseStatusSnapshot: Equatable, Sendable {
     public let buttonHint: String
 }
 
-/// The eight fields the decision table reads.
+/// The fields the decision table reads.
 public struct MiseStatusInput: Sendable {
-    public var needsReload = false
     public var progressLabel = Strings.ready
     public var currentError: String?
     public var latestError: String?
@@ -28,11 +26,10 @@ public struct MiseStatusInput: Sendable {
     public var latestVersion: String?
 
     public init(
-        needsReload: Bool = false, progressLabel: String = Strings.ready, currentError: String? = nil,
+        progressLabel: String = Strings.ready, currentError: String? = nil,
         latestError: String? = nil, loaded: Bool = true, latestLoaded: Bool = true,
         version: String? = nil, latestVersion: String? = nil
     ) {
-        self.needsReload = needsReload
         self.progressLabel = progressLabel
         self.currentError = currentError
         self.latestError = latestError
@@ -54,11 +51,6 @@ public enum MiseStatus {
     }
 
     public static func snapshot(_ input: MiseStatusInput) -> MiseStatusSnapshot {
-        if input.needsReload {
-            return .init(key: .updatedNeedsReload, label: "Updated (Reload Needed)",
-                         description: "업데이트가 적용되었습니다. 앱 재시작 또는 화면 재로드를 권장합니다.",
-                         canUpdate: false, buttonHint: "이미 업데이트를 적용했습니다. 먼저 앱을 다시 로드하세요.")
-        }
         if input.progressLabel == Strings.runningMiseSelfUpdate {
             return .init(key: .updating, label: "Updating", description: "mise self-update가 실행 중입니다.",
                          canUpdate: false, buttonHint: "업데이트 실행 중입니다.")
@@ -95,7 +87,7 @@ public enum MiseStatus {
 extension AppState {
     public var miseStatus: MiseStatusSnapshot {
         MiseStatus.snapshot(MiseStatusInput(
-            needsReload: miseNeedsReload, progressLabel: progressLabel, currentError: miseCurrentError,
+            progressLabel: progressLabel, currentError: miseCurrentError,
             latestError: miseLatestError, loaded: miseLoaded, latestLoaded: miseLatestLoaded,
             version: miseVersion, latestVersion: miseLatestVersion))
     }

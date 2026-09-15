@@ -53,7 +53,6 @@ extension AppState {
             miseVersion = result.afterVersion
             miseLoaded = true
             miseCurrentError = nil
-            miseNeedsReload = true
             miseLastResult = [
                 "Before: \(result.beforeVersion ?? "unknown")",
                 "After: \(result.afterVersion ?? "unknown")",
@@ -63,7 +62,6 @@ extension AppState {
             addLog("mise self-update finished: \(result.beforeVersion ?? "unknown") -> \(result.afterVersion ?? "unknown").")
             setBusy(false, Strings.updateComplete, progress: 100)
         } catch {
-            miseNeedsReload = false
             miseLastResult = "ERROR:\n\(error.localizedDescription)"
             addLog("mise self-update failed: \(error.localizedDescription)")
             setBusy(false, Strings.updateFailed)

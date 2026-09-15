@@ -31,12 +31,6 @@ struct MiseTab: View {
             Card {
                 Text("상태 안내: ").bold() + Text(status.description)
             }
-            if state.miseNeedsReload {
-                Card(tint: .accentColor) {
-                    Text("업데이트가 적용되었습니다.").bold()
-                    Text("앱을 재시작하거나 화면을 다시 로드해 새 환경을 반영하세요.").foregroundStyle(.secondary)
-                }
-            }
             if !state.miseLastResult.isEmpty { resultCard(state.miseLastResult) }
         }
         .navigationTitle("mise 관리")

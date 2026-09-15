@@ -45,7 +45,7 @@ extension AppState {
         }
         let errors = [toolsError, miseCurrentError, miseLatestError, pluginUpdatesError].compactMap { $0 }
             + plugins.filter { $0.status == .error }.map { "\($0.name): \($0.error ?? Strings.ToolStatus.checkFailed)" }
-        let settled: Set<MiseStatusKey> = [.upToDate, .aheadOrCustom, .updateAvailable, .updatedNeedsReload]
+        let settled: Set<MiseStatusKey> = [.upToDate, .aheadOrCustom, .updateAvailable]
         let unchecked = !toolsLoaded || toolsCheckedAt == nil || miseLatestCheckedAt == nil || pluginUpdatesCheckedAt == nil
             || !settled.contains(mise.key)
             || plugins.contains { $0.status != .done || ($0.sameMajorLatest == nil && $0.releaseLatest == nil && $0.latestByMajor.isEmpty) }
