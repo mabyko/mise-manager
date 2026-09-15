@@ -24,6 +24,9 @@ final class TrayPanel: NSPanel {
         level = .popUpMenu
         collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .transient, .ignoresCycle]
         isMovableByWindowBackground = false
+        // A mouse-down in the hidden title bar (top 28pt) started a drag session that resigned key and
+        // closed the panel before mouse-up, so the header controls never fired.
+        isMovable = false
         hidesOnDeactivate = false
         isReleasedWhenClosed = false
         animationBehavior = .utilityWindow
