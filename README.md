@@ -99,6 +99,8 @@ Mise Manager delegates runtime and plugin management to the installed `mise` exe
 | Update one plugin's source | `mise plugins update <plugin>` |
 | Update mise | `mise self-update -y --no-plugins` |
 
+Read-only mise queries have a 120-second time limit. A timeout is shown as an error and releases the busy state. Install and update commands do not use this query deadline.
+
 GUI apps start without the shell `PATH`, so mise is looked up through `MISE_BIN` and the usual install directories (`~/.local/bin`, `~/.mise/bin`, Homebrew, `/usr/local/bin`). One observable `AppState` drives both the window and the menu-bar panel; commands from the panel are checked against current state before execution.
 
 Plugin updates invalidate cached tool candidates; run the full check again to refresh them. Older mise versions may not support `--outdated`. Package-manager installations that disable self-update must update mise through that package manager. Numeric tracking currently groups by major, so Python 3.11 and 3.12 share the `3.x` series; tracking arbitrary minor lines and project-specific version pins is not implemented.

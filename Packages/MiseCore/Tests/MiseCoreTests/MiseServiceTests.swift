@@ -49,6 +49,26 @@ struct MiseServiceTests {
 struct MiseCLIIntegrationTests {
     static var miseAvailable: Bool { PathResolver.resolveMiseExecutable().hasPrefix("/") }
 
+    @Test func largeOutputDoesNotBlockOnTheOtherPipe() async throws {
+        let cli = MiseCLI()
+        // The watchdog makes a pipe deadlock fail instead of hanging the test runner.
+        let result = try await cli.runShell("/bin/sh", ["-c", """
+            (sleep 5; kill -TERM $$) >/dev/null 2>&1 &
+            watchdog=$!
+            sleep 0.1
+            i=0
+            while [ "$i" -lt 10000 ]; do
+                printf '0123456789abcdef\\n'
+                i=$((i + 1))
+            done
+            printf '완료\\r\\n마지막' >&2
+            kill "$watchdog"
+            """])
+        #expect(result.exitCode == 0)
+        #expect(result.stdout == String(repeating: "0123456789abcdef\n", count: 10000))
+        #expect(result.stderr == "완료\n마지막\n")
+    }
+
     @Test(.enabled(if: miseAvailable)) func versionIsStreamedAndReturned() async throws {
         let cli = MiseCLI()
         let version = try await Mise(runner: cli).version()
