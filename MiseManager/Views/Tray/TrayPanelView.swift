@@ -6,6 +6,7 @@ struct TrayPanelView: View {
     var state: AppState
     let close: () -> Void
     @State private var onlyUpdates = false
+    @State private var confirmingMiseUpdate = false
     @Environment(\.snapshotMode) private var snapshotMode
 
     private var summary: UpdateSummary { state.updateSummary }
@@ -16,6 +17,10 @@ struct TrayPanelView: View {
             header.padding(.horizontal, 14).padding(.top, 12).padding(.bottom, 8)
             tabs.padding(.horizontal, 14).padding(.bottom, 10)
             Divider()
+            if confirmingMiseUpdate {
+                miseUpdateConfirmation.padding(14)
+                Divider()
+            }
             if snapshotMode { content } else { ScrollView { content } }
             Divider()
             footer.padding(.horizontal, 14).padding(.vertical, 10)
@@ -48,9 +53,12 @@ struct TrayPanelView: View {
 
     private var content: some View {
         VStack(alignment: .leading, spacing: 10) {
+            if let error = state.miseSelfUpdateError {
+                Text("mise 업데이트 실패: \(error)").font(.callout).foregroundStyle(.red)
+            }
             if summary.attention { attention }
             if onlyUpdates {
-                UpdateList(state: state, items: summary.items)
+                UpdateList(state: state, items: summary.items, onMiseUpdate: requestMiseUpdate)
                 if summary.items.isEmpty {
                     Text(summary.attention ? "아직 확인된 업데이트가 없습니다." : "확인된 업데이트가 없습니다.").foregroundStyle(.secondary)
                 }
@@ -96,24 +104,30 @@ struct TrayPanelView: View {
         let outdated = state.outdatedPluginNames.count
         return VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 10) {
-                Image(systemName: "shippingbox.fill")
-                    .frame(width: 28, height: 28)
-                    .background(.tint.opacity(0.15), in: RoundedRectangle(cornerRadius: 7))
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("mise").bold()
-                    Text(MiseStatus.normalizeVersionToken(state.miseVersion) ?? state.miseVersion ?? "미확인")
-                        .font(.caption.monospaced()).foregroundStyle(.secondary)
+                Button { open(.mise) } label: {
+                    HStack(spacing: 10) {
+                        Image(systemName: "shippingbox.fill")
+                            .frame(width: 28, height: 28)
+                            .background(.tint.opacity(0.15), in: RoundedRectangle(cornerRadius: 7))
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("mise").bold()
+                            Text(MiseStatus.normalizeVersionToken(state.miseVersion) ?? state.miseVersion ?? "미확인")
+                                .font(.caption.monospaced()).foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        if let tint { Pill(text: text, tint: tint) } else { Text(text).font(.caption).foregroundStyle(.secondary) }
+                        Image(systemName: "chevron.right").font(.caption).foregroundStyle(.tertiary)
+                    }
+                    .contentShape(Rectangle())
                 }
-                Spacer()
-                if let tint { Pill(text: text, tint: tint) } else { Text(text).font(.caption).foregroundStyle(.secondary) }
+                .buttonStyle(.plain)
+                .accessibilityLabel("mise 자세히 보기")
                 if status.canUpdate {
-                    Button("검토…") { close(); Task { await state.run(.apply(id: "mise")) } }
-                        .controlSize(.small).disabled(checking)
+                    Button("업데이트", action: requestMiseUpdate)
+                        .controlSize(.small).disabled(state.actionsDisabled)
+                        .accessibilityLabel("mise 업데이트")
                 }
-                Image(systemName: "chevron.right").font(.caption).foregroundStyle(.tertiary)
             }
-            .contentShape(Rectangle())
-            .onTapGesture { open(.mise) }
             if outdated > 0 {
                 Button { open(.updates) } label: {
                     HStack(spacing: 6) {
@@ -132,6 +146,31 @@ struct TrayPanelView: View {
         }
         .padding(10)
         .background(.quaternary.opacity(0.4), in: RoundedRectangle(cornerRadius: 10))
+    }
+
+    private func requestMiseUpdate() {
+        guard !state.actionsDisabled, state.miseStatus.canUpdate else { return }
+        confirmingMiseUpdate = true
+    }
+
+    private var miseUpdateConfirmation: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("mise를 업데이트할까요?").font(.headline)
+            Text("\(MiseStatus.normalizeVersionToken(state.miseVersion) ?? "현재 버전") → \(MiseStatus.normalizeVersionToken(state.miseLatestVersion) ?? "최신 버전")")
+                .font(.callout.monospaced())
+            Text("설치된 도구와 전역 버전 설정은 유지합니다.")
+                .font(.caption).foregroundStyle(.secondary)
+            HStack {
+                Spacer()
+                Button("취소") { confirmingMiseUpdate = false }
+                Button("업데이트 실행") {
+                    confirmingMiseUpdate = false
+                    Task { await state.confirmMiseSelfUpdate() }
+                }
+                .disabled(state.actionsDisabled || !state.miseStatus.canUpdate)
+                .accessibilityLabel("mise 업데이트 실행")
+            }
+        }
     }
 
     static func miseStatusText(_ key: MiseStatusKey) -> (String, Color?) {

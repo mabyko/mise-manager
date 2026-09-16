@@ -45,8 +45,9 @@ extension AppState {
     public func cancelMiseUpdateDialog() { pendingMiseUpdateConfirm = false }
 
     public func confirmMiseSelfUpdate() async {
-        if busy { return }
+        guard !busy, !updateCheckRunning, miseStatus.canUpdate else { return }
         pendingMiseUpdateConfirm = false
+        miseSelfUpdateError = nil
         setBusy(true, Strings.runningMiseSelfUpdate)
         do {
             let result = try await mise.selfUpdate()
@@ -62,6 +63,7 @@ extension AppState {
             addLog("mise self-update finished: \(result.beforeVersion ?? "unknown") -> \(result.afterVersion ?? "unknown").")
             setBusy(false, Strings.updateComplete, progress: 100)
         } catch {
+            miseSelfUpdateError = error.localizedDescription
             miseLastResult = "ERROR:\n\(error.localizedDescription)"
             addLog("mise self-update failed: \(error.localizedDescription)")
             setBusy(false, Strings.updateFailed)

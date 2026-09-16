@@ -67,6 +67,30 @@ struct MiseStatusTests {
         #expect(MiseStatus.snapshot(input { $0.progressLabel = Strings.runningMiseSelfUpdate }).key == .updating)
     }
 
+    @MainActor @Test func selfUpdateRevalidatesStateAndExposesFailureForTheTray() async {
+        let runner = FakeRunner()
+        let state = makeState(runner)
+        state.miseVersion = "2026.9.7"
+        state.miseLatestVersion = "v2026.9.8"
+        state.miseLoaded = true
+        state.miseLatestLoaded = true
+        state.updateCheckRunning = true
+        await state.confirmMiseSelfUpdate()
+        #expect(!runner.called(prefix: "self-update"))
+
+        state.updateCheckRunning = false
+        state.miseLatestVersion = state.miseVersion
+        await state.confirmMiseSelfUpdate()
+        #expect(!runner.called(prefix: "self-update"))
+
+        state.miseLatestVersion = "v2026.9.8"
+        runner.fail("self-update -y --no-plugins", "Use your package manager to update mise")
+        await state.confirmMiseSelfUpdate()
+        #expect(runner.count("self-update -y --no-plugins") == 1)
+        #expect(state.miseSelfUpdateError == "Use your package manager to update mise")
+        #expect(!state.busy)
+    }
+
     @Test func anyCheckErrorBlocksUpdating() {
         #expect(MiseStatus.snapshot(input { $0.currentError = "boom" }).key == .checkFailed)
         #expect(MiseStatus.snapshot(input { $0.latestError = "boom" }).key == .checkFailed)

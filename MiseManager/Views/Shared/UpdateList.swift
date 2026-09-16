@@ -5,6 +5,7 @@ import SwiftUI
 struct UpdateList: View {
     var state: AppState
     let items: [UpdateItem]
+    var onMiseUpdate: (() -> Void)? = nil
 
     var body: some View {
         VStack(spacing: 8) {
@@ -17,13 +18,14 @@ struct UpdateList: View {
         let hint: String = switch item.kind {
         case .series: switches ? "설치 후 전역 전환" : "설치만 · 전역 유지"
         case .major: "호환성 확인 필요 · 앱에서 검토"
-        case .mise: "앱에서 확인 후 업데이트"
+        case .mise: onMiseUpdate == nil ? "앱에서 확인 후 업데이트" : "메뉴바에서 확인 후 업데이트"
         case .plugin: "플러그인 소스 갱신"
         }
         let action: String = switch item.kind {
         case .series: switches ? "설치·전환" : "설치"
         case .plugin: "업데이트"
-        case .major, .mise: "검토…"
+        case .major: "검토…"
+        case .mise: onMiseUpdate == nil ? "검토…" : "업데이트"
         }
         return HStack(spacing: 12) {
             ToolGlyph(name: item.name)
@@ -38,7 +40,10 @@ struct UpdateList: View {
                 Text(hint).font(.caption).foregroundStyle(.secondary)
             }
             Spacer()
-            Button(action) { Task { await state.run(.apply(id: item.id)) } }
+            Button(action) {
+                if item.kind == .mise, let onMiseUpdate { onMiseUpdate() }
+                else { Task { await state.run(.apply(id: item.id)) } }
+            }
                 .controlSize(.small)
                 .disabled(state.actionsDisabled)
                 .accessibilityLabel("\(item.label) \(item.to) \(action)")
