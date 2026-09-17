@@ -45,7 +45,8 @@ struct UpdateList: View {
                 else { Task { await state.run(.apply(id: item.id)) } }
             }
                 .controlSize(.small)
-                .disabled(state.actionsDisabled)
+                .disabled(item.kind == .series || item.kind == .major
+                          ? state.toolActionsDisabled(item.name) : state.actionsDisabled)
                 .accessibilityLabel("\(item.label) \(item.to) \(action)")
         }
         .padding(10)

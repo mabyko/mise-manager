@@ -3,10 +3,12 @@ public struct OutputLine: Equatable, Sendable {
     public enum Stream: String, Sendable { case stdout, stderr }
     public let stream: Stream
     public let line: String
+    public let command: String?
 
-    public init(stream: Stream, line: String) {
+    public init(stream: Stream, line: String, command: String? = nil) {
         self.stream = stream
         self.line = line
+        self.command = command
     }
 }
 

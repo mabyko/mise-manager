@@ -191,10 +191,141 @@ import Testing
 
     @Test func actionsAreNoOpsWhileAnotherActionIsRunning() async {
         let (runner, state) = setup()
-        state.busy = true
+        state.setBusy(true)
         await state.useInstalledVersion("node", "22.14.0")
         await state.reloadAndCheckTools()
         #expect(runner.calls.isEmpty)
+    }
+
+    @Test(.timeLimit(.minutes(1))) func differentToolsRunTogetherAndKeepTheirOwnLocksAndResults() async {
+        let (runner, state) = setup()
+        state.plugins += ["bun", "python"].map {
+            PluginRow(name: $0, activeGlobalVersion: "1.0.0", installedVersions: ["1.0.0"],
+                      latestByMajor: ["1": "1.1.0"], status: .done)
+        }
+        runner.installed([("node", "22.14.0", ["22.14.0", "22.15.0"]),
+                          ("bun", "1.0.0", ["1.0.0"]), ("python", "1.0.0", ["1.0.0", "1.1.0"])])
+        runner.fail("install -y bun@1.1.0", "download failed")
+        let node = runner.pause("install -y node@22.15.0")
+        let bun = runner.pause("install -y bun@1.1.0")
+        defer { node.resume.finish(); bun.resume.finish() }
+        let first = Task { await state.installVersion("node", "22.15.0") }
+        for await _ in node.started {}
+        #expect(state.busy)
+        #expect(state.toolActionsDisabled("node"))
+        #expect(!state.toolActionsDisabled("bun"))
+
+        // The tray dispatcher must allow the second tool too.
+        let second = Task { await state.run(.apply(id: "bun@1.1.0")) }
+        for await _ in bun.started {}
+        #expect(state.toolOperations.count == 2)
+        #expect(state.progressLabel == "도구 2개 작업 중")
+        #expect(state.progress == nil)
+        #expect(state.toolActionsDisabled("python"))
+        let calls = runner.calls
+        await state.installVersion("python", "1.1.0")
+        await state.installVersion("node", "24.0.0")
+        await state.useInstalledVersion("node", "22.14.0")
+        await state.deleteInstalledVersion("node", "22.15.0")
+        await state.checkAllUpdates()
+        await state.reloadMiseVersion()
+        await state.checkLatestMiseRelease()
+        await state.reloadPluginDefinitions()
+        state.miseVersion = "2026.9.7"
+        state.miseLatestVersion = "2026.9.8"
+        state.miseLoaded = true
+        state.miseLatestLoaded = true
+        state.openMiseUpdateDialog()
+        await state.confirmMiseSelfUpdate()
+        #expect(!state.pendingMiseUpdateConfirm)
+        #expect(runner.calls == calls)
+
+        bun.resume.finish()
+        await second.value
+        #expect(state.plugin("bun")?.status == .error)
+        #expect(state.plugin("bun")?.error == "download failed")
+        #expect(state.busy)
+        #expect(state.progressLabel == Strings.installing("node@22.15.0"))
+        #expect(state.toolActionsDisabled("node"))
+        #expect(!state.toolActionsDisabled("python"))
+        await state.installVersion("python", "1.1.0")
+        #expect(runner.count("install -y python@1.1.0") == 1)
+
+        node.resume.finish()
+        await first.value
+        #expect(state.plugin("node")?.status == .done)
+        #expect(state.plugin("node")?.installedVersions.contains("22.15.0") == true)
+        #expect(state.toolOperations.isEmpty)
+        #expect(!state.busy)
+        #expect(state.progressLabel == Strings.ready)
+    }
+
+    @Test(.timeLimit(.minutes(1))) func selfUpdateBlocksEveryToolActionButAllowsNavigation() async {
+        let (runner, state) = setup()
+        state.miseVersion = "2026.9.7"
+        state.miseLatestVersion = "2026.9.8"
+        state.miseLoaded = true
+        state.miseLatestLoaded = true
+        let update = runner.pause("self-update -y --no-plugins")
+        defer { update.resume.finish() }
+        let task = Task { await state.confirmMiseSelfUpdate() }
+        for await _ in update.started {}
+        #expect(state.busy)
+        #expect(state.toolActionsDisabled("node"))
+        #expect(state.toolActionsDisabled("bun"))
+        #expect(state.progressLabel == Strings.runningMiseSelfUpdate)
+        let calls = runner.calls
+        await state.installVersion("node", "22.15.0")
+        await state.useInstalledVersion("node", "22.14.0")
+        await state.deleteInstalledVersion("node", "22.15.0")
+        await state.run(.use(name: "node", version: "22.14.0"))
+        await state.installPluginDefinition("bun")
+        await state.reloadPluginDefinitions()
+        await state.run(.open(tab: .logs))
+        #expect(state.activeTab == .logs)
+        #expect(runner.calls == calls)
+        update.resume.finish()
+        await task.value
+        #expect(!state.busy)
+        #expect(!state.toolActionsDisabled("node"))
+    }
+
+    @Test(.timeLimit(.minutes(1)), arguments: [false, true])
+    func globalWritesWaitForEachOtherAndReleaseAfterFailure(cancelWaiting: Bool) async {
+        let (runner, state) = setup()
+        state.plugins.append(PluginRow(name: "bun", activeGlobalVersion: "1.0.0", installedVersions: ["1.0.0"], status: .done))
+        runner.installed([("node", "22.14.0", ["22.14.0"]), ("bun", "1.0.0", ["1.0.0", "1.1.0"])])
+        runner.fail("use -g -y node@22.14.0", "config write failed")
+        let node = runner.pause("use -g -y node@22.14.0")
+        let bun = runner.pause("use -g -y bun@1.1.0")
+        defer { node.resume.finish(); bun.resume.finish() }
+        let first = Task { await state.useInstalledVersion("node", "22.14.0") }
+        for await _ in node.started {}
+        let second = Task { await state.updateToVersion("bun", "1.1.0") }
+        // Yield to the second task until it is queued at the config write, never sleeping on a clock.
+        for _ in 0..<10_000 {
+            if !state.globalVersionWaiters.isEmpty { break }
+            await Task.yield()
+        }
+        #expect(state.globalVersionWaiters.count == 1)
+        #expect(runner.count("install -y bun@1.1.0") == 1)
+        #expect(runner.count("use -g -y bun@1.1.0") == 0)
+        if cancelWaiting { second.cancel() }
+        node.resume.finish()
+        if !cancelWaiting { for await _ in bun.started {} }
+        await first.value
+        #expect(state.plugin("node")?.status == .error)
+        if !cancelWaiting {
+            #expect(state.busy)
+            #expect(state.globalVersionChanging)
+        }
+        bun.resume.finish()
+        await second.value
+        #expect(!state.globalVersionChanging)
+        #expect(state.globalVersionWaiters.isEmpty)
+        #expect(!state.busy)
+        #expect(runner.count("use -g -y bun@1.1.0") == (cancelWaiting ? 0 : 1))
+        #expect(state.plugin("bun")?.installedVersions.contains("1.1.0") == true)
     }
 
     @Test func reloadRecordsALoadErrorAndSkipsChecksAndAGoodLoadChecksEveryTool() async {

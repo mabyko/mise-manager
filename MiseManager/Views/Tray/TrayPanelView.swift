@@ -211,7 +211,7 @@ private struct TrayToolBlock: View {
     let open: (ActiveTab, String?) -> Void
     @State private var expanded = false
 
-    private var checking: Bool { state.busy || state.updateCheckRunning }
+    private var checking: Bool { state.toolActionsDisabled(tool.name) }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -236,6 +236,10 @@ private struct TrayToolBlock: View {
 
             // One compact line per pending update, under the tool it belongs to.
             ForEach(updates) { item in updateLine(item) }
+
+            if let operation = state.toolOperations[tool.name] {
+                Text(operation).font(.caption).foregroundStyle(.secondary).padding(.leading, 38)
+            }
 
             if expanded {
                 VStack(alignment: .leading, spacing: 6) {

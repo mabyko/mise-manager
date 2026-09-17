@@ -17,7 +17,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         outputTask = Task { [cli, state] in
-            for await line in cli.output { state.liveOutputLine = line.line }
+            for await line in cli.output {
+                state.liveOutputLine = line.command.map { "[\($0)] \(line.line)" } ?? line.line
+            }
         }
         let statusItem = StatusItemController(state: state)
         self.statusItem = statusItem

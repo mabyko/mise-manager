@@ -100,6 +100,32 @@ struct MiseCLIRunnerTests {
         #expect(result == CommandResult(stdout: "installed\n", stderr: "warn\n", exitCode: 0))
     }
 
+    @Test func installsRunConcurrentlyAndOutputIdentifiesItsCommand() async throws {
+        let path = try Self.fakeMise(#"""
+            cd "$(dirname "$0")"
+            touch "$3"
+            attempts=0
+            until [ -f node@22 ] && [ -f bun@1 ]; do
+                attempts=$((attempts + 1))
+                [ "$attempts" -lt 100 ] || exit 1
+                sleep 0.02
+            done
+            echo "$3 installed"
+            """#)
+        defer { try? FileManager.default.removeItem(atPath: URL(fileURLWithPath: path).deletingLastPathComponent().path) }
+        let cli = MiseCLI(environment: ["MISE_BIN": path, "PATH": "/usr/bin:/bin"])
+        async let node = cli.runMise(["install", "-y", "node@22"])
+        async let bun = cli.runMise(["install", "-y", "bun@1"])
+        let results = try await [node, bun]
+        try #require(results.allSatisfy { $0.exitCode == 0 })
+        #expect(results.map(\.stdout) == ["node@22 installed\n", "bun@1 installed\n"])
+        var output: [String: String] = [:]
+        for await line in cli.output.prefix(2) {
+            if let command = line.command { output[command] = line.line }
+        }
+        #expect(output == ["mise install -y node@22": "node@22 installed", "mise install -y bun@1": "bun@1 installed"])
+    }
+
     @Test func cancellationTerminatesTheProcessGroupAndThrows() async throws {
         let cli = MiseCLI()
         // The backgrounded sleep inherits our stdout pipe: only a group signal reaches it.

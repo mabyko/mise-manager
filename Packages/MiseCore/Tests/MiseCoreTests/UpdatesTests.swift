@@ -24,7 +24,7 @@ import Testing
         #expect(!state.busy)
         #expect(state.progressLabel == Strings.checkComplete)
 
-        state.busy = true
+        state.setBusy(true)
         await state.checkAllUpdates()
         #expect(runner.count("--version") == 1)
     }

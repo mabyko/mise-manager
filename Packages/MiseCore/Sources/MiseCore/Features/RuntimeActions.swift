@@ -15,7 +15,7 @@ extension AppState {
             if tab == .installs, !installsLoaded, !busy, !updateCheckRunning { await reloadPluginDefinitions() }
             return
         }
-        if busy || updateCheckRunning || pendingDelete != nil || pendingMajorUpdate != nil || pendingMiseUpdateConfirm || pendingPluginUrlDialog != nil { return }
+        if globalBusy || updateCheckRunning || pendingDelete != nil || pendingMajorUpdate != nil || pendingMiseUpdateConfirm || pendingPluginUrlDialog != nil { return }
         switch action {
         case .check:
             await checkAllUpdates()

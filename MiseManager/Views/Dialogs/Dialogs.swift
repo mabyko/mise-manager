@@ -19,7 +19,7 @@ private struct AppDialogs: ViewModifier {
                 titleVisibility: .visible,
                 presenting: state.pendingDelete
             ) { pending in
-                Button("삭제", role: .destructive) { Task { await state.deleteInstalledVersion(pending.pluginName, pending.version) } }.disabled(state.busy)
+                Button("삭제", role: .destructive) { Task { await state.deleteInstalledVersion(pending.pluginName, pending.version) } }.disabled(state.toolActionsDisabled(pending.pluginName))
                 Button("취소", role: .cancel) { state.pendingDelete = nil }
             } message: { pending in
                 Text("\(pending.pluginName)@\(pending.version)\n이 버전을 로컬에서 제거합니다. 프로젝트에서 사용 중인지 확인해 주세요. 다시 사용하려면 재설치해야 합니다.")
@@ -61,7 +61,7 @@ private struct MajorUpdateSheet: View {
                 Spacer()
                 Button("취소") { state.pendingMajorUpdate = nil }.keyboardShortcut(.cancelAction)
                 Button("설치 후 전역 전환") { Task { await state.confirmMajorUpdate() } }
-                    .disabled(state.busy)
+                    .disabled(pending.map { state.toolActionsDisabled($0.pluginName) } ?? true)
             }
         }
     }

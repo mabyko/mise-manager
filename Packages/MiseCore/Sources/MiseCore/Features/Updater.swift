@@ -102,10 +102,14 @@ extension AppState {
 
     /// Row-level retry: reconcile the row's versions from mise first, then check it.
     public func retryCheck(_ name: String) async {
-        if busy || plugin(name) == nil { return }
-        setBusy(true, Strings.checking(name))
+        if toolActionsDisabled(name) || plugin(name) == nil { return }
+        setBusy(false)
+        toolOperations[name] = Strings.checking(name)
         updatePlugin(name) { $0.status = .checking }
-        defer { setBusy(false, Strings.checkComplete) }
+        defer {
+            toolOperations[name] = nil
+            if toolOperations.isEmpty { setBusy(false, Strings.checkComplete) }
+        }
         do {
             if let row = try await refreshPlugin(name) { await checkPlugin(row) }
         } catch {
@@ -128,16 +132,20 @@ extension AppState {
         }
     }
 
-    /// One mise mutation on a tool: busy span, row status, then the row is re-read from mise whether
+    /// One mutation per tool, at most two tools at once; re-read the row from mise whether
     /// or not the command succeeded, so whatever mise actually did is what the table shows.
     func runToolAction(
         _ name: String, status: PluginStatus, label: String,
         action: () async throws -> Void, okLog: String, failLog: () -> String
     ) async {
-        guard !busy, !updateCheckRunning, let before = plugin(name) else { return }
-        setBusy(true, label)
+        guard !toolActionsDisabled(name), let before = plugin(name), !Task.isCancelled else { return }
+        setBusy(false)
+        toolOperations[name] = label
         updatePlugin(name) { $0.status = status }
-        defer { setBusy(false) }
+        defer {
+            toolOperations[name] = nil
+            liveOutputLine = ""
+        }
         do {
             try await action()
         } catch {
@@ -173,14 +181,14 @@ extension AppState {
 
     /// Series updates install only; the global default moves only when the setting says so.
     public func updateInstalledSeries(_ name: String, _ version: String) async {
-        guard !busy, let plugin = plugin(name), ToolStatus.installedSeries(plugin).contains(where: { $0.update == version }) else { return }
+        guard !toolActionsDisabled(name), let plugin = plugin(name), ToolStatus.installedSeries(plugin).contains(where: { $0.update == version }) else { return }
         if seriesUpdateSwitchesGlobal(plugin, version) { await updateToVersion(name, version) } else { await installVersion(name, version) }
     }
 
     public func useInstalledVersion(_ name: String, _ version: String) async {
         await runToolAction(
             name, status: .updating, label: Strings.using("\(name)@\(version)"),
-            action: { _ = try await mise.useGlobal(plugin: name, version: version) },
+            action: { try await switchGlobalVersion(name, version) },
             okLog: "switched global version to \(version).", failLog: { "use failed" })
     }
 
@@ -192,13 +200,14 @@ extension AppState {
             action: {
                 _ = try await mise.install(plugin: name, version: version)
                 failLog = "installed \(version) but switching global failed"
-                _ = try await mise.useGlobal(plugin: name, version: version)
+                toolOperations[name] = Strings.using("\(name)@\(version)")
+                try await switchGlobalVersion(name, version)
             },
             okLog: "updated to \(version) (installed + switched global).", failLog: { failLog })
     }
 
     public func deleteInstalledVersion(_ name: String, _ version: String) async {
-        guard !busy, let plugin = plugin(name) else { return }
+        guard !toolActionsDisabled(name), let plugin = plugin(name) else { return }
         guard plugin.activeGlobalVersion != version else {
             addLog("\(name): cannot delete active global version \(version).")
             return
@@ -209,19 +218,36 @@ extension AppState {
             okLog: "deleted \(version).", failLog: { "delete failed" })
     }
 
+    /// All tools share the same global config; only this short write step is serialized.
+    func switchGlobalVersion(_ name: String, _ version: String) async throws {
+        if globalVersionChanging {
+            await withCheckedContinuation { globalVersionWaiters.append($0) }
+        } else {
+            globalVersionChanging = true
+        }
+        defer {
+            if globalVersionWaiters.isEmpty { globalVersionChanging = false }
+            else { globalVersionWaiters.removeFirst().resume() }
+        }
+        try Task.checkCancellation()
+        _ = try await mise.useGlobal(plugin: name, version: version)
+    }
+
     // MARK: Confirm dialogs
 
     public func requestMajorUpdate(_ name: String, _ version: String) {
+        guard !toolActionsDisabled(name) else { return }
         pendingMajorUpdate = PendingMajorUpdate(pluginName: name, fromVersion: plugin(name)?.activeGlobalVersion, targetVersion: version)
     }
 
     public func confirmMajorUpdate() async {
-        guard let pending = pendingMajorUpdate, !busy else { return }
+        guard let pending = pendingMajorUpdate, !toolActionsDisabled(pending.pluginName) else { return }
         pendingMajorUpdate = nil
         await updateToVersion(pending.pluginName, pending.targetVersion)
     }
 
     public func requestDelete(_ name: String, _ version: String) {
+        guard !toolActionsDisabled(name) else { return }
         pendingDelete = PendingDelete(pluginName: name, version: version)
     }
 }

@@ -7,6 +7,7 @@ final class FakeRunner: CommandRunner, @unchecked Sendable {
     private let lock = NSLock()
     private var _calls: [[String]] = []
     private var replies: [String: [CommandResult]]
+    private var pauses: [String: (started: AsyncStream<Void>.Continuation, resume: AsyncStream<Void>)] = [:]
 
     init(_ replies: [String: CommandResult] = [:]) { self.replies = replies.mapValues { [$0] } }
 
@@ -35,7 +36,24 @@ final class FakeRunner: CommandRunner, @unchecked Sendable {
         reply("ls --global --json", json(tools.compactMap { tool in tool.global.map { (tool.name, [$0]) } }))
     }
 
-    func runMise(_ args: [String]) async throws -> CommandResult { take(args) }
+    /// Hold a command in flight until the test releases it, without timing-dependent sleeps.
+    func pause(_ key: String) -> (started: AsyncStream<Void>, resume: AsyncStream<Void>.Continuation) {
+        let started = AsyncStream<Void>.makeStream()
+        let resume = AsyncStream<Void>.makeStream()
+        lock.withLock { pauses[key] = (started.continuation, resume.stream) }
+        return (started.stream, resume.continuation)
+    }
+
+    func runMise(_ args: [String]) async throws -> CommandResult {
+        let result = take(args)
+        if let pause = lock.withLock({ pauses.removeValue(forKey: args.joined(separator: " ")) }) {
+            pause.started.yield(())
+            pause.started.finish()
+            for await _ in pause.resume {}
+            try Task.checkCancellation()
+        }
+        return result
+    }
     func runShell(_ program: String, _ args: [String]) async throws -> CommandResult { take([program] + args) }
 
     private func take(_ args: [String]) -> CommandResult {

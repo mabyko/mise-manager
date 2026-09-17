@@ -60,7 +60,7 @@ struct ToolDetail: View {
     private var label: String { ToolStatus.label(tool) }
     private var series: [InstalledSeries] { ToolStatus.installedSeries(tool) }
     private var update: ToolUpdate? { ToolStatus.update(tool) }
-    private var disabled: Bool { state.actionsDisabled }
+    private var disabled: Bool { state.toolActionsDisabled(tool.name) }
     private var candidates: [String] {
         var seen = Set<String>()
         return [tool.sameMajorLatest, tool.releaseLatest, state.settings.showPrereleases ? tool.overallLatest : nil]
@@ -122,7 +122,7 @@ struct ToolDetail: View {
                 Button("다시 확인") { Task { await state.retryCheck(tool.name) } }.disabled(disabled)
             }
         case .checking, .updating, .deleting:
-            HStack(spacing: 8) { ProgressView().controlSize(.small); Text("\(label) · 작업 결과가 자동으로 반영됩니다.") }
+            HStack(spacing: 8) { ProgressView().controlSize(.small); Text("\(state.toolOperations[tool.name] ?? label) · 작업 결과가 자동으로 반영됩니다.") }
                 .foregroundStyle(.secondary)
         case .done where label == Strings.ToolStatus.latestStable:
             Text("현재 확인된 안정 버전 업데이트가 없습니다.").bold()

@@ -2,7 +2,7 @@ import MiseCore
 import SwiftUI
 
 extension AppState {
-    /// Every mutating control is off while a command runs or a full check is in flight.
+    /// App-wide actions wait for every running command; tool controls use toolActionsDisabled.
     var actionsDisabled: Bool { busy || updateCheckRunning }
 }
 

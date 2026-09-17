@@ -107,16 +107,16 @@ public actor MiseCLI: CommandRunner {
         try process.run()
         let pid = process.processIdentifier
         let reap = Task { for await _ in reaped {} }
+        let command = ([URL(fileURLWithPath: program).lastPathComponent] + args).joined(separator: " ")
 
         do {
             let result = try await withThrowingTaskGroup(of: Event.self) { group in
-                group.addTask { .stdout(try await collect(stdout.fileHandleForReading, .stdout, emit)) }
-                group.addTask { .stderr(try await collect(stderr.fileHandleForReading, .stderr, emit)) }
+                group.addTask { .stdout(try await collect(stdout.fileHandleForReading, .stdout, emit, command: command)) }
+                group.addTask { .stderr(try await collect(stderr.fileHandleForReading, .stderr, emit, command: command)) }
                 group.addTask { var code: Int32 = -1; for await finished in status { code = finished }; return .exit(code) }
                 if let timeout {
                     group.addTask {
                         try await Task.sleep(for: timeout)
-                        let command = ([URL(fileURLWithPath: program).lastPathComponent] + args).joined(separator: " ")
                         throw MiseError("\(command) timed out after \(timeout)")
                     }
                 }
@@ -153,7 +153,8 @@ public actor MiseCLI: CommandRunner {
     private enum Event { case stdout(String), stderr(String), exit(Int32) }
 
     private static func collect(
-        _ handle: FileHandle, _ stream: OutputLine.Stream, _ emit: AsyncStream<OutputLine>.Continuation
+        _ handle: FileHandle, _ stream: OutputLine.Stream, _ emit: AsyncStream<OutputLine>.Continuation,
+        command: String
     ) async throws -> String {
         // FileHandle.bytes shares a serial IO actor: an idle pipe can block all other pipes.
         let bytes = AsyncThrowingStream<UInt8, Error> { continuation in
@@ -175,7 +176,7 @@ public actor MiseCLI: CommandRunner {
         defer { handle.readabilityHandler = nil }
         var collected = ""
         for try await line in bytes.lines {
-            emit.yield(OutputLine(stream: stream, line: line))
+            emit.yield(OutputLine(stream: stream, line: line, command: command))
             collected += line + "\n"
         }
         return collected

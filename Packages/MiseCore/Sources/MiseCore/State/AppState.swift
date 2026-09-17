@@ -120,10 +120,19 @@ public enum PluginUrlDialog: Equatable, Sendable {
     public var pendingMiseUpdateConfirm = false
     public var plugins: [PluginRow] = []
     public var logs: [String] = []
-    public var busy = false
+    var globalBusy = false
+    public internal(set) var toolOperations: [String: String] = [:]
+    public var busy: Bool { globalBusy || !toolOperations.isEmpty }
+    @ObservationIgnored var globalVersionChanging = false
+    @ObservationIgnored var globalVersionWaiters: [CheckedContinuation<Void, Never>] = []
     /// Real percentage when one exists (N/M plugin checks); nil = indeterminate.
-    public var progress: Double? = 0
-    public var progressLabel = Strings.ready
+    private var globalProgress: Double? = 0
+    public var progress: Double? { toolOperations.isEmpty ? globalProgress : nil }
+    private var globalProgressLabel = Strings.ready
+    public var progressLabel: String {
+        if toolOperations.count > 1 { return "도구 \(toolOperations.count)개 작업 중" }
+        return toolOperations.values.first ?? globalProgressLabel
+    }
     /// Latest subprocess output line while busy.
     public var liveOutputLine = ""
     public var pendingDelete: PendingDelete?
@@ -157,20 +166,24 @@ public enum PluginUrlDialog: Equatable, Sendable {
 
     // MARK: Busy / progress
 
+    public func toolActionsDisabled(_ name: String) -> Bool {
+        globalBusy || updateCheckRunning || toolOperations[name] != nil || toolOperations.count >= 2
+    }
+
     public func setBusy(_ nextBusy: Bool, _ label: String = Strings.ready, progress nextProgress: Double? = nil) {
         statusResetTask?.cancel()
         statusResetTask = nil
         if nextBusy { liveOutputLine = "" }
-        busy = nextBusy
-        progressLabel = label
-        progress = nextProgress
+        globalBusy = nextBusy
+        globalProgressLabel = label
+        globalProgress = nextProgress
         // Completion labels ("확인 완료 · 100%") shouldn't linger forever.
         if !nextBusy && label != Strings.ready {
             statusResetTask = Task { [weak self] in
                 try? await Task.sleep(for: .seconds(4))
                 guard !Task.isCancelled, let self, !self.busy else { return }
-                self.progressLabel = Strings.ready
-                self.progress = 0
+                self.globalProgressLabel = Strings.ready
+                self.globalProgress = 0
             }
         }
     }

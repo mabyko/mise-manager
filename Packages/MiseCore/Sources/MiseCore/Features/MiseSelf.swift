@@ -1,6 +1,7 @@
 /// mise itself: version, latest release, self-update, installation. Port of features/mise.ts.
 extension AppState {
     public func reloadMiseVersion() async {
+        guard !busy else { return }
         setBusy(true, Strings.loadingMiseVersion)
         do {
             let version = try await mise.version()
@@ -18,6 +19,7 @@ extension AppState {
     }
 
     public func checkLatestMiseRelease() async {
+        guard !busy else { return }
         setBusy(true, Strings.checkingLatestMise)
         defer { miseLatestLoaded = true; miseLatestCheckedAt = Self.nowLabel() }
         do {
@@ -34,6 +36,7 @@ extension AppState {
     }
 
     public func openMiseUpdateDialog() {
+        guard !busy, !updateCheckRunning else { return }
         let status = miseStatus
         guard status.canUpdate else {
             addLog("mise update blocked: \(status.buttonHint)")

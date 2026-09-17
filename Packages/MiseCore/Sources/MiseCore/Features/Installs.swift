@@ -9,6 +9,11 @@ public enum PluginInstallPlan: Equatable, Sendable {
 
 extension AppState {
     public func reloadPluginDefinitions() async {
+        guard !busy else { return }
+        await loadPluginDefinitions()
+    }
+
+    private func loadPluginDefinitions() async {
         setBusy(true, Strings.loadingPluginDefinitions)
         installsError = nil
         do {
@@ -74,7 +79,7 @@ extension AppState {
         setBusy(true, Strings.installingPlugin(plugin, force: force))
         do {
             let result = try await mise.installPluginDefinition(plugin: plugin, gitUrl: gitUrl, force: force, removeToolAlias: removeToolAlias)
-            await reloadPluginDefinitions()
+            await loadPluginDefinitions()
             let url = gitUrl?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
             addLog("\(plugin): plugin \(force ? "updated" : "installed")\(url.isEmpty ? "" : " (\(url))").")
             if result.stdout.contains("Updated tool_alias") || result.stdout.contains("Removed tool_alias") {
@@ -91,7 +96,7 @@ extension AppState {
         setBusy(true, Strings.removingPlugin(plugin))
         do {
             _ = try await mise.uninstallPluginDefinition(plugin)
-            await reloadPluginDefinitions()
+            await loadPluginDefinitions()
             addLog("\(plugin): plugin removed.")
         } catch {
             addLog("\(plugin): plugin remove failed - \(error.localizedDescription)")
