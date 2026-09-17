@@ -203,19 +203,23 @@ struct TrayPanelView: View {
 }
 
 /// One tool: a summary row, its pending series/major updates with their actions, and on demand the
-/// installed versions with global switching.
+/// installed versions with global switching and confirmed deletion.
 private struct TrayToolBlock: View {
     var state: AppState
     let tool: PluginRow
     let updates: [UpdateItem]
     let open: (ActiveTab, String?) -> Void
     @State private var expanded = false
+    @State private var deletingVersion: String?
 
     private var checking: Bool { state.toolActionsDisabled(tool.name) }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Button { withAnimation(.easeOut(duration: 0.15)) { expanded.toggle() } } label: {
+            Button {
+                deletingVersion = nil
+                withAnimation(.easeOut(duration: 0.15)) { expanded.toggle() }
+            } label: {
                 HStack(spacing: 10) {
                     ToolGlyph(name: tool.name)
                     VStack(alignment: .leading, spacing: 2) {
@@ -252,8 +256,16 @@ private struct TrayToolBlock: View {
                             } else {
                                 Button("전역으로 사용") { Task { await state.run(.use(name: tool.name, version: version)) } }
                                     .controlSize(.small).disabled(checking)
+                                Button { deletingVersion = version } label: { Image(systemName: "trash") }
+                                    .controlSize(.small).disabled(checking)
+                                    .help("\(tool.name)@\(version) 삭제")
+                                    .accessibilityLabel("\(tool.name) \(version) 삭제")
                             }
                         }
+                    }
+                    if let version = deletingVersion,
+                       tool.installedVersions.contains(version), tool.activeGlobalVersion != version {
+                        deleteConfirmation(version)
                     }
                     if tool.installedVersions.isEmpty { Text("설치된 버전이 없습니다.").font(.caption).foregroundStyle(.secondary) }
                     Button("앱에서 자세히 보기 →") { open(.updater, tool.name) }.buttonStyle(.link).font(.callout)
@@ -262,6 +274,26 @@ private struct TrayToolBlock: View {
             }
         }
         .padding(.vertical, 2)
+    }
+
+    private func deleteConfirmation(_ version: String) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("\(tool.name)@\(version)을 삭제할까요?").font(.callout.bold())
+            Text("프로젝트에서 사용하는 버전일 수 있습니다.").font(.caption).foregroundStyle(.secondary)
+            HStack {
+                Spacer()
+                Button("취소") { deletingVersion = nil }
+                Button("삭제", role: .destructive) {
+                    deletingVersion = nil
+                    Task { await state.deleteInstalledVersion(tool.name, version) }
+                }
+                .disabled(checking)
+                .accessibilityLabel("\(tool.name) \(version) 삭제 실행")
+            }
+            .controlSize(.small)
+        }
+        .padding(10)
+        .background(.quaternary.opacity(0.4), in: RoundedRectangle(cornerRadius: 8))
     }
 
     private func updateLine(_ item: UpdateItem) -> some View {
