@@ -14,16 +14,18 @@ struct MainWindow: View {
         }
         .preferredColorScheme(colorScheme)
         .appDialogs(state)
-        .onAppear {
-            state.showMainWindow = {
-                // LSUIElement app: the Dock icon comes back only while the window is open. Activation must
-                // stay inside the user event that got us here; macOS 14+ drops it otherwise.
-                NSApp.setActivationPolicy(.regular)
-                NSApp.activate(ignoringOtherApps: true)
-                openWindow(id: "main")
-            }
-        }
+        .onAppear { Self.installOpener(state, openWindow) }
         .onChange(of: state.settings.checkIntervalHours) { state.scheduleIntervalChecks() }
+    }
+
+    static func installOpener(_ state: AppState, _ openWindow: OpenWindowAction) {
+        state.showMainWindow = {
+            // LSUIElement app: the Dock icon comes back only while the window is open. Activation must
+            // stay inside the user event that got us here; macOS 14+ drops it otherwise.
+            NSApp.setActivationPolicy(.regular)
+            NSApp.activate(ignoringOtherApps: true)
+            openWindow(id: "main")
+        }
     }
 
     private var detail: some View { Self.tabView(state.activeTab, state: state) }

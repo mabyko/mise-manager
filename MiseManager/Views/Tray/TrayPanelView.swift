@@ -8,6 +8,7 @@ struct TrayPanelView: View {
     @State private var onlyUpdates = false
     @State private var confirmingMiseUpdate = false
     @Environment(\.snapshotMode) private var snapshotMode
+    @Environment(\.openWindow) private var openWindow
 
     private var summary: UpdateSummary { state.updateSummary }
     private var checking: Bool { state.busy || state.updateCheckRunning }
@@ -26,6 +27,8 @@ struct TrayPanelView: View {
             footer.padding(.horizontal, 14).padding(.vertical, 10)
         }
         .frame(width: TrayPanel.size.width, height: snapshotMode ? nil : TrayPanel.size.height)
+        // A login launch closes the main window before it appears, so the tray installs the opener too.
+        .onAppear { MainWindow.installOpener(state, openWindow) }
     }
 
     private var header: some View {
