@@ -4,7 +4,7 @@ import Testing
 // Mirrors src/mainview/core/miseStatus.test.ts.
 struct MiseStatusTests {
     func input(_ patch: (inout MiseStatusInput) -> Void = { _ in }) -> MiseStatusInput {
-        var input = MiseStatusInput(version: "2026.8.6 macos-arm64 (2026-08-14)", latestVersion: "v2026.8.7")
+        var input = MiseStatusInput(version: "2026.8.6 macos-arm64 (2026-08-14)", latestVersion: "v2026.8.7", eligibleVersion: "v2026.8.7")
         patch(&input)
         return input
     }
@@ -23,7 +23,7 @@ struct MiseStatusTests {
     }
 
     @Test func upToDateWhenVersionsMatch() {
-        let snapshot = MiseStatus.snapshot(input { $0.latestVersion = "v2026.8.6" })
+        let snapshot = MiseStatus.snapshot(input { $0.latestVersion = "v2026.8.6"; $0.eligibleVersion = "v2026.8.6" })
         #expect(snapshot.key == .upToDate)
         #expect(!snapshot.canUpdate)
     }
@@ -60,6 +60,7 @@ struct MiseStatusTests {
         await state.reloadMiseVersion()
         #expect(state.miseStatus.key == .upToDate)
         state.miseLatestVersion = "v2026.9.9"
+        state.miseEligibleVersion = "v2026.9.9"
         #expect(state.miseStatus.canUpdate)
     }
 
@@ -72,6 +73,7 @@ struct MiseStatusTests {
         let state = makeState(runner)
         state.miseVersion = "2026.9.7"
         state.miseLatestVersion = "v2026.9.8"
+        state.miseEligibleVersion = "v2026.9.8"
         state.miseLoaded = true
         state.miseLatestLoaded = true
         state.updateCheckRunning = true
@@ -80,10 +82,12 @@ struct MiseStatusTests {
 
         state.updateCheckRunning = false
         state.miseLatestVersion = state.miseVersion
+        state.miseEligibleVersion = state.miseVersion
         await state.confirmMiseSelfUpdate()
         #expect(!runner.called(prefix: "self-update"))
 
         state.miseLatestVersion = "v2026.9.8"
+        state.miseEligibleVersion = "v2026.9.8"
         runner.fail("self-update -y --no-plugins", "Use your package manager to update mise")
         await state.confirmMiseSelfUpdate()
         #expect(runner.count("self-update -y --no-plugins") == 1)

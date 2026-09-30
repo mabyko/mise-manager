@@ -40,6 +40,40 @@ public struct Mise: Sendable {
         (try? await version()) != nil
     }
 
+    /// Let mise resolve durations, environment overrides and its self-update policy.
+    public func releasePolicy() async throws -> MiseReleasePolicy {
+        let repository = try await effectiveSetting("self_update.repository") ?? "jdx/mise"
+        let apiURL = try await effectiveSetting("self_update.api_url") ?? "https://api.github.com"
+        // ponytail: public release index only; fetch source-specific metadata if custom repositories are needed.
+        guard repository == "jdx/mise", apiURL.trimmingCharacters(in: CharacterSet(charactersIn: "/")) == "https://api.github.com" else {
+            throw MiseError("사용자 지정 mise 릴리스 저장소는 앱에서 확인할 수 없습니다. 터미널에서 mise self-update를 사용하세요.")
+        }
+        let minimumAge: String
+        if let age = try await effectiveSetting("self_update.minimum_release_age") {
+            minimumAge = age
+        } else {
+            minimumAge = try await effectiveSetting("minimum_release_age") ?? "24h"
+        }
+        let versionResult = try await runOK(["version", "--json"], fallback: "mise 업데이트 후보를 확인하지 못했습니다.")
+        let version = try JSONSerialization.jsonObject(with: Data(versionResult.stdout.utf8)) as? [String: Any]
+        guard let eligible = version?["latest"] as? String,
+              eligible.wholeMatch(of: /v?\d+\.\d+\.\d+/) != nil else {
+            throw MiseError("mise 정책에 맞는 업데이트 후보를 확인하지 못했습니다. 네트워크와 mise 버전을 확인하세요.")
+        }
+        return MiseReleasePolicy(eligibleVersion: eligible, minimumAge: minimumAge)
+    }
+
+    private func effectiveSetting(_ key: String) async throws -> String? {
+        let result = try await runner.runMise(["settings", "get", key])
+        if result.exitCode != 0 {
+            if result.stderr.contains("Setting [\(key)] is not set") { return nil }
+            throw MiseError(Self.errOr(result.stderr, "mise 설정을 확인하지 못했습니다: \(key)"))
+        }
+        let value = result.stdout.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !value.isEmpty else { throw MiseError("mise 설정 응답이 비어 있습니다: \(key)") }
+        return value
+    }
+
     public func selfUpdate() async throws -> MiseSelfUpdateResult {
         let before = (try? await version()) ?? nil
         let result = try await runOK(

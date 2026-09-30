@@ -36,7 +36,8 @@ public actor MiseCLI: CommandRunner {
     /// and runs to completion (task cancellation still stops it).
     static func isQuery(_ args: [String]) -> Bool {
         switch args.first {
-        case "--version", "ls", "ls-remote": true
+        case "--version", "version", "ls", "ls-remote": true
+        case "settings": args.count == 3 && args[1] == "get"
         case "plugins": args.count > 1 && ["ls", "ls-remote"].contains(args[1])
         default: false
         }

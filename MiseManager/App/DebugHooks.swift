@@ -71,6 +71,7 @@ extension AppDelegate {
         state.miseLoaded = true
         state.miseCurrentError = nil
         state.miseLatestVersion = "v2026.8.13"
+        state.miseEligibleVersion = "2026.8.13"
         state.miseLatestLoaded = true
         state.miseLatestError = nil
         state.miseLatestCheckedAt = now

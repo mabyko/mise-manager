@@ -3,6 +3,7 @@ public enum MiseStatusKey: String, Sendable {
     case checkFailed = "check_failed"
     case notChecked = "not_checked"
     case updateAvailable = "update_available"
+    case releaseWaiting = "release_waiting"
     case upToDate = "up_to_date"
     case aheadOrCustom = "ahead_or_custom"
 }
@@ -24,11 +25,14 @@ public struct MiseStatusInput: Sendable {
     public var latestLoaded = true
     public var version: String?
     public var latestVersion: String?
+    public var eligibleVersion: String?
+    public var minimumAge = "24h"
 
     public init(
         progressLabel: String = Strings.ready, currentError: String? = nil,
         latestError: String? = nil, loaded: Bool = true, latestLoaded: Bool = true,
-        version: String? = nil, latestVersion: String? = nil
+        version: String? = nil, latestVersion: String? = nil,
+        eligibleVersion: String? = nil, minimumAge: String = "24h"
     ) {
         self.progressLabel = progressLabel
         self.currentError = currentError
@@ -37,6 +41,8 @@ public struct MiseStatusInput: Sendable {
         self.latestLoaded = latestLoaded
         self.version = version
         self.latestVersion = latestVersion
+        self.eligibleVersion = eligibleVersion
+        self.minimumAge = minimumAge
     }
 }
 
@@ -57,7 +63,7 @@ public enum MiseStatus {
         }
         if input.currentError != nil || input.latestError != nil {
             return .init(key: .checkFailed, label: "Check Failed",
-                         description: "버전 확인에 실패했습니다. 네트워크 상태 또는 GitHub API 제한을 확인하세요.",
+                         description: "릴리스 목록 또는 mise 업데이트 정책을 확인하지 못했습니다. 오류 내용을 확인한 뒤 다시 시도하세요.",
                          canUpdate: false, buttonHint: "먼저 Current/Latest 버전 확인을 정상화하세요.")
         }
         if !input.loaded || !input.latestLoaded {
@@ -69,10 +75,19 @@ public enum MiseStatus {
                          description: "버전 형식을 해석할 수 없습니다. Current/Latest를 다시 확인하세요.",
                          canUpdate: false, buttonHint: "버전 비교가 가능한 형식이어야 합니다.")
         }
+        guard let eligible = normalizeVersionToken(input.eligibleVersion) else {
+            return .init(key: .notChecked, label: "정책 미확인", description: "mise 정책에 맞는 업데이트 후보를 다시 확인하세요.",
+                         canUpdate: false, buttonHint: "업데이트 정책을 확인한 뒤 활성화됩니다.")
+        }
         switch Version.compare(current, latest) {
         case .orderedAscending:
-            return .init(key: .updateAvailable, label: "Update Available", description: "\(current) -> \(latest) 업데이트가 가능합니다.",
-                         canUpdate: true, buttonHint: "업데이트를 진행할 수 있습니다.")
+            if Version.compare(current, eligible) == .orderedAscending {
+                return .init(key: .updateAvailable, label: "업데이트 가능", description: "\(current) → \(eligible) 업데이트가 가능합니다. 적용 정책: \(input.minimumAge).",
+                             canUpdate: true, buttonHint: "mise 정책에 맞는 \(eligible) 버전으로 업데이트합니다.")
+            }
+            return .init(key: .releaseWaiting, label: "새 릴리스 대기 중",
+                         description: "최신 릴리스 \(latest)은 적용 정책(\(input.minimumAge))에 따라 대기 중입니다. 현재 업데이트할 수 있는 버전이 없습니다.",
+                         canUpdate: false, buttonHint: "mise가 새 릴리스를 업데이트 후보로 선택할 때까지 기다립니다.")
         case .orderedSame:
             return .init(key: .upToDate, label: "Up-to-date", description: "현재 버전(\(current))이 최신(\(latest))입니다.",
                          canUpdate: false, buttonHint: "이미 최신 버전입니다.")
@@ -85,10 +100,22 @@ public enum MiseStatus {
 }
 
 extension AppState {
+    /// Only newer, unselected stable releases are shown in the waiting list.
+    public var misePendingReleases: [MiseRelease] {
+        guard miseLatestError == nil,
+              let current = MiseStatus.normalizeVersionToken(miseVersion),
+              let eligible = MiseStatus.normalizeVersionToken(miseEligibleVersion) else { return [] }
+        return miseReleases.filter {
+            Version.compare($0.version, current) == .orderedDescending
+                && Version.compare($0.version, eligible) == .orderedDescending
+        }
+    }
+
     public var miseStatus: MiseStatusSnapshot {
         MiseStatus.snapshot(MiseStatusInput(
             progressLabel: progressLabel, currentError: miseCurrentError,
             latestError: miseLatestError, loaded: miseLoaded, latestLoaded: miseLatestLoaded,
-            version: miseVersion, latestVersion: miseLatestVersion))
+            version: miseVersion, latestVersion: miseLatestVersion,
+            eligibleVersion: miseEligibleVersion, minimumAge: miseMinimumReleaseAge))
     }
 }

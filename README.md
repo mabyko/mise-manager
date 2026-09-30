@@ -89,6 +89,7 @@ Mise Manager delegates runtime and plugin management to the installed `mise` exe
 | Action | Command |
 | --- | --- |
 | Read the mise version | `mise --version` |
+| Check mise update eligibility | `mise settings get <key>`, `mise version --json` |
 | List installed and global tool versions | `mise ls --installed --json`, `mise ls --global --json` |
 | Check available versions | `mise ls-remote <tool> --json` |
 | Install a tool version | `mise install -y <tool>@<version>` |
@@ -100,6 +101,8 @@ Mise Manager delegates runtime and plugin management to the installed `mise` exe
 | Update mise | `mise self-update -y --no-plugins` |
 
 Read-only mise queries have a 120-second time limit. A timeout is shown as an error and releases the busy state. Install and update commands do not use this query deadline.
+
+The mise tab separates the latest published stable release from the version eligible for self-update. Eligibility comes from mise itself; the app displays `self_update.minimum_release_age`, then `minimum_release_age`, or the default `24h`. Newer releases still waiting appear separately in the mise and updates tabs, without increasing the update count. Manual and scheduled checks refresh eligibility, and confirmation checks the policy again without pinning a version or bypassing the delay. Publication dates come from mise's public `releases.tsv` index. Failed queries disable the update action; custom self-update repositories must be managed through the terminal. This applies to mise itself; tool and plugin updates keep their existing behavior.
 
 GUI apps start without the shell `PATH`, so mise is looked up through `MISE_BIN` and the usual install directories (`~/.local/bin`, `~/.mise/bin`, Homebrew, `/usr/local/bin`). One observable `AppState` drives both the window and the menu-bar panel; commands from the panel are checked against current state before execution.
 

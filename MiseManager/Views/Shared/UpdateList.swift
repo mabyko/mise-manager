@@ -53,3 +53,29 @@ struct UpdateList: View {
         .background(.quaternary.opacity(0.4), in: RoundedRectangle(cornerRadius: 10))
     }
 }
+
+/// Kept separate from actionable updates and their badge count.
+struct MisePendingReleases: View {
+    var state: AppState
+
+    var body: some View {
+        if !state.misePendingReleases.isEmpty {
+            Card {
+                Text("대기 중인 새 mise 릴리스").font(.title3.bold())
+                Text("적용 정책: \(state.miseMinimumReleaseAge) · 업데이트 개수에서 제외")
+                    .font(.callout).foregroundStyle(.secondary)
+                ForEach(state.misePendingReleases) { release in
+                    HStack {
+                        Text("mise \(release.version)").font(.body.monospaced()).bold()
+                        Spacer()
+                        Text(release.publishedAt, format: .dateTime.year().month().day().hour().minute().locale(Locale(identifier: "ko_KR")))
+                            .font(.callout).foregroundStyle(.secondary)
+                        Text("공개").font(.caption).foregroundStyle(.secondary)
+                    }
+                }
+                Text("mise가 업데이트 후보로 선택하면 다음 버전 확인 때 업데이트 목록으로 이동합니다.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+        }
+    }
+}

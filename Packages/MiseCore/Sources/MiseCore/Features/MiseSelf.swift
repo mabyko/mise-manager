@@ -23,10 +23,14 @@ extension AppState {
         setBusy(true, Strings.checkingLatestMise)
         defer { miseLatestLoaded = true; miseLatestCheckedAt = Self.nowLabel() }
         do {
-            let latest = try await latestRelease()
-            miseLatestVersion = latest
+            let releases = try await latestRelease()
+            let policy = try await mise.releasePolicy()
+            miseReleases = releases
+            miseLatestVersion = releases.first?.version
+            miseEligibleVersion = policy.eligibleVersion
+            miseMinimumReleaseAge = policy.minimumAge
             miseLatestError = nil
-            addLog("Loaded latest mise release: \(latest ?? "unknown").")
+            addLog("Loaded mise releases: latest \(miseLatestVersion ?? "unknown"), eligible \(policy.eligibleVersion), minimum release age \(policy.minimumAge).")
             setBusy(false)
         } catch {
             miseLatestError = error.localizedDescription
@@ -53,6 +57,18 @@ extension AppState {
         miseSelfUpdateError = nil
         setBusy(true, Strings.runningMiseSelfUpdate)
         do {
+            // Re-read mise settings and eligibility after confirmation; never pin a version
+            // (an explicit version would bypass mise's release-age safety policy).
+            let policy = try await mise.releasePolicy()
+            miseEligibleVersion = policy.eligibleVersion
+            miseMinimumReleaseAge = policy.minimumAge
+            guard let current = MiseStatus.normalizeVersionToken(miseVersion),
+                  Version.compare(current, policy.eligibleVersion) == .orderedAscending else {
+                miseLastResult = "적용 정책(\(policy.minimumAge))을 만족하는 새 업데이트가 없습니다."
+                addLog("mise update skipped: eligible version \(policy.eligibleVersion).")
+                setBusy(false)
+                return
+            }
             let result = try await mise.selfUpdate()
             miseVersion = result.afterVersion
             miseLoaded = true
@@ -64,7 +80,8 @@ extension AppState {
                 result.stderr.isEmpty ? "" : "\nSTDERR:\n\(result.stderr)",
             ].filter { !$0.isEmpty }.joined(separator: "\n")
             addLog("mise self-update finished: \(result.beforeVersion ?? "unknown") -> \(result.afterVersion ?? "unknown").")
-            setBusy(false, Strings.updateComplete, progress: 100)
+            let changed = MiseStatus.normalizeVersionToken(result.beforeVersion) != MiseStatus.normalizeVersionToken(result.afterVersion)
+            setBusy(false, changed ? Strings.updateComplete : "mise 버전이 변경되지 않았습니다.", progress: changed ? 100 : nil)
         } catch {
             miseSelfUpdateError = error.localizedDescription
             miseLastResult = "ERROR:\n\(error.localizedDescription)"
