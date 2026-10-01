@@ -59,7 +59,12 @@ extension AppState {
         do {
             // Re-read mise settings and eligibility after confirmation; never pin a version
             // (an explicit version would bypass mise's release-age safety policy).
-            let policy = try await mise.releasePolicy()
+            let policy: MiseReleasePolicy
+            do { policy = try await mise.releasePolicy() }
+            catch {
+                miseLatestError = error.localizedDescription
+                throw error
+            }
             miseEligibleVersion = policy.eligibleVersion
             miseMinimumReleaseAge = policy.minimumAge
             guard let current = MiseStatus.normalizeVersionToken(miseVersion),
@@ -80,7 +85,9 @@ extension AppState {
                 result.stderr.isEmpty ? "" : "\nSTDERR:\n\(result.stderr)",
             ].filter { !$0.isEmpty }.joined(separator: "\n")
             addLog("mise self-update finished: \(result.beforeVersion ?? "unknown") -> \(result.afterVersion ?? "unknown").")
-            let changed = MiseStatus.normalizeVersionToken(result.beforeVersion) != MiseStatus.normalizeVersionToken(result.afterVersion)
+            let before = MiseStatus.normalizeVersionToken(result.beforeVersion) ?? current
+            let after = MiseStatus.normalizeVersionToken(result.afterVersion)
+            let changed = after != nil && before != after
             setBusy(false, changed ? Strings.updateComplete : "mise 버전이 변경되지 않았습니다.", progress: changed ? 100 : nil)
         } catch {
             miseSelfUpdateError = error.localizedDescription

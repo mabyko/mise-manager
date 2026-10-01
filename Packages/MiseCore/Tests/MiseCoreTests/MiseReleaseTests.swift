@@ -132,6 +132,42 @@ import Testing
         #expect(state.progress != 100)
     }
 
+    @Test func confirmationPolicyFailureDisablesUpdatesButCommandFailureAllowsRetry() async {
+        let runner = FakeRunner()
+        let state = state(runner)
+        state.miseVersion = "2026.9.16"
+        await state.checkLatestMiseRelease()
+        runner.fail("settings get self_update.minimum_release_age", "policy query failed")
+        await state.confirmMiseSelfUpdate()
+        #expect(state.miseLatestError == "policy query failed")
+        #expect(!state.miseStatus.canUpdate)
+        #expect(state.updateSummary.items.isEmpty)
+        #expect(!runner.called(prefix: "self-update"))
+
+        runner.replyMiseReleasePolicy()
+        await state.checkLatestMiseRelease()
+        runner.fail("self-update -y --no-plugins", "update failed")
+        await state.confirmMiseSelfUpdate()
+        #expect(state.miseLatestError == nil)
+        #expect(state.miseStatus.canUpdate)
+        #expect(state.miseSelfUpdateError != nil)
+    }
+
+    @Test(arguments: ["2026.9.16", "2026.9.17"])
+    func failedBeforeVersionQueryUsesKnownVersion(after: String) async {
+        let runner = FakeRunner()
+        let state = state(runner)
+        state.miseVersion = "2026.9.16"
+        await state.checkLatestMiseRelease()
+        runner.queue("--version", [FakeRunner.failure("version query failed"), FakeRunner.ok(after)])
+        await state.confirmMiseSelfUpdate()
+        #expect(state.miseVersion == after)
+        #expect((state.progress == 100) == (after != "2026.9.16"))
+        if after == "2026.9.16" {
+            #expect(state.progressLabel == "mise 버전이 변경되지 않았습니다.")
+        }
+    }
+
     @Test func releaseIndexRequiresValidPublicationMetadataAndSortsCalendarVersions() throws {
         let releases = try ReleaseChecker.parseIndex("v2026.9.9\t100\nv2026.9.18\t200\nv2026.9.18\t200\n")
         #expect(releases.map(\.version) == ["2026.9.18", "2026.9.9"])
