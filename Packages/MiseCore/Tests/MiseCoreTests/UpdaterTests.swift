@@ -233,6 +233,7 @@ import Testing
         await state.reloadPluginDefinitions()
         state.miseVersion = "2026.9.7"
         state.miseLatestVersion = "2026.9.8"
+        state.miseEligibleVersion = "2026.9.8"
         state.miseLoaded = true
         state.miseLatestLoaded = true
         state.openMiseUpdateDialog()
@@ -264,6 +265,7 @@ import Testing
         let (runner, state) = setup()
         state.miseVersion = "2026.9.7"
         state.miseLatestVersion = "2026.9.8"
+        state.miseEligibleVersion = "2026.9.8"
         state.miseLoaded = true
         state.miseLatestLoaded = true
         let update = runner.pause("self-update -y --no-plugins")

@@ -131,6 +131,14 @@ struct TrayPanelView: View {
                         .accessibilityLabel("mise 업데이트")
                 }
             }
+            if !state.misePendingReleases.isEmpty {
+                Button { open(.updates) } label: {
+                    Text("새 릴리스 \(state.misePendingReleases.count)개 대기 · 정책 \(state.miseMinimumReleaseAge)")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("대기 중인 mise 릴리스 보기")
+            }
             if outdated > 0 {
                 Button { open(.updates) } label: {
                     HStack(spacing: 6) {
@@ -159,7 +167,7 @@ struct TrayPanelView: View {
     private var miseUpdateConfirmation: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("mise를 업데이트할까요?").font(.headline)
-            Text("\(MiseStatus.normalizeVersionToken(state.miseVersion) ?? "현재 버전") → \(MiseStatus.normalizeVersionToken(state.miseLatestVersion) ?? "최신 버전")")
+            Text("\(MiseStatus.normalizeVersionToken(state.miseVersion) ?? "현재 버전") → \(MiseStatus.normalizeVersionToken(state.miseEligibleVersion) ?? "업데이트 후보")")
                 .font(.callout.monospaced())
             Text("설치된 도구와 전역 버전 설정은 유지합니다.")
                 .font(.caption).foregroundStyle(.secondary)
@@ -180,6 +188,7 @@ struct TrayPanelView: View {
         switch key {
         case .upToDate: ("최신", nil)
         case .updateAvailable: ("업데이트 가능", .orange)
+        case .releaseWaiting: ("새 릴리스 대기", .orange)
         case .checkFailed: ("확인 실패", .red)
         case .loading: ("확인 중", nil)
         case .updating: ("업데이트 중", nil)

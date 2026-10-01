@@ -21,16 +21,18 @@ struct MiseTab: View {
             if state.miseInstalledChecked, !state.miseIsInstalled { installPanel }
 
             Text("버전 상태").font(.title3.bold())
-            Text("현재 설치된 mise 버전과 공식 최신 릴리스를 비교합니다. 외부 플러그인 업데이트는 플러그인 관리에서 따로 선택합니다. Homebrew 등 패키지 관리자로 설치해 자체 업데이트를 지원하지 않는 경우에는 해당 패키지 관리자로 업데이트하세요.")
+            Text("최신 릴리스와 mise 대기 정책을 만족하는 업데이트 후보를 구분합니다. 기본 대기 시간은 공개 후 24시간이며 mise 설정을 따릅니다. 외부 플러그인 업데이트는 플러그인 관리에서 따로 선택합니다. Homebrew 등 패키지 관리자로 설치해 자체 업데이트를 지원하지 않는 경우에는 해당 패키지 관리자로 업데이트하세요.")
                 .foregroundStyle(.secondary)
             HStack(alignment: .top, spacing: 12) {
                 summaryCard("현재 버전", current, "local: mise --version")
-                summaryCard("최신 릴리스", latest, "공식 최신 릴리스")
+                summaryCard("업데이트 후보", state.miseLatestError == nil ? (state.miseEligibleVersion ?? "미확인") : "미확인", "적용 정책: \(state.miseMinimumReleaseAge)")
+                summaryCard("최신 릴리스", latest, "공개된 최신 안정 버전")
                 summaryCard("상태", status.label, state.miseLatestCheckedAt ?? "Not checked")
             }
             Card {
                 Text("상태 안내: ").bold() + Text(status.description)
             }
+            MisePendingReleases(state: state)
             if !state.miseLastResult.isEmpty { resultCard(state.miseLastResult) }
         }
         .navigationTitle("mise 관리")
@@ -72,7 +74,7 @@ struct MiseTab: View {
     private func summaryCard(_ title: String, _ value: String, _ hint: String) -> some View {
         Card {
             Text(title).font(.caption).foregroundStyle(.secondary)
-            Text(value).font(.headline).textSelection(.enabled)
+            Text(value).font(.headline).textSelection(.enabled).fixedSize(horizontal: false, vertical: true)
             Text(hint).font(.caption).foregroundStyle(.tertiary)
         }
     }

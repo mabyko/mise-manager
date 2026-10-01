@@ -89,6 +89,7 @@ Mise Manager는 설치된 `mise` 실행 파일에 런타임과 플러그인 관�
 | 작업 | 명령 |
 | --- | --- |
 | mise 버전 확인 | `mise --version` |
+| mise 업데이트 후보·정책 확인 | `mise settings get <key>`, `mise version --json` |
 | 설치·전역 도구 버전 조회 | `mise ls --installed --json`, `mise ls --global --json` |
 | 사용 가능한 버전 확인 | `mise ls-remote <tool> --json` |
 | 도구 버전 설치 | `mise install -y <tool>@<version>` |
@@ -98,6 +99,8 @@ Mise Manager는 설치된 `mise` 실행 파일에 런타임과 플러그인 관�
 | 플러그인 소스 업데이트 확인 | `mise plugins ls --user --outdated` |
 | 플러그인 하나의 소스 업데이트 | `mise plugins update <plugin>` |
 | mise 업데이트 | `mise self-update -y --no-plugins` |
+
+mise 화면은 공개된 최신 안정 릴리스와 자체 업데이트가 가능한 버전을 구분합니다. 업데이트 후보는 mise가 직접 선택하며, 적용 정책은 `self_update.minimum_release_age`, `minimum_release_age`, 기본값 `24h` 순서로 표시합니다. 대기 중인 새 릴리스는 mise와 업데이트 화면에 별도로 표시하고 업데이트 개수에서 제외합니다. 수동·예약 확인 때 후보를 갱신하며, 업데이트 실행 직전에도 정책을 다시 확인합니다. 특정 버전을 지정하거나 대기 시간을 우회하지 않습니다. 공개 시각은 mise의 공식 `releases.tsv` 목록에서 가져옵니다. 조회에 실패하면 업데이트 버튼을 비활성화하며, 사용자 지정 자체 업데이트 저장소는 터미널에서 관리해야 합니다. 이 구분은 mise 자체에 적용하며 도구·플러그인 업데이트는 기존 방식을 유지합니다.
 
 GUI 앱은 셸 `PATH` 없이 시작하므로 mise는 `MISE_BIN`과 일반적인 설치 경로(`~/.local/bin`, `~/.mise/bin`, Homebrew, `/usr/local/bin`)에서 찾습니다. 관찰 가능한 `AppState` 하나가 앱 창과 메뉴바 창을 함께 움직이고, 메뉴바 창에서 요청한 작업은 현재 상태에 맞는지 확인한 뒤 실행합니다.
 

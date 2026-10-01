@@ -16,9 +16,10 @@ struct UpdatesTab: View {
                     .foregroundStyle(.secondary)
             }
             UpdateList(state: state, items: summary.items)
+            MisePendingReleases(state: state)
             if summary.items.isEmpty, !summary.attention, !state.busy {
                 Card {
-                    Text("확인된 업데이트가 없습니다.").font(.title3.bold())
+                    Text("지금 업데이트할 수 있는 항목이 없습니다.").font(.title3.bold())
                     Text("설치된 모든 버전 계열을 확인했습니다.").foregroundStyle(.secondary)
                 }
             }

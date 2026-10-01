@@ -89,7 +89,7 @@ public enum PluginUrlDialog: Equatable, Sendable {
 @MainActor @Observable public final class AppState {
     @ObservationIgnored public let mise: Mise
     public let settings: Settings
-    @ObservationIgnored let latestRelease: @Sendable () async throws -> String?
+    @ObservationIgnored let latestRelease: @Sendable () async throws -> [MiseRelease]
     /// Installed by the app so runtime "open" actions can raise the main window.
     @ObservationIgnored public var showMainWindow: @MainActor () -> Void = {}
     /// Installed by the app (Phase 4); opens the menu bar panel.
@@ -112,6 +112,9 @@ public enum PluginUrlDialog: Equatable, Sendable {
     public var miseLoaded = false
     public var miseCurrentError: String?
     public var miseLatestVersion: String?
+    public var miseEligibleVersion: String?
+    public var miseMinimumReleaseAge = "24h"
+    public var miseReleases: [MiseRelease] = []
     public var miseLatestLoaded = false
     public var miseLatestError: String?
     public var miseLatestCheckedAt: String?
@@ -157,7 +160,7 @@ public enum PluginUrlDialog: Equatable, Sendable {
 
     public init(
         mise: Mise, settings: Settings,
-        latestRelease: @escaping @Sendable () async throws -> String? = ReleaseChecker.latestMiseRelease
+        latestRelease: @escaping @Sendable () async throws -> [MiseRelease] = ReleaseChecker.miseReleases
     ) {
         self.mise = mise
         self.settings = settings

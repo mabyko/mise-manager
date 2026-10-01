@@ -52,11 +52,11 @@ struct MiseCLIRunnerTests {
     }
 
     @Test func onlyReadOnlyQueriesAreBounded() {
-        for query in [["--version"], ["ls", "--installed", "--json"], ["ls", "--global", "--json"], ["ls-remote", "python", "--json"],
+        for query in [["version", "--json"], ["settings", "get", "self_update.minimum_release_age"], ["--version"], ["ls", "--installed", "--json"], ["ls", "--global", "--json"], ["ls-remote", "python", "--json"],
                       ["plugins", "ls", "--user", "--outdated"], ["plugins", "ls", "--core"], ["plugins", "ls-remote", "--urls"]] {
             #expect(MiseCLI.isQuery(query), "\(query)")
         }
-        for mutation in [["install", "-y", "node@22"], ["use", "-g", "node@22"], ["uninstall", "-y", "node@22"],
+        for mutation in [["settings", "set", "auto_update", "true"], ["install", "-y", "node@22"], ["use", "-g", "node@22"], ["uninstall", "-y", "node@22"],
                          ["self-update", "-y", "--no-plugins"], ["plugins", "install", "-y", "x"], ["plugins", "update", "x"],
                          ["plugins", "uninstall", "-y", "x"], []] {
             #expect(!MiseCLI.isQuery(mutation), "\(mutation)")

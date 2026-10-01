@@ -22,6 +22,15 @@ final class FakeRunner: CommandRunner, @unchecked Sendable {
 
     func reply(_ key: String, _ stdout: String) { lock.withLock { replies[key] = [Self.ok(stdout)] } }
     func fail(_ key: String, _ message: String) { lock.withLock { replies[key] = [Self.failure(message)] } }
+    func replyMiseReleasePolicy(age: String? = nil, globalAge: String? = nil, repository: String = "jdx/mise") {
+        reply("settings get self_update.repository", repository)
+        reply("settings get self_update.api_url", "https://api.github.com")
+        for (key, value) in [("self_update.minimum_release_age", age), ("minimum_release_age", globalAge)] {
+            if let value { reply("settings get \(key)", value) }
+            else { fail("settings get \(key)", "mise ERROR Setting [\(key)] is not set") }
+        }
+    }
+
     /// Each result is used once; the last one repeats.
     func queue(_ key: String, _ results: [CommandResult]) { lock.withLock { replies[key] = results } }
 
@@ -73,5 +82,11 @@ func makeState(_ runner: FakeRunner, latest: @escaping @Sendable () async throws
     let id = UUID().uuidString
     let defaults = UserDefaults(suiteName: "mise-manager.tests.\(id)")!
     let config = NSTemporaryDirectory() + "mise-manager-tests-\(id)/config.toml"
-    return AppState(mise: Mise(runner: runner, configPath: config), settings: Settings(defaults: defaults), latestRelease: latest)
+    runner.replyMiseReleasePolicy()
+    runner.reply("version --json", #"{"latest":"2026.9.8"}"#)
+    return AppState(mise: Mise(runner: runner, configPath: config), settings: Settings(defaults: defaults), latestRelease: {
+        guard let version = try await latest() else { return [] }
+        runner.reply("version --json", "{\"latest\":\"\(version)\"}")
+        return [MiseRelease(version: version, publishedAt: .distantPast)]
+    })
 }
