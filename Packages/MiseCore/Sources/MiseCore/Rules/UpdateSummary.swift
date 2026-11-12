@@ -13,6 +13,9 @@ public struct UpdateSummary: Equatable, Sendable {
     public let items: [UpdateItem]
     public let errors: [String]
     public let attention: Bool
+    /// Checked tools whose remote offers nothing to compare against (an `http:` tool, for example).
+    /// Checking again cannot change that, so they are listed instead of raising `attention`.
+    public let uncomparable: [String]
 }
 
 extension AppState {
@@ -48,7 +51,10 @@ extension AppState {
         let settled: Set<MiseStatusKey> = [.upToDate, .aheadOrCustom, .updateAvailable, .releaseWaiting]
         let unchecked = !toolsLoaded || toolsCheckedAt == nil || miseLatestCheckedAt == nil || pluginUpdatesCheckedAt == nil
             || !settled.contains(mise.key)
-            || plugins.contains { $0.status != .done || ($0.sameMajorLatest == nil && $0.releaseLatest == nil && $0.latestByMajor.isEmpty) }
-        return UpdateSummary(items: items, errors: errors, attention: unchecked || !errors.isEmpty)
+            || plugins.contains { $0.status != .done }
+        let uncomparable = plugins
+            .filter { $0.status == .done && $0.sameMajorLatest == nil && $0.releaseLatest == nil && $0.latestByMajor.isEmpty }
+            .map(\.name)
+        return UpdateSummary(items: items, errors: errors, attention: unchecked || !errors.isEmpty, uncomparable: uncomparable)
     }
 }

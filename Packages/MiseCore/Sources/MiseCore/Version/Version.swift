@@ -33,7 +33,8 @@ public enum Version {
     }
 
     static func isPreReleaseSuffix(_ suffix: String) -> Bool {
-        if suffix.isEmpty || suffix.hasPrefix("+") { return false }
+        // Flutter names every stable release `3.50.0-stable`; the channel suffix is not a pre-release tag.
+        if suffix.isEmpty || suffix.hasPrefix("+") || suffix.lowercased().hasSuffix("-stable") { return false }
         if suffix.hasPrefix("-") { return true }
         // Keywords (a/alpha/b/beta/rc/pre/preview/dev/test) are all subsumed by "any ASCII letter".
         return suffix.utf8.contains(where: \.isASCIILetter)

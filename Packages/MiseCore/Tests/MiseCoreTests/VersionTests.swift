@@ -28,6 +28,19 @@ struct VersionTests {
         #expect(Version.isPreRelease("nightly-2024"))
     }
 
+    @Test func flutterStableChannelSuffixIsNotAPreRelease() {
+        for version in ["3.50.0-stable", "1.5.4-hotfix.2-stable", "1.7.8+hotfix.4-stable"] {
+            #expect(!Version.isPreRelease(version), "\(version)")
+        }
+        #expect(Version.isPreRelease("3.22.0-0.1.pre-beta"))
+        #expect(Version.compare("3.50.0-stable", "3.47.9-stable") == .orderedDescending)
+        let plan = UpdatePlanner.plan(
+            plugin: "flutter", baseVersion: "stable", includeChannels: false,
+            remoteStdout: #"["3.47.9-stable","3.50.0-stable","stable"]"#)
+        #expect(plan.releaseLatest == "3.50.0-stable")
+        #expect(plan.latestByMajor == ["3": "3.50.0-stable"])
+    }
+
     @Test func stableFilterOnlyAppliesToPythonAndRuby() {
         #expect(!Version.isStable(plugin: "python", version: "3.13.0a1"))
         #expect(Version.isStable(plugin: "python", version: "3.12.1"))
