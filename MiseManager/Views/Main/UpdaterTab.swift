@@ -90,7 +90,7 @@ struct ToolDetail: View {
             if !cleanup.isEmpty {
                 Button("구버전 \(cleanup.count)개 정리…") { state.requestCleanup(tool.name) }
                     .controlSize(.small).disabled(disabled)
-                    .help("같은 계열에 더 새 버전이 설치된, 사용하지 않는 버전을 한 번에 삭제합니다")
+                    .help("같은 계열에 더 새 버전이 설치된 버전을 한 번에 삭제합니다. 전역 버전과 사용 중으로 확인된 버전은 제외합니다")
             }
         }
         Text(series.isEmpty

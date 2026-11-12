@@ -20,7 +20,7 @@ private struct AppDialogs: ViewModifier {
                 presenting: state.pendingDelete
             ) { pending in
                 Button(pending.versions.count == 1 ? "삭제" : "\(pending.versions.count)개 삭제", role: .destructive) {
-                    Task { await state.deleteInstalledVersions(pending.pluginName, pending.versions) }
+                    Task { await state.deleteInstalledVersions(pending.pluginName, pending.versions, cleanup: pending.cleanup) }
                 }
                 .disabled(state.toolActionsDisabled(pending.pluginName))
                 Button("취소", role: .cancel) { state.pendingDelete = nil }

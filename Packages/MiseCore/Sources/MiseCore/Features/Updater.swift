@@ -140,7 +140,7 @@ extension AppState {
     /// or not the command succeeded, so whatever mise actually did is what the table shows.
     func runToolAction(
         _ name: String, status: PluginStatus, label: String,
-        action: () async throws -> Void, okLog: String, failLog: () -> String
+        action: () async throws -> Void, okLog: @autoclosure () -> String, failLog: () -> String
     ) async {
         guard !toolActionsDisabled(name), let before = plugin(name), !Task.isCancelled else { return }
         setBusy(false)
@@ -161,7 +161,7 @@ extension AppState {
             addLog("\(name): \(failLog()) - \(error.localizedDescription)")
             return
         }
-        addLog("\(name): \(okLog)")
+        addLog("\(name): \(okLog())")
         do {
             if let row = try await refreshPlugin(name) { await settlePlugin(before: before, row: row) }
         } catch {
@@ -215,7 +215,9 @@ extension AppState {
     }
 
     /// Deletes in order and stops at the first failure; the row is re-read either way.
-    public func deleteInstalledVersions(_ name: String, _ versions: [String]) async {
+    /// A clean-up was confirmed against an earlier read, so it re-reads mise first and deletes only
+    /// the confirmed versions that are still candidates: never one that has since come into use.
+    public func deleteInstalledVersions(_ name: String, _ versions: [String], cleanup: Bool = false) async {
         guard !toolActionsDisabled(name), let plugin = plugin(name), !versions.isEmpty else { return }
         if let active = plugin.activeGlobalVersion, versions.contains(active) {
             addLog("\(name): cannot delete active global version \(active).")
@@ -226,12 +228,17 @@ extension AppState {
             name, status: .deleting,
             label: versions.count == 1 ? Strings.deleting("\(name)@\(versions[0])") : Strings.deletingVersions(name, versions.count),
             action: {
-                for version in versions {
+                var targets = versions
+                if cleanup {
+                    let candidates = try await refreshPlugin(name).map(ToolStatus.cleanupCandidates) ?? []
+                    targets = versions.filter(candidates.contains)
+                }
+                for version in targets {
                     _ = try await mise.deleteVersion(plugin: name, version: version)
                     deleted.append(version)
                 }
             },
-            okLog: "deleted \(versions.joined(separator: ", ")).",
+            okLog: deleted.isEmpty ? "nothing left to clean up." : "deleted \(deleted.joined(separator: ", ")).",
             failLog: { deleted.isEmpty ? "delete failed" : "delete failed after removing \(deleted.joined(separator: ", "))" })
     }
 
@@ -272,6 +279,6 @@ extension AppState {
     public func requestCleanup(_ name: String) {
         guard !toolActionsDisabled(name), let plugin = plugin(name) else { return }
         let versions = ToolStatus.cleanupCandidates(plugin)
-        if !versions.isEmpty { pendingDelete = PendingDelete(pluginName: name, versions: versions) }
+        if !versions.isEmpty { pendingDelete = PendingDelete(pluginName: name, versions: versions, cleanup: true) }
     }
 }

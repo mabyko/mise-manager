@@ -195,7 +195,7 @@ import Testing
         let installed = ["22.14.0", "22.13.0", "22.12.0", "20.9.0"]
         state.plugins = [row { $0.installedVersions = installed }]
         state.requestCleanup("node")
-        #expect(state.pendingDelete == PendingDelete(pluginName: "node", versions: ["22.13.0", "22.12.0"]))
+        #expect(state.pendingDelete == PendingDelete(pluginName: "node", versions: ["22.13.0", "22.12.0"], cleanup: true))
 
         runner.installed([("node", "22.14.0", ["22.14.0", "20.9.0"])])
         await state.deleteInstalledVersions("node", ["22.13.0", "22.12.0"])
@@ -214,6 +214,31 @@ import Testing
         #expect(state.plugin("node")?.status == .error)
         await state.deleteInstalledVersions("node", ["22.12.0", "22.14.0"])
         #expect(state.logs.first?.contains("cannot delete active global version 22.14.0") == true)
+    }
+
+    @Test func cleanUpReReadsMiseAndSparesAVersionThatCameIntoUseAfterTheConfirmation() async {
+        let (runner, state) = setup()
+        let installed = ["22.14.0", "22.13.0", "22.12.0"]
+        state.plugins = [row { $0.installedVersions = installed }]
+        state.requestCleanup("node")
+        #expect(state.pendingDelete == PendingDelete(pluginName: "node", versions: ["22.13.0", "22.12.0"], cleanup: true))
+
+        // By the time the user confirms, mise reports only 22.12.0 as unused.
+        runner.installed([("node", "22.14.0", installed)])
+        runner.reply("ls --prunable --json", #"{"node":[{"version":"22.12.0"}]}"#)
+        await state.deleteInstalledVersions("node", ["22.13.0", "22.12.0"], cleanup: true)
+        #expect(runner.count("uninstall -y node@22.12.0") == 1)
+        #expect(!runner.called(prefix: "uninstall -y node@22.13.0"))
+        #expect(state.logs.contains { $0.contains("deleted 22.12.0.") })
+
+        // The same versions as an explicit single delete are the user's call and go through.
+        await state.deleteInstalledVersions("node", ["22.13.0"])
+        #expect(runner.count("uninstall -y node@22.13.0") == 1)
+
+        runner.reply("ls --prunable --json", #"{}"#)
+        await state.deleteInstalledVersions("node", ["22.12.0"], cleanup: true)
+        #expect(runner.count("uninstall -y node@22.12.0") == 1)
+        #expect(state.logs.contains { $0.contains("nothing left to clean up.") })
     }
 
     @Test func installDirectoriesAreMeasuredInTheBackgroundAndForgottenWhenRemoved() async {

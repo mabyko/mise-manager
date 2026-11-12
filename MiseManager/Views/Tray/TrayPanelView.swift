@@ -245,6 +245,8 @@ private struct TrayToolBlock: View {
     @State private var expanded = false
     /// Versions awaiting the inline delete confirmation: one row's version, or a whole clean-up.
     @State private var deleting: [String] = []
+    /// The pending versions came from the clean-up button, so deletion re-validates them against mise.
+    @State private var cleaningUp = false
 
     private var checking: Bool { state.toolActionsDisabled(tool.name) }
     private var groups: [InstalledVersionGroup] { ToolStatus.versionGroups(tool) }
@@ -324,9 +326,9 @@ private struct TrayToolBlock: View {
             if !pendingDelete.isEmpty { deleteConfirmation(pendingDelete) }
             HStack {
                 if !cleanup.isEmpty {
-                    Button("구버전 \(cleanup.count)개 정리…") { deleting = cleanup }
+                    Button("구버전 \(cleanup.count)개 정리…") { deleting = cleanup; cleaningUp = true }
                         .controlSize(.small).disabled(checking)
-                        .help("같은 계열에 더 새 버전이 설치된, 사용하지 않는 버전을 한 번에 삭제합니다")
+                        .help("같은 계열에 더 새 버전이 설치된 버전을 한 번에 삭제합니다. 전역 버전과 사용 중으로 확인된 버전은 제외합니다")
                 }
                 Spacer()
                 Button("앱에서 자세히 보기 →") { open(.updater, tool.name) }.buttonStyle(.link).font(.callout)
@@ -364,7 +366,7 @@ private struct TrayToolBlock: View {
             if let size = state.diskSize(tool, [item.version]) {
                 Text(DeleteCopy.size(size)).font(.caption.monospacedDigit()).foregroundStyle(.tertiary).fixedSize()
             }
-            Button { deleting = [item.version] } label: { Image(systemName: "trash") }
+            Button { deleting = [item.version]; cleaningUp = false } label: { Image(systemName: "trash") }
                 .buttonStyle(.borderless)
                 .disabled(checking || item.isGlobal)
                 .opacity(item.isGlobal ? 0 : 1)
@@ -388,7 +390,7 @@ private struct TrayToolBlock: View {
                 Button("취소") { deleting = [] }
                 Button(versions.count == 1 ? "삭제" : "\(versions.count)개 삭제", role: .destructive) {
                     deleting = []
-                    Task { await state.deleteInstalledVersions(tool.name, versions) }
+                    Task { await state.deleteInstalledVersions(tool.name, versions, cleanup: cleaningUp) }
                 }
                 .disabled(checking)
                 .accessibilityLabel("\(tool.name) \(versions.joined(separator: ", ")) 삭제 실행")

@@ -68,7 +68,11 @@ public struct PendingDelete: Equatable, Sendable {
     public var pluginName: String
     /// One version, or every superseded version of a clean-up.
     public var versions: [String]
-    public init(pluginName: String, versions: [String]) { self.pluginName = pluginName; self.versions = versions }
+    /// A clean-up is re-validated against mise before deleting; a single delete is the user's explicit choice.
+    public var cleanup: Bool
+    public init(pluginName: String, versions: [String], cleanup: Bool = false) {
+        self.pluginName = pluginName; self.versions = versions; self.cleanup = cleanup
+    }
 }
 
 public struct PendingMajorUpdate: Equatable, Sendable {
@@ -239,18 +243,20 @@ public enum PluginUrlDialog: Equatable, Sendable {
         return versions.isEmpty ? nil : total
     }
 
-    /// Measures install directories not measured yet, one at a time off the main actor.
+    private var installPaths: Set<String> { Set(plugins.flatMap { $0.installPaths.values }) }
+
+    /// Measures install directories not measured yet, off the main actor. A refresh during a
+    /// measurement queues behind it, so the same directory is never scanned twice at once.
     func refreshVersionSizes() {
-        let paths = Set(plugins.flatMap { $0.installPaths.values })
+        let paths = installPaths
         versionSizes = versionSizes.filter { paths.contains($0.key) }
-        let missing = paths.subtracting(versionSizes.keys).sorted()
-        sizeTask?.cancel()
-        guard !missing.isEmpty else { return }
+        let previous = sizeTask
         sizeTask = Task { [diskUsage] in
-            for path in missing {
+            await previous?.value
+            for path in installPaths.subtracting(versionSizes.keys).sorted() {
                 let size = await Task.detached(priority: .utility) { diskUsage(path) }.value
-                if Task.isCancelled { return }
-                if let size { versionSizes[path] = size }
+                // The version may have been removed while its directory was being measured.
+                if let size, installPaths.contains(path) { versionSizes[path] = size }
             }
         }
     }
