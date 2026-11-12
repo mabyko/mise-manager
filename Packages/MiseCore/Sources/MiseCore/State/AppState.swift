@@ -13,7 +13,7 @@ public struct PluginRow: Equatable, Sendable {
     /// See `PluginSummary.unusedVersions`; nil = unknown.
     public var unusedVersions: [String]?
     public var installPaths: [String: String]
-    public var latestByMajor: [String: String]
+    public var latestByLine: [String: String]
     public var sameMajorLatest: String?
     public var releaseLatest: String?
     public var overallLatest: String?
@@ -24,7 +24,7 @@ public struct PluginRow: Equatable, Sendable {
     public init(
         name: String, activeGlobalVersion: String? = nil, installedVersions: [String] = [],
         unusedVersions: [String]? = nil, installPaths: [String: String] = [:],
-        latestByMajor: [String: String] = [:], sameMajorLatest: String? = nil, releaseLatest: String? = nil,
+        latestByLine: [String: String] = [:], sameMajorLatest: String? = nil, releaseLatest: String? = nil,
         overallLatest: String? = nil, checkedVersions: Int = 0, status: PluginStatus = .idle, error: String? = nil
     ) {
         self.name = name
@@ -32,7 +32,7 @@ public struct PluginRow: Equatable, Sendable {
         self.installedVersions = installedVersions
         self.unusedVersions = unusedVersions
         self.installPaths = installPaths
-        self.latestByMajor = latestByMajor
+        self.latestByLine = latestByLine
         self.sameMajorLatest = sameMajorLatest
         self.releaseLatest = releaseLatest
         self.overallLatest = overallLatest
@@ -56,7 +56,7 @@ public struct PluginRow: Equatable, Sendable {
     }
 
     mutating func clearCandidates() {
-        latestByMajor = [:]
+        latestByLine = [:]
         sameMajorLatest = nil
         releaseLatest = nil
         overallLatest = nil

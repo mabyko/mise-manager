@@ -14,15 +14,26 @@ struct MiseServiceTests {
 
     @Test func checkingUpdatesNeverInstalls() async throws {
         let runner = FakeRunner(["ls-remote node --json": CommandResult(stdout: #"["20.1.0","20.2.0"]"#, stderr: "", exitCode: 0)])
-        let info = try await Mise(runner: runner).checkPluginUpdates(plugin: "node", baseVersion: "20.1.0", includeChannels: false)
+        runner.latest("node", ["20": "20.2.0"], overall: "22.3.0")
+        let info = try await Mise(runner: runner).checkPluginUpdates(plugin: "node", baseVersion: "20.1.0", lines: ["18", "20"], includeChannels: false)
         #expect(info.sameMajorLatest == "20.2.0")
-        #expect(await runner.calls == [["ls-remote", "node", "--json"]])
+        #expect(info.latestByLine == ["20": "20.2.0"])
+        #expect(info.releaseLatest == "22.3.0")
+        #expect(await runner.calls == [["ls-remote", "node", "--json"], ["latest", "node@18"], ["latest", "node@20"], ["latest", "node"]])
     }
 
     @Test func remoteFailureBecomesAnErrorRowNotAThrow() async throws {
         let runner = FakeRunner(["ls-remote node --json": CommandResult(stdout: "", stderr: "boom\n", exitCode: 1)])
-        let info = try await Mise(runner: runner).checkPluginUpdates(plugin: "node", baseVersion: "1", includeChannels: false)
+        let info = try await Mise(runner: runner).checkPluginUpdates(plugin: "node", baseVersion: "1", lines: ["1"], includeChannels: false)
         #expect(info.error == "boom")
+        #expect(!runner.called(prefix: "latest"))
+
+        // A line mise cannot resolve fails the whole tool rather than leaving it looking up to date.
+        let partial = FakeRunner(["ls-remote node --json": FakeRunner.ok("[]"), "latest node@20": FakeRunner.ok("20.2.0")])
+        partial.fail("latest node@22", "registry unreachable")
+        let failed = try await Mise(runner: partial).checkPluginUpdates(plugin: "node", baseVersion: "20.1.0", lines: ["20", "22"], includeChannels: false)
+        #expect(failed.error == "registry unreachable")
+        #expect(failed.latestByLine.isEmpty)
     }
 
     @Test func installedPluginsMergeGlobalOnlyTools() async throws {

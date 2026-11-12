@@ -49,9 +49,10 @@ extension AppState {
         }
         updatePlugin(row.name) { $0.status = .checking }
         do {
-            let result = try await mise.checkPluginUpdates(plugin: row.name, baseVersion: base, includeChannels: false)
+            let lines = Set((row.installedVersions + [base]).compactMap(Version.line(of:))).sorted()
+            let result = try await mise.checkPluginUpdates(plugin: row.name, baseVersion: base, lines: lines, includeChannels: false)
             updatePlugin(row.name) {
-                $0.latestByMajor = result.latestByMajor
+                $0.latestByLine = result.latestByLine
                 $0.sameMajorLatest = result.sameMajorLatest
                 $0.releaseLatest = result.releaseLatest
                 $0.overallLatest = result.overallLatest
@@ -180,7 +181,7 @@ extension AppState {
 
     public func seriesUpdateSwitchesGlobal(_ plugin: PluginRow, _ version: String) -> Bool {
         settings.switchGlobalAfterUpdate && plugin.activeGlobalVersion != nil
-            && Version.major(of: plugin.activeGlobalVersion!) == Version.major(of: version)
+            && Version.line(of: plugin.activeGlobalVersion!) == Version.line(of: version)
     }
 
     /// Series updates install only; the global default moves only when the setting says so.

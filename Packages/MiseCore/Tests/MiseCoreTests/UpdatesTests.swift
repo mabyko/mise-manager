@@ -37,6 +37,7 @@ import Testing
         runner.installed([("http:tla2tools", nil, ["1.7.4"]), ("node", "22.14.0", ["22.14.0"])])
         runner.reply("ls-remote http:tla2tools --json", "[]")
         runner.reply("ls-remote node --json", #"["22.14.0"]"#)
+        runner.latest("node", ["22": "22.14.0"], overall: "22.14.0")
 
         await state.checkAllUpdates()
         #expect(state.updateSummary.errors.isEmpty)
@@ -54,7 +55,7 @@ import Testing
         let state = makeState(runner)
         state.plugins = [PluginRow(
             name: "node", activeGlobalVersion: "26.0.0", installedVersions: ["26.0.0", "24.20.0"],
-            latestByMajor: ["26": "26.1.0", "24": "24.21.0"], sameMajorLatest: "26.1.0", releaseLatest: "26.1.0",
+            latestByLine: ["26": "26.1.0", "24": "24.21.0"], sameMajorLatest: "26.1.0", releaseLatest: "26.1.0",
             checkedVersions: 20, status: .done)]
         runner.installed([("node", "26.0.0", ["26.0.0", "24.20.0", "24.21.0"])])
         let id = state.updateSummary.items.first { $0.to == "24.21.0" }!.id

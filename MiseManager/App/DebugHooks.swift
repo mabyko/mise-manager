@@ -76,7 +76,7 @@ extension AppDelegate {
         state.miseLatestError = nil
         state.miseLatestCheckedAt = now
         func row(_ name: String, _ global: String, _ installed: [String], _ byMajor: [String: String], _ same: String, _ release: String, _ overall: String?, _ checked: Int) -> PluginRow {
-            PluginRow(name: name, activeGlobalVersion: global, installedVersions: installed, latestByMajor: byMajor,
+            PluginRow(name: name, activeGlobalVersion: global, installedVersions: installed, latestByLine: byMajor,
                       sameMajorLatest: same, releaseLatest: release, overallLatest: overall, checkedVersions: checked, status: .done)
         }
         state.plugins = [

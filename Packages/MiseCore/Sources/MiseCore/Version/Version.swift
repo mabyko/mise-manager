@@ -45,12 +45,6 @@ public enum Version {
         return version.contains("-") || version.utf8.contains(where: \.isASCIILetter)
     }
 
-    /// Only python and ruby publish pre-releases that must be hidden by default.
-    public static func isStable(plugin: String, version: String) -> Bool {
-        guard plugin == "python" || plugin == "ruby" else { return true }
-        return !isPreRelease(version)
-    }
-
     public static func startsWithDigit(_ version: String) -> Bool {
         version.utf8.first?.isASCIIDigit ?? false
     }
@@ -99,6 +93,16 @@ public enum Version {
 
     public static func major(of version: String) -> UInt64? {
         parse(version)?.parts.first
+    }
+
+    /// The update line a version follows: its text up to the end of the first number, which is
+    /// also the request mise resolves (`24.22.3` → `24`, `temurin-21.0.12+101.0.LTS` → `temurin-21`).
+    /// Nil for channels such as `stable` and for refs and paths, which have no line.
+    public static func line(of version: String) -> String? {
+        let trimmed = version.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.contains(":"), let start = trimmed.firstIndex(where: \.isASCIIDigit) else { return nil }
+        let end = trimmed[start...].firstIndex { !$0.isASCIIDigit } ?? trimmed.endIndex
+        return String(trimmed[..<end])
     }
 
     /// Highest version; of equal candidates the last one wins (matches TS sort().at(-1)).

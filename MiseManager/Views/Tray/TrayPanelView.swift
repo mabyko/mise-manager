@@ -307,7 +307,8 @@ private struct TrayToolBlock: View {
 
     /// The installed versions in their own inset panel, so they never read as the next tool's rows.
     private var versions: some View {
-        let showSeries = groups.contains { $0.major != nil }
+        // Vendor lines such as temurin-21 already show in the version itself; only numeric lines get a column.
+        let showSeries = groups.contains { $0.line.flatMap(UInt64.init) != nil }
         return VStack(alignment: .leading, spacing: 8) {
             if tool.installedVersions.isEmpty {
                 Text("설치된 버전이 없습니다.").font(.caption).foregroundStyle(.secondary)
@@ -318,7 +319,7 @@ private struct TrayToolBlock: View {
                 VStack(alignment: .leading, spacing: 4) {
                     ForEach(Array(group.versions.enumerated()), id: \.element.id) { index, item in
                         versionRow(
-                            item, series: showSeries ? (index == 0 ? group.major.map { "\($0).x" } ?? "기타" : "") : nil,
+                            item, series: showSeries ? (index == 0 ? group.line.map { UInt64($0) == nil ? "" : "\($0).x" } ?? "기타" : "") : nil,
                             hasSiblings: group.hasSiblings)
                     }
                 }
@@ -403,16 +404,21 @@ private struct TrayToolBlock: View {
 
     private func updateLine(_ item: UpdateItem) -> some View {
         let switches = item.kind == .series && state.seriesUpdateSwitchesGlobal(tool, item.to)
-        let series = item.kind == .major ? "새 major" : Version.major(of: item.to).map { "\($0).x" } ?? ""
+        let line = Version.line(of: item.to)
+        let numeric = line.flatMap(UInt64.init) != nil
+        let series = item.kind == .major ? "새 major" : line.map { "\($0).x" } ?? ""
         let action = item.kind == .major ? "검토…" : (switches ? "설치·전환" : "설치")
         let hint = item.kind == .major ? "호환성 확인이 필요해 앱에서 검토합니다"
             : (switches ? "설치 후 전역 기본값을 이 버전으로 전환합니다" : "설치만 하고 전역 기본값은 유지합니다")
         return HStack(spacing: 8) {
-            Text(series).font(.caption.bold()).foregroundStyle(.secondary).frame(width: 56, alignment: .leading)
+            // A vendor line's versions are long and name the line themselves: show only the target.
+            if numeric || item.kind == .major {
+                Text(series).font(.caption.bold()).foregroundStyle(.secondary).frame(width: 56, alignment: .leading)
+            }
             HStack(spacing: 4) {
-                Text(item.from)
+                if numeric || item.kind == .major { Text(item.from) }
                 Image(systemName: "arrow.right").font(.caption2).foregroundStyle(.secondary)
-                Text(item.to).bold()
+                Text(item.to).bold().lineLimit(1).truncationMode(.middle)
             }
             .font(.callout.monospaced())
             Spacer()

@@ -34,18 +34,16 @@ struct VersionTests {
         }
         #expect(Version.isPreRelease("3.22.0-0.1.pre-beta"))
         #expect(Version.compare("3.50.0-stable", "3.47.9-stable") == .orderedDescending)
-        let plan = UpdatePlanner.plan(
-            plugin: "flutter", baseVersion: "stable", includeChannels: false,
-            remoteStdout: #"["3.47.9-stable","3.50.0-stable","stable"]"#)
-        #expect(plan.releaseLatest == "3.50.0-stable")
-        #expect(plan.latestByMajor == ["3": "3.50.0-stable"])
     }
 
-    @Test func stableFilterOnlyAppliesToPythonAndRuby() {
-        #expect(!Version.isStable(plugin: "python", version: "3.13.0a1"))
-        #expect(Version.isStable(plugin: "python", version: "3.12.1"))
-        #expect(!Version.isStable(plugin: "ruby", version: "3.4.0-preview1"))
-        #expect(Version.isStable(plugin: "node", version: "20.0.0-nightly"))
+    @Test func aLineIsTheVersionUpToItsFirstNumber() {
+        #expect(Version.line(of: "24.22.3") == "24")
+        #expect(Version.line(of: "3.50.0-stable") == "3")
+        #expect(Version.line(of: "temurin-21.0.12+101.0.LTS") == "temurin-21")
+        #expect(Version.line(of: "graalvm-community-25.0.3") == "graalvm-community-25")
+        for channel in ["stable", "lts", "system", "ref:abc123", "path:/opt/node20"] {
+            #expect(Version.line(of: channel) == nil, "\(channel)")
+        }
     }
 
     @Test func majorExtraction() {

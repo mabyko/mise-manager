@@ -25,7 +25,7 @@ extension AppState {
             for series in ToolStatus.installedSeries(tool) {
                 if let update = series.update {
                     items.append(UpdateItem(id: "\(tool.name)@\(update)", kind: .series, name: tool.name,
-                                            label: "\(tool.name) \(series.major).x", from: series.current, to: update))
+                                            label: "\(tool.name) \(series.line).x", from: series.current, to: update))
                 }
             }
             if let major = ToolStatus.update(tool)?.major, !items.contains(where: { $0.name == tool.name && $0.to == major }) {
@@ -53,7 +53,7 @@ extension AppState {
             || !settled.contains(mise.key)
             || plugins.contains { $0.status != .done }
         let uncomparable = plugins
-            .filter { $0.status == .done && $0.sameMajorLatest == nil && $0.releaseLatest == nil && $0.latestByMajor.isEmpty }
+            .filter { $0.status == .done && $0.sameMajorLatest == nil && $0.releaseLatest == nil && $0.latestByLine.isEmpty }
             .map(\.name)
         return UpdateSummary(items: items, errors: errors, attention: unchecked || !errors.isEmpty, uncomparable: uncomparable)
     }
