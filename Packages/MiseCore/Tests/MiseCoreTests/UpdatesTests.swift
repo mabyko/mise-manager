@@ -49,6 +49,16 @@ import Testing
         #expect(state.updateSummary.uncomparable == ["http:tla2tools 1.x", "node 27.x"])
         state.plugins[1].installedVersions = ["22.14.0"]
 
+        for global in ["22.14.0", "pypy3.10-7.3.19"] {
+            state.plugins[1].activeGlobalVersion = global
+            state.plugins[1].installedVersions = ["22.14.0", "pypy3.10-7.3.19", "stable"]
+            #expect(state.updateSummary.uncomparable == ["http:tla2tools 1.x", "node pypy3.10-7.3.19"])
+            #expect(!state.updateSummary.attention)
+        }
+        state.plugins[1].installedVersions = ["stable"]
+        #expect(state.updateSummary.uncomparable == ["http:tla2tools 1.x"])
+        state.plugins[1].installedVersions = ["22.14.0"]
+
         // A tool that has not been checked still asks for a check.
         state.plugins[0].status = .idle
         #expect(state.updateSummary.attention)

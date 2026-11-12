@@ -40,6 +40,23 @@ struct ToolStatusTests {
         #expect(!ToolStatus.hasUpdates(older))
     }
 
+    @Test func aRuntimeWithoutALineIsNotAChannel() {
+        func label(_ version: String) -> String {
+            ToolStatus.label(PluginRow(name: "runtime", activeGlobalVersion: version, installedVersions: [version], releaseLatest: "9.9.9", status: .done))
+        }
+        for runtime in ["pypy3.10-7.3.19", "semeru-openj9-17.0.21.0", "jetbrains-21.0.2-b375.1", "nightly-2026-11-12", "ref:abc123"] {
+            #expect(Version.isLinelessRuntime(runtime), "\(runtime)")
+            #expect(label(runtime) == Strings.ToolStatus.noComparison, "\(runtime)")
+        }
+        for channel in ["stable", "lts", "system"] {
+            #expect(!Version.isLinelessRuntime(channel), "\(channel)")
+            #expect(label(channel) == Strings.ToolStatus.channel, "\(channel)")
+        }
+        for versioned in ["24.22.3", "3.50.0-stable", "temurin-21.0.12+101.0.LTS"] {
+            #expect(!Version.isLinelessRuntime(versioned), "\(versioned)")
+        }
+    }
+
     @Test func vendorLinesGetTheirOwnUpdateButNoNewMajorOffer() {
         let java = PluginRow(
             name: "java", installedVersions: ["temurin-25.0.5+8.0.LTS", "temurin-21.0.12+101.0.LTS", "temurin-21.0.11+9.0.LTS"],

@@ -150,6 +150,7 @@ public enum ToolStatus {
         case .idle, .skipped: return Strings.ToolStatus.unchecked
         case .done: break
         }
+        if let base = plugin.baseVersion, Version.isLinelessRuntime(base) { return Strings.ToolStatus.noComparison }
         guard let base = plugin.baseVersion, Version.line(of: base) != nil else { return Strings.ToolStatus.channel }
         if hasUpdates(plugin) { return Strings.ToolStatus.updateAvailable }
         if Version.startsWithDigit(base), Version.isPreRelease(base) { return Strings.ToolStatus.prerelease }
