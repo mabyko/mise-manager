@@ -55,7 +55,8 @@ extension AppState {
             || plugins.contains { $0.status != .done }
         let uncomparable = plugins.filter { $0.status == .done }.flatMap { tool -> [String] in
             let unanswered = ToolStatus.installedSeries(tool).filter { $0.latest == nil }.map { "\(tool.name) \($0.line).x" }
-            if !unanswered.isEmpty { return unanswered }
+            let runtimes = tool.installedVersions.filter(Version.isLinelessRuntime).map { "\(tool.name) \($0)" }
+            if !unanswered.isEmpty || !runtimes.isEmpty { return unanswered + runtimes }
             return tool.sameMajorLatest == nil && tool.releaseLatest == nil && tool.latestByLine.isEmpty ? [tool.name] : []
         }
         return UpdateSummary(items: items, errors: errors, attention: unchecked || !errors.isEmpty, uncomparable: uncomparable)

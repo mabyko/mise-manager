@@ -53,6 +53,10 @@ struct VersionBadges: View {
     var body: some View {
         HStack(spacing: 6) {
             if version.isGlobal { Text("전역").bold().foregroundStyle(Color.accentColor) }
+            if Version.isLinelessRuntime(version.version) {
+                Text("업데이트 확인 불가").foregroundStyle(.secondary)
+                    .help("이 버전은 어느 계열인지 알 수 없어 업데이트를 확인하지 않습니다")
+            }
             if version.isSuperseded {
                 Text("구버전").foregroundStyle(.orange).help("같은 계열에 더 새 버전이 설치되어 있습니다")
             } else if hasSiblings {

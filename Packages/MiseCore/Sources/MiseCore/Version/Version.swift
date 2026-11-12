@@ -108,6 +108,11 @@ public enum Version {
         return trimmed.wholeMatch(of: /((?:[A-Za-z]+-)+[0-9]+)(?:[.+](?:[0-9]+|[A-Za-z]+))*/).map { String($0.1) }
     }
 
+    /// A numbered runtime whose name cannot safely be queried as an update line.
+    public static func isLinelessRuntime(_ version: String) -> Bool {
+        line(of: version) == nil && version.contains(where: \.isNumber)
+    }
+
     /// Highest version; of equal candidates the last one wins (matches TS sort().at(-1)).
     public static func pickLatest(_ versions: some Sequence<String>) -> String? {
         var best: String?

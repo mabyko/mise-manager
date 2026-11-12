@@ -89,7 +89,7 @@ struct ToolDetail: View {
             }
         }
         Text(series.isEmpty
-             ? "채널 버전만 있어 계열을 비교할 수 없습니다."
+             ? (tool.installedVersions.contains(where: Version.isLinelessRuntime) ? "업데이트를 확인할 수 없는 버전이 설치되어 있습니다." : "채널 버전만 있어 계열을 비교할 수 없습니다.")
              : "계열마다 새 버전을 확인합니다. 같은 계열에 더 새 버전이 설치된 버전은 구버전으로 표시합니다.")
             .foregroundStyle(.secondary)
         if tool.installedVersions.isEmpty {
@@ -124,6 +124,8 @@ struct ToolDetail: View {
                 .foregroundStyle(.secondary)
         case .done where label == Strings.ToolStatus.latestStable:
             Text("현재 확인된 안정 버전 업데이트가 없습니다.").bold()
+        case .done where tool.baseVersion.map(Version.isLinelessRuntime) == true:
+            Text("이 버전의 업데이트를 확인할 수 없습니다.").foregroundStyle(.secondary)
         case .done where label == Strings.ToolStatus.channel:
             Card {
                 Text("채널 버전을 사용 중입니다.").bold()
