@@ -23,6 +23,10 @@ struct UpdatesTab: View {
                     Text("설치된 모든 버전 계열을 확인했습니다.").foregroundStyle(.secondary)
                 }
             }
+            if !summary.uncomparable.isEmpty {
+                Text("비교할 원격 버전이 없어 업데이트를 확인할 수 없는 도구: \(summary.uncomparable.joined(separator: ", "))")
+                    .font(.callout).foregroundStyle(.secondary)
+            }
             if !summary.items.isEmpty {
                 Text("각 계열의 새 버전을 따로 설치할 수 있습니다. 전역 전환 여부는 항목에 표시됩니다.").font(.callout).foregroundStyle(.secondary)
             }

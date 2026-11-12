@@ -29,6 +29,26 @@ import Testing
         #expect(runner.count("--version") == 1)
     }
 
+    @Test func aCheckedToolWithNothingToCompareIsListedInsteadOfLeavingTheCheckUnfinished() async {
+        let runner = FakeRunner()
+        let state = makeState(runner, latest: { "v2026.9.5" })
+        runner.reply("--version", "2026.9.5 macos-arm64")
+        runner.reply("version --json", #"{"latest":"2026.9.5"}"#)
+        runner.installed([("http:tla2tools", nil, ["1.7.4"]), ("node", "22.14.0", ["22.14.0"])])
+        runner.reply("ls-remote http:tla2tools --json", "[]")
+        runner.reply("ls-remote node --json", #"["22.14.0"]"#)
+
+        await state.checkAllUpdates()
+        #expect(state.updateSummary.errors.isEmpty)
+        #expect(state.updateSummary.uncomparable == ["http:tla2tools"])
+        #expect(!state.updateSummary.attention)
+
+        // A tool that has not been checked still asks for a check.
+        state.plugins[0].status = .idle
+        #expect(state.updateSummary.attention)
+        #expect(state.updateSummary.uncomparable.isEmpty)
+    }
+
     @Test func theOwnerHandlesATrayInstallOnceAndKeepsTheGlobalDefault() async {
         let runner = FakeRunner()
         let state = makeState(runner)
