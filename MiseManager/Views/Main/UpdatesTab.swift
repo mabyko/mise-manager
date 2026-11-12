@@ -24,7 +24,7 @@ struct UpdatesTab: View {
                 }
             }
             if !summary.uncomparable.isEmpty {
-                Text("비교할 원격 버전이 없어 업데이트를 확인할 수 없는 도구: \(summary.uncomparable.joined(separator: ", "))")
+                Text("mise에 비교할 버전이 없어 업데이트를 확인할 수 없는 계열: \(summary.uncomparable.joined(separator: ", "))")
                     .font(.callout).foregroundStyle(.secondary)
             }
             if !summary.items.isEmpty {

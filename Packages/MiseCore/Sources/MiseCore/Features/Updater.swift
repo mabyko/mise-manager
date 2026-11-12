@@ -49,9 +49,10 @@ extension AppState {
         }
         updatePlugin(row.name) { $0.status = .checking }
         do {
-            let result = try await mise.checkPluginUpdates(plugin: row.name, baseVersion: base, includeChannels: false)
+            let lines = Set((row.installedVersions + [base]).compactMap(Version.line(of:))).sorted()
+            let result = try await mise.checkPluginUpdates(plugin: row.name, baseVersion: base, lines: lines, includeChannels: false)
             updatePlugin(row.name) {
-                $0.latestByMajor = result.latestByMajor
+                $0.latestByLine = result.latestByLine
                 $0.sameMajorLatest = result.sameMajorLatest
                 $0.releaseLatest = result.releaseLatest
                 $0.overallLatest = result.overallLatest
@@ -125,11 +126,13 @@ extension AppState {
 
     // MARK: Version actions
 
-    /// Candidates are only meaningful for the base they were checked against. After a successful
-    /// mutation a verified row whose base did not move stays done; anything else is re-checked so a
-    /// cached 22.15 is never offered as a same-major update for 20.x.
+    /// Candidates are only meaningful for the base and the lines they were checked against. After a
+    /// successful mutation a verified row whose base did not move and that gained no line stays done;
+    /// anything else is re-checked, so a cached 22.15 is never offered as a same-major update for
+    /// 20.x and a newly installed line is not left without mise's answer.
     func settlePlugin(before: PluginRow, row: PluginRow) async {
-        if before.status == .done && before.baseVersion == row.baseVersion {
+        func lines(_ plugin: PluginRow) -> Set<String> { Set(plugin.installedVersions.compactMap(Version.line(of:))) }
+        if before.status == .done && before.baseVersion == row.baseVersion && lines(row).isSubset(of: lines(before)) {
             updatePlugin(row.name) { $0.status = .done; $0.error = nil }
         } else {
             await checkPlugin(row)
@@ -179,8 +182,8 @@ extension AppState {
     }
 
     public func seriesUpdateSwitchesGlobal(_ plugin: PluginRow, _ version: String) -> Bool {
-        settings.switchGlobalAfterUpdate && plugin.activeGlobalVersion != nil
-            && Version.major(of: plugin.activeGlobalVersion!) == Version.major(of: version)
+        settings.switchGlobalAfterUpdate
+            && plugin.activeGlobalVersion.flatMap(Version.line(of:)).map { $0 == Version.line(of: version) } == true
     }
 
     /// Series updates install only; the global default moves only when the setting says so.

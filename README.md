@@ -28,7 +28,7 @@ Captured from the native app (light theme) with sample data. The menu-bar strip 
 - Open **mise**, **Plugin Management**, **Logs**, or **Settings** from the sidebar.
 - **Updates** collects tool-series, mise, and external-plugin updates in one list. Its sidebar badge and the macOS menu bar share the same count. A red dot on the menu-bar icon stays visible while updates are available and clears when none remain; unknown and failed checks remain visible separately.
 - Click the menu-bar icon for a compact tool list, per-series installs, and global version selection. The panel opens under the icon on whichever display you click, without activating the app, and closes on an outside click or Esc. **Settings → 메뉴바 아이콘 표시** controls its visibility (on by default, saved across restarts). mise updates can be confirmed and run in the panel; new-major updates open the main window for review. The app is a menu-bar app: the Dock icon appears only while the main window is open. Closing the window keeps the app running in the menu bar; reopen it from the panel or by launching the app again, and quit from the app menu or the panel's gear menu. **Settings → 로그인 시 시작** registers it as a login item so it comes up in the menu bar only.
-- Track every installed major independently: Node 26 and Node 24 each get their own latest stable candidate from one remote lookup per tool.
+- Track every installed line independently. A line is a numeric version's major (`24.22.3` → `24`) or a vendor plus major (`temurin-21.0.12+101.0.LTS` → `temurin-21`), and each one asks `mise latest <tool>@<line>`. Each mise backend decides what a stable release is, so Node 26 and Node 24, or Temurin 21 and 25, get their own updates and the app never guesses a tool's naming scheme. Channels such as `stable`, and names where a digit belongs to the runtime (`pypy3.10-…`), have no line and are not compared.
 - Install tool versions, switch the global version, or remove unused versions.
 - Installed versions are grouped by major. A version with a newer sibling installed in the same major is marked **구버전** (superseded), `mise ls --prunable` tells **미사용** (no tracked config or running process selects it) from **사용 중** (in use), and each version shows its size on disk. **구버전 N개 정리** removes the superseded versions after one confirmation, skipping the global version and any version mise reports as in use; when mise cannot report usage, every superseded version is offered.
 - Install a series update while keeping previous versions and the global default. Settings can enable switching the default when updating its current major; updates to other majors never switch it.
@@ -91,8 +91,9 @@ Mise Manager delegates runtime and plugin management to the installed `mise` exe
 | --- | --- |
 | Read the mise version | `mise --version` |
 | Check mise update eligibility | `mise settings get <key>`, `mise version --json` |
-| List installed and global tool versions | `mise ls --installed --json`, `mise ls --global --json` |
-| Check available versions | `mise ls-remote <tool> --json` |
+| List installed, global and unused tool versions | `mise ls --installed --json`, `mise ls --global --json`, `mise ls --prunable --json` |
+| Check the latest version of each line | `mise latest <tool>@<line>`, `mise latest <tool>` |
+| Check pre-release candidates | `mise ls-remote <tool> --json` |
 | Install a tool version | `mise install -y <tool>@<version>` |
 | Select a global version | `mise use -g -y <tool>@<version>` |
 | Remove a tool version | `mise uninstall -y <tool>@<version>` |

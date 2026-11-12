@@ -1,54 +1,57 @@
 import Testing
 @testable import MiseCore
 
-// Mirrors the plan_plugin_update tests in src-tauri/src/actions.rs.
 struct UpdatePlannerTests {
-    func plan(_ plugin: String, _ base: String, _ channels: Bool, _ stdout: String) -> PluginUpdateInfo {
-        UpdatePlanner.plan(plugin: plugin, baseVersion: base, includeChannels: channels, remoteStdout: stdout)
+    func plan(
+        _ base: String, _ stdout: String, lines: [String: String] = [:], release: String? = nil, channels: Bool = false
+    ) -> PluginUpdateInfo {
+        UpdatePlanner.plan(
+            plugin: "tool", baseVersion: base, includeChannels: channels, remoteStdout: stdout,
+            lineLatest: lines, releaseLatest: release)
     }
 
-    @Test func computesSameMajorReleaseAndPreReleaseColumns() {
-        let info = plan("node", "20.1.0", false, "20.2.0\n21.0.0\n22.0.0-rc1\nlts\n20.1.0")
+    @Test func miseAnswersFillTheStableColumnsAndTheRemoteListOnlyThePreRelease() {
+        let info = plan("20.1.0", "20.2.0\n21.0.0\n22.0.0-rc1\nlts\n20.1.0", lines: ["20": "20.2.0"], release: "21.0.0")
         // "lts" is dropped without channels; 22.0.0-rc1 > base so it surfaces.
         #expect(info.sameMajorLatest == "20.2.0")
+        #expect(info.latestByLine == ["20": "20.2.0"])
         #expect(info.releaseLatest == "21.0.0")
         #expect(info.overallLatest == "22.0.0-rc1")
         #expect(info.checkedVersions == 4)
         #expect(info.error == nil)
-    }
 
-    @Test func pythonPreReleasesAreFilteredOutEntirely() {
-        let info = plan("python", "3.12.0", false, "3.13.0a1\n3.12.1\n3.13.0")
-        #expect(info.releaseLatest == "3.13.0")
-        #expect(info.overallLatest == nil)
-        #expect(info.checkedVersions == 2)
+        // Nothing stable is derived from the list itself: without mise's answers there is no candidate.
+        let bare = plan("20.1.0", "20.2.0\n21.0.0")
+        #expect(bare.sameMajorLatest == nil)
+        #expect(bare.releaseLatest == nil)
+        #expect(bare.latestByLine.isEmpty)
     }
 
     @Test func preReleaseNotNewerThanSemverBaseStaysHidden() {
-        let info = plan("node", "22.0.0", false, "21.0.0\n22.0.0-rc1\n22.0.0")
-        #expect(info.releaseLatest == "22.0.0")
-        #expect(info.overallLatest == nil)
+        #expect(plan("22.0.0", "21.0.0\n22.0.0-rc1\n22.0.0", release: "22.0.0").overallLatest == nil)
     }
 
     @Test func nonSemverBaseRequiresPreReleaseAtLeastReleaseLatest() {
-        let info = plan("java", "system", true, "17.0.0\n18-ea\n17.0.1")
-        #expect(info.releaseLatest == "17.0.1")
+        let info = plan("system", "17.0.0\n18-ea\n17.0.1", release: "17.0.1", channels: true)
         #expect(info.overallLatest == "18-ea")
         #expect(info.sameMajorLatest == nil)
     }
 
     @Test func acceptsJsonRemoteListings() {
-        let info = plan("node", "1.0.0", false, #"["1.0.0", {"version": "1.1.0"}]"#)
-        #expect(info.releaseLatest == "1.1.0")
-        #expect(info.checkedVersions == 2)
+        #expect(plan("1.0.0", #"["1.0.0", {"version": "1.1.0"}]"#).checkedVersions == 2)
     }
 
-    @Test func tracksEachMajorWithoutPromotingPrereleases() {
-        let info = plan("node", "26.0.0", false, #"["24.20.0","26.0.0","24.21.0","26.1.0","24.22.0-rc.1","27.0.0-rc.1"]"#)
-        #expect(info.latestByMajor["24"] == "24.21.0")
-        #expect(info.latestByMajor["26"] == "26.1.0")
-        #expect(info.latestByMajor["27"] == nil)
-        #expect(info.sameMajorLatest == "26.1.0")
-        #expect(info.releaseLatest == "26.1.0")
+    @Test func vendorLinesAndUnusualNamingNeedNoSpecialCase() {
+        let java = plan(
+            "temurin-21.0.12+101.0.LTS", "[]",
+            lines: ["temurin-21": "temurin-21.0.13+9.0.LTS", "temurin-25": "temurin-25.0.5+8.0.LTS"], release: "27.0.1+1")
+        #expect(java.sameMajorLatest == "temurin-21.0.13+9.0.LTS")
+        #expect(java.latestByLine["temurin-25"] == "temurin-25.0.5+8.0.LTS")
+        #expect(plan("3.47.9-stable", "[]", lines: ["3": "3.50.0-stable"]).sameMajorLatest == "3.50.0-stable")
+    }
+
+    @Test func anAnswerOutsideTheRequestedLineIsDropped() {
+        let info = plan("24.20.0", "[]", lines: ["2": "22.1.0", "24": "24.21.0", "temurin-21": "21.0.13+9.0.LTS"])
+        #expect(info.latestByLine == ["24": "24.21.0"])
     }
 }

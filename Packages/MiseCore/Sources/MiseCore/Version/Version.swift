@@ -45,12 +45,6 @@ public enum Version {
         return version.contains("-") || version.utf8.contains(where: \.isASCIILetter)
     }
 
-    /// Only python and ruby publish pre-releases that must be hidden by default.
-    public static func isStable(plugin: String, version: String) -> Bool {
-        guard plugin == "python" || plugin == "ruby" else { return true }
-        return !isPreRelease(version)
-    }
-
     public static func startsWithDigit(_ version: String) -> Bool {
         version.utf8.first?.isASCIIDigit ?? false
     }
@@ -99,6 +93,19 @@ public enum Version {
 
     public static func major(of version: String) -> UInt64? {
         parse(version)?.parts.first
+    }
+
+    /// The update line a version follows, which is also the request mise resolves.
+    /// A numeric version follows its major (`24.22.3` → `24`). A vendor build follows vendor and
+    /// major (`temurin-21.0.12+101.0.LTS` → `temurin-21`), but only in the plain shape
+    /// `words-number` followed by `.`/`+` separated tokens that are all digits or all letters.
+    /// Anything else has no line: channels (`stable`), dates (`nightly-2026-11-12`), refs and paths,
+    /// and names where a digit belongs to the runtime rather than the version (`pypy3.10-7.3.19`,
+    /// `semeru-openj9-17.0.1`, `graalvm-22.3.0+java11`), which mise would match across runtimes.
+    public static func line(of version: String) -> String? {
+        let trimmed = version.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let major = major(of: trimmed) { return String(major) }
+        return trimmed.wholeMatch(of: /((?:[A-Za-z]+-)+[0-9]+)(?:[.+](?:[0-9]+|[A-Za-z]+))*/).map { String($0.1) }
     }
 
     /// Highest version; of equal candidates the last one wins (matches TS sort().at(-1)).

@@ -34,18 +34,29 @@ struct VersionTests {
         }
         #expect(Version.isPreRelease("3.22.0-0.1.pre-beta"))
         #expect(Version.compare("3.50.0-stable", "3.47.9-stable") == .orderedDescending)
-        let plan = UpdatePlanner.plan(
-            plugin: "flutter", baseVersion: "stable", includeChannels: false,
-            remoteStdout: #"["3.47.9-stable","3.50.0-stable","stable"]"#)
-        #expect(plan.releaseLatest == "3.50.0-stable")
-        #expect(plan.latestByMajor == ["3": "3.50.0-stable"])
     }
 
-    @Test func stableFilterOnlyAppliesToPythonAndRuby() {
-        #expect(!Version.isStable(plugin: "python", version: "3.13.0a1"))
-        #expect(Version.isStable(plugin: "python", version: "3.12.1"))
-        #expect(!Version.isStable(plugin: "ruby", version: "3.4.0-preview1"))
-        #expect(Version.isStable(plugin: "node", version: "20.0.0-nightly"))
+    @Test func aLineIsTheMajorOrAPlainVendorAndMajor() {
+        #expect(Version.line(of: "24.22.3") == "24")
+        #expect(Version.line(of: "3.50.0-stable") == "3")
+        #expect(Version.line(of: "22.0.0-rc1") == "22")
+        #expect(Version.line(of: "temurin-21.0.12+101.0.LTS") == "temurin-21")
+        #expect(Version.line(of: "corretto-21.0.13.0.11") == "corretto-21")
+        #expect(Version.line(of: "zulu-jre-javafx-21.54.109.0") == "zulu-jre-javafx-21")
+        #expect(Version.line(of: "graalvm-community-25.0.3") == "graalvm-community-25")
+        #expect(Version.line(of: "openjdk-21") == "openjdk-21")
+    }
+
+    @Test func namesThatMiseWouldMatchAcrossRuntimesHaveNoLine() {
+        // mise answers `python@pypy3` with pypy3.12, `java@semeru-openj9` with JDK 25 and
+        // `java@graalvm-22` with +java19: a digit in the name is not the version's major.
+        for version in [
+            "pypy3.10-7.3.19", "miniconda3-3.11-24.1.2-0", "semeru-openj9-17.0.21.0", "graalvm-22.3.0+java11",
+            "liberica-nik-openjdk17-23.0.2+3", "liberica-8u412+9", "kona-21.0.13.b1", "jetbrains-21.0.2-b375.1",
+            "temurin-21.0.13-ea", "nightly-2026-11-12", "stable", "lts", "system", "ref:abc123", "path:/opt/node20", "/opt/node20",
+        ] {
+            #expect(Version.line(of: version) == nil, "\(version)")
+        }
     }
 
     @Test func majorExtraction() {

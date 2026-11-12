@@ -45,6 +45,12 @@ final class FakeRunner: CommandRunner, @unchecked Sendable {
         reply("ls --global --json", json(tools.compactMap { tool in tool.global.map { (tool.name, [$0]) } }))
     }
 
+    /// `mise latest` as mise would answer: one reply per line (`node@24`) and the tool's overall latest.
+    func latest(_ tool: String, _ lines: [String: String] = [:], overall: String? = nil) {
+        for (line, version) in lines { reply("latest \(tool)@\(line)", version) }
+        if let overall { reply("latest \(tool)", overall) }
+    }
+
     /// Hold a command in flight until the test releases it, without timing-dependent sleeps.
     func pause(_ key: String) -> (started: AsyncStream<Void>, resume: AsyncStream<Void>.Continuation) {
         let started = AsyncStream<Void>.makeStream()

@@ -63,12 +63,7 @@ struct ToolDetail: View {
     private var cleanup: [String] { ToolStatus.cleanupCandidates(tool) }
     private var update: ToolUpdate? { ToolStatus.update(tool) }
     private var disabled: Bool { state.toolActionsDisabled(tool.name) }
-    private var candidates: [String] {
-        var seen = Set<String>()
-        return [tool.sameMajorLatest, tool.releaseLatest, state.settings.showPrereleases ? tool.overallLatest : nil]
-            .compactMap { $0 }
-            .filter { $0 != tool.activeGlobalVersion && seen.insert($0).inserted }
-    }
+    private var candidates: [String] { ToolStatus.otherCandidates(tool, includePrerelease: state.settings.showPrereleases) }
 
     var body: some View {
         HStack(spacing: 10) {
@@ -94,8 +89,8 @@ struct ToolDetail: View {
             }
         }
         Text(series.isEmpty
-             ? "숫자 버전이 없어 major 계열을 비교할 수 없습니다."
-             : "major 계열마다 새 버전을 확인합니다. 같은 계열에 더 새 버전이 설치된 버전은 구버전으로 표시합니다.")
+             ? "채널 버전만 있어 계열을 비교할 수 없습니다."
+             : "계열마다 새 버전을 확인합니다. 같은 계열에 더 새 버전이 설치된 버전은 구버전으로 표시합니다.")
             .foregroundStyle(.secondary)
         if tool.installedVersions.isEmpty {
             Text("설치된 버전이 없습니다.").foregroundStyle(.secondary)
@@ -144,7 +139,7 @@ struct ToolDetail: View {
     /// One major line: its update state on top, then every installed version of that line.
     private func groupCard(_ group: InstalledVersionGroup) -> some View {
         Card {
-            if let series = series.first(where: { $0.major == group.major }) {
+            if let series = series.first(where: { $0.line == group.line }) {
                 seriesHeader(series)
             } else if groups.count > 1 {
                 Text("기타 버전").font(.headline)
@@ -159,7 +154,7 @@ struct ToolDetail: View {
     private func seriesHeader(_ series: InstalledSeries) -> some View {
         let switches = series.update.map { state.seriesUpdateSwitchesGlobal(tool, $0) } ?? false
         return HStack(spacing: 14) {
-            Text("\(series.major).x").font(.headline.monospaced()).frame(width: 56, alignment: .leading)
+            Text("\(series.line).x").font(.headline.monospaced()).lineLimit(1).fixedSize().frame(minWidth: 56, alignment: .leading)
             VStack(alignment: .leading, spacing: 3) {
                 if let update = series.update {
                     HStack(spacing: 6) {
@@ -167,11 +162,11 @@ struct ToolDetail: View {
                         Image(systemName: "arrow.right").foregroundStyle(.secondary)
                         Text(update).bold()
                     }
-                    .font(.body.monospaced())
+                    .font(.body.monospaced()).lineLimit(1).truncationMode(.middle)
                 }
                 Text(series.update != nil
                      ? (switches ? "설치 후 전역 기본값 전환" : "설치만 · 전역 기본값 유지")
-                     : (series.latest != nil ? "확인된 업데이트 없음" : label))
+                     : (series.latest != nil ? "확인된 업데이트 없음" : (tool.status == .done ? Strings.ToolStatus.noComparison : label)))
                     .font(.caption).foregroundStyle(.secondary)
             }
             Spacer()
@@ -219,7 +214,7 @@ struct ToolDetail: View {
     private func candidateRow(_ version: String) -> some View {
         HStack {
             Text(version).font(.body.monospaced().bold())
-            Text(Version.isPreRelease(version) ? "프리릴리스" : "릴리스 후보").font(.caption).foregroundStyle(.secondary)
+            Text(version == tool.overallLatest && version != tool.releaseLatest ? "프리릴리스" : "릴리스 후보").font(.caption).foregroundStyle(.secondary)
             Spacer()
             if tool.installedVersions.contains(version) {
                 Pill(text: "설치됨")

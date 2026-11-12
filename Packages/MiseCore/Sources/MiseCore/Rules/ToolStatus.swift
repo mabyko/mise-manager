@@ -1,11 +1,12 @@
-/// One installed major line of a tool, tracked independently of the global selection.
+/// One installed line of a tool (`24`, `temurin-21`; see `Version.line`), tracked independently
+/// of the global selection.
 public struct InstalledSeries: Equatable, Sendable {
-    public let major: UInt64
+    public let line: String
     public let current: String
     public let latest: String?
     public let update: String?
-    public init(major: UInt64, current: String, latest: String?, update: String?) {
-        self.major = major; self.current = current; self.latest = latest; self.update = update
+    public init(line: String, current: String, latest: String?, update: String?) {
+        self.line = line; self.current = current; self.latest = latest; self.update = update
     }
 }
 
@@ -29,36 +30,36 @@ public struct InstalledVersion: Equatable, Sendable, Identifiable {
     }
 }
 
-/// Installed versions of one major line; `major` is nil for channel or vendor-prefixed versions.
+/// Installed versions of one line; `line` is nil for channels such as `stable`.
 public struct InstalledVersionGroup: Equatable, Sendable, Identifiable {
-    public let major: UInt64?
+    public let line: String?
     public let versions: [InstalledVersion]
-    public var id: String { major.map(String.init) ?? "other" }
-    /// Several versions of one numeric major: only then do "newest of the line" and "superseded" mean anything.
-    public var hasSiblings: Bool { major != nil && versions.count > 1 }
-    public init(major: UInt64?, versions: [InstalledVersion]) { self.major = major; self.versions = versions }
+    public var id: String { line ?? "other" }
+    /// Several versions of one line: only then do "newest of the line" and "superseded" mean anything.
+    public var hasSiblings: Bool { line != nil && versions.count > 1 }
+    public init(line: String?, versions: [InstalledVersion]) { self.line = line; self.versions = versions }
 }
 
 /// Port of src/mainview/core/toolStatus.ts.
 public enum ToolStatus {
-    /// Installed versions by major, newest major first and newest version first within it;
-    /// versions without a numeric major come last.
+    /// Installed versions by line, newest line first and newest version first within it;
+    /// versions without a line come last.
     public static func versionGroups(_ plugin: PluginRow) -> [InstalledVersionGroup] {
-        var byMajor: [UInt64?: [String]] = [:]
-        for version in plugin.installedVersions { byMajor[Version.major(of: version), default: []].append(version) }
-        let majors = byMajor.keys.sorted { a, b in
+        var byLine: [String?: [String]] = [:]
+        for version in plugin.installedVersions { byLine[Version.line(of: version), default: []].append(version) }
+        let lines = byLine.keys.sorted { a, b in
             switch (a, b) {
-            case let (x?, y?): x > y
+            case let (x?, y?): Version.compare(x, y) == .orderedDescending
             case (nil, _): false
             case (_, nil): true
             }
         }
-        return majors.map { major in
-            let versions = byMajor[major]!.sorted { Version.compare($0, $1) == .orderedDescending }
-            return InstalledVersionGroup(major: major, versions: versions.enumerated().map { index, version in
+        return lines.map { line in
+            let versions = byLine[line]!.sorted { Version.compare($0, $1) == .orderedDescending }
+            return InstalledVersionGroup(line: line, versions: versions.enumerated().map { index, version in
                 InstalledVersion(
                     version: version, isGlobal: version == plugin.activeGlobalVersion,
-                    isSuperseded: major != nil && index > 0,
+                    isSuperseded: line != nil && index > 0,
                     isUnused: version == plugin.activeGlobalVersion ? false : plugin.unusedVersions.map { $0.contains(version) })
             })
         }
@@ -79,19 +80,20 @@ public enum ToolStatus {
     }
 
     public static func installedSeries(_ plugin: PluginRow) -> [InstalledSeries] {
-        var newest: [UInt64: String] = [:]
+        var newest: [String: String] = [:]
         for version in plugin.installedVersions {
-            guard let major = Version.major(of: version) else { continue }
-            if let previous = newest[major], Version.compare(version, previous) != .orderedDescending { continue }
-            newest[major] = version
+            guard let line = Version.line(of: version) else { continue }
+            if let previous = newest[line], Version.compare(version, previous) != .orderedDescending { continue }
+            newest[line] = version
         }
-        let baseMajor = plugin.baseVersion.flatMap(Version.major(of:))
-        return newest.keys.sorted(by: >).map { major in
-            let current = newest[major]!
-            let candidate = plugin.latestByMajor[String(major)] ?? (baseMajor == major ? plugin.sameMajorLatest : nil)
-            let latest = plugin.status == .done ? candidate.flatMap { Version.isPreRelease($0) ? nil : $0 } : nil
+        let baseLine = plugin.baseVersion.flatMap(Version.line(of:))
+        return newest.keys.sorted { Version.compare($0, $1) == .orderedDescending }.map { line in
+            let current = newest[line]!
+            // mise's answer for the line; whether it is stable is mise's call, not guessed here.
+            let latest = plugin.status == .done ? plugin.latestByLine[line] ?? (baseLine == line ? plugin.sameMajorLatest : nil) : nil
+            // Only a newer version is an update: mise's latest can trail what is already installed.
             let update = latest.flatMap { Version.compare($0, current) == .orderedDescending ? $0 : nil }
-            return InstalledSeries(major: major, current: current, latest: latest, update: update)
+            return InstalledSeries(line: line, current: current, latest: latest, update: update)
         }
     }
 
@@ -99,22 +101,44 @@ public enum ToolStatus {
         update(plugin) != nil || installedSeries(plugin).contains { $0.update != nil }
     }
 
-    /// Verified stable updates only; prereleases stay in the version inspector.
+    /// The global line's update and a newer numeric major. A vendor line such as `temurin-21` gets
+    /// no "new major" offer: mise's overall latest could silently switch the vendor.
     public static func update(_ plugin: PluginRow) -> ToolUpdate? {
         guard plugin.status == .done, let base = plugin.baseVersion, let baseMajor = Version.major(of: base) else { return nil }
         func needsInstall(_ version: String) -> Bool {
             !plugin.installedVersions.contains {
-                Version.major(of: $0) == Version.major(of: version) && Version.compare($0, version) != .orderedAscending
+                Version.line(of: $0) == Version.line(of: version) && Version.compare($0, version) != .orderedAscending
             }
         }
         func newer(_ candidate: String?) -> String? {
             candidate.flatMap {
-                needsInstall($0) && !Version.isPreRelease($0) && Version.compare($0, base) == .orderedDescending ? $0 : nil
+                needsInstall($0) && Version.compare($0, base) == .orderedDescending ? $0 : nil
             }
         }
         let primary = newer(plugin.sameMajorLatest)
         let major = newer(plugin.releaseLatest).flatMap { Version.major(of: $0).map { $0 > baseMajor } == true ? $0 : nil }
         return primary == nil && major == nil ? nil : ToolUpdate(primary: primary, major: major)
+    }
+
+    /// Versions the "other versions" inspector may offer to install: mise's answers and, on request,
+    /// the pre-release candidate. Never the global version, never older than the base, and for a
+    /// vendor line never another line (the tool's overall latest can be another vendor's build).
+    public static func otherCandidates(_ plugin: PluginRow, includePrerelease: Bool) -> [String] {
+        let base = plugin.baseVersion
+        let baseLine = base.flatMap(Version.line(of:))
+        let vendorLine = baseLine != nil && base.flatMap(Version.major(of:)) == nil
+        var seen = Set<String>()
+        return [plugin.sameMajorLatest, plugin.releaseLatest, includePrerelease ? plugin.overallLatest : nil]
+            .compactMap { $0 }
+            .filter { candidate in
+                guard candidate != plugin.activeGlobalVersion, seen.insert(candidate).inserted else { return false }
+                // A channel such as `stable` has nothing to order candidates against, so they are listed.
+                // A runtime without a line (pypy3.10-…, semeru-openj9-…) gets none: nothing here is
+                // known to be the same runtime.
+                guard let base, baseLine != nil else { return base?.contains(where: \.isNumber) != true }
+                if vendorLine, Version.line(of: candidate) != baseLine { return false }
+                return Version.compare(candidate, base) == .orderedDescending
+            }
     }
 
     public static func label(_ plugin: PluginRow) -> String {
@@ -126,10 +150,11 @@ public enum ToolStatus {
         case .idle, .skipped: return Strings.ToolStatus.unchecked
         case .done: break
         }
-        guard let base = plugin.baseVersion, Version.major(of: base) != nil else { return Strings.ToolStatus.channel }
+        guard let base = plugin.baseVersion, Version.line(of: base) != nil else { return Strings.ToolStatus.channel }
         if hasUpdates(plugin) { return Strings.ToolStatus.updateAvailable }
-        if plugin.sameMajorLatest == nil && plugin.releaseLatest == nil { return Strings.ToolStatus.noComparison }
-        if Version.isPreRelease(base) { return Strings.ToolStatus.prerelease }
+        if Version.startsWithDigit(base), Version.isPreRelease(base) { return Strings.ToolStatus.prerelease }
+        // mise had no answer for the line in use: that is not the same as being up to date.
+        if plugin.sameMajorLatest == nil { return Strings.ToolStatus.noComparison }
         return Strings.ToolStatus.latestStable
     }
 }

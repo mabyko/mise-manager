@@ -138,14 +138,31 @@ public struct Mise: Sendable {
         return summaries.sorted { $0.name < $1.name }
     }
 
-    public func checkPluginUpdates(plugin: String, baseVersion: String, includeChannels: Bool) async throws -> PluginUpdateInfo {
+    /// What mise itself resolves for a request such as `node` or `node@24`; nil when it has nothing.
+    func latest(_ request: String) async throws -> String? {
+        Parsers.trimmedLines(try await runOK(["latest", request], fallback: "failed to resolve the latest \(request)").stdout).last
+    }
+
+    /// One remote listing, then mise's latest for every installed line and for the tool overall.
+    /// Any failed query becomes the row's error: a tool is never reported up to date on partial answers.
+    public func checkPluginUpdates(
+        plugin: String, baseVersion: String, lines: [String], includeChannels: Bool
+    ) async throws -> PluginUpdateInfo {
         let remote = try await runner.runMise(["ls-remote", plugin, "--json"])
         guard remote.exitCode == 0 else {
             return PluginUpdateInfo(
                 plugin: plugin, baseVersion: baseVersion,
                 error: Self.errOr(remote.stderr, "failed to fetch remote versions for \(plugin)"))
         }
-        return UpdatePlanner.plan(plugin: plugin, baseVersion: baseVersion, includeChannels: includeChannels, remoteStdout: remote.stdout)
+        do {
+            var lineLatest: [String: String] = [:]
+            for line in lines { lineLatest[line] = try await latest("\(plugin)@\(line)") }
+            return UpdatePlanner.plan(
+                plugin: plugin, baseVersion: baseVersion, includeChannels: includeChannels, remoteStdout: remote.stdout,
+                lineLatest: lineLatest, releaseLatest: try await latest(plugin))
+        } catch let error as MiseError {
+            return PluginUpdateInfo(plugin: plugin, baseVersion: baseVersion, error: error.message)
+        }
     }
 
     func toolCommand(_ args: [String], plugin: String, version: String, fallback: String) async throws -> UpdateResult {

@@ -28,7 +28,7 @@ public struct PluginUpdateInfo: Codable, Equatable, Sendable {
     public var plugin: String
     public var baseVersion: String
     public var sameMajorLatest: String?
-    public var latestByMajor: [String: String]
+    public var latestByLine: [String: String]
     public var releaseLatest: String?
     public var overallLatest: String?
     public var checkedVersions: Int
@@ -36,13 +36,13 @@ public struct PluginUpdateInfo: Codable, Equatable, Sendable {
 
     public init(
         plugin: String, baseVersion: String, sameMajorLatest: String? = nil,
-        latestByMajor: [String: String] = [:], releaseLatest: String? = nil,
+        latestByLine: [String: String] = [:], releaseLatest: String? = nil,
         overallLatest: String? = nil, checkedVersions: Int = 0, error: String? = nil
     ) {
         self.plugin = plugin
         self.baseVersion = baseVersion
         self.sameMajorLatest = sameMajorLatest
-        self.latestByMajor = latestByMajor
+        self.latestByLine = latestByLine
         self.releaseLatest = releaseLatest
         self.overallLatest = overallLatest
         self.checkedVersions = checkedVersions

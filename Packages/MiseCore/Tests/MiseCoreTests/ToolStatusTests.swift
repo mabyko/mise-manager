@@ -17,13 +17,13 @@ struct ToolStatusTests {
         let multi = with {
             $0.activeGlobalVersion = "26.1.0"
             $0.installedVersions = ["24.19.0", "26.1.0", "24.20.0"]
-            $0.latestByMajor = ["24": "24.21.0", "26": "26.1.0"]
+            $0.latestByLine = ["24": "24.21.0", "26": "26.1.0"]
             $0.sameMajorLatest = "26.1.0"
             $0.releaseLatest = "26.1.0"
         }
         #expect(ToolStatus.installedSeries(multi) == [
-            InstalledSeries(major: 26, current: "26.1.0", latest: "26.1.0", update: nil),
-            InstalledSeries(major: 24, current: "24.20.0", latest: "24.21.0", update: "24.21.0"),
+            InstalledSeries(line: "26", current: "26.1.0", latest: "26.1.0", update: nil),
+            InstalledSeries(line: "24", current: "24.20.0", latest: "24.21.0", update: "24.21.0"),
         ])
         #expect(ToolStatus.update(multi) == nil)
         #expect(ToolStatus.hasUpdates(multi))
@@ -34,9 +34,67 @@ struct ToolStatusTests {
         var failed = multi
         failed.status = .error
         #expect(!ToolStatus.hasUpdates(failed))
-        var prerelease = multi
-        prerelease.latestByMajor = ["24": "24.22.0-rc.1"]
-        #expect(!ToolStatus.hasUpdates(prerelease))
+        // mise's latest can trail what is installed (a backend's own idea of latest): never a downgrade.
+        var older = multi
+        older.latestByLine = ["24": "24.19.5", "26": "26.0.9"]
+        #expect(!ToolStatus.hasUpdates(older))
+    }
+
+    @Test func vendorLinesGetTheirOwnUpdateButNoNewMajorOffer() {
+        let java = PluginRow(
+            name: "java", installedVersions: ["temurin-25.0.5+8.0.LTS", "temurin-21.0.12+101.0.LTS", "temurin-21.0.11+9.0.LTS"],
+            latestByLine: ["temurin-25": "temurin-25.0.5+8.0.LTS", "temurin-21": "temurin-21.0.13+9.0.LTS"],
+            sameMajorLatest: "temurin-25.0.5+8.0.LTS", releaseLatest: "27.0.1+1", status: .done)
+        #expect(ToolStatus.installedSeries(java) == [
+            InstalledSeries(line: "temurin-25", current: "temurin-25.0.5+8.0.LTS", latest: "temurin-25.0.5+8.0.LTS", update: nil),
+            InstalledSeries(line: "temurin-21", current: "temurin-21.0.12+101.0.LTS", latest: "temurin-21.0.13+9.0.LTS", update: "temurin-21.0.13+9.0.LTS"),
+        ])
+        // The tool's overall latest is another vendor's build, so it is never offered as a new major.
+        #expect(ToolStatus.update(java) == nil)
+        #expect(ToolStatus.label(java) == Strings.ToolStatus.updateAvailable)
+        #expect(ToolStatus.cleanupCandidates(java) == ["temurin-21.0.11+9.0.LTS"])
+        var current = java
+        current.latestByLine["temurin-21"] = "temurin-21.0.12+101.0.LTS"
+        #expect(ToolStatus.label(current) == Strings.ToolStatus.latestStable)
+        // The inspector never offers the overall latest to a vendor line: 27.0.1+1 is another vendor's build.
+        #expect(ToolStatus.otherCandidates(java, includePrerelease: true).isEmpty)
+    }
+
+    @Test func aLineMiseHasNoAnswerForIsNotReportedAsUpToDate() {
+        // `mise latest java@adoptopenjdk-11` prints nothing although the tool itself has a latest.
+        let java = PluginRow(
+            name: "java", activeGlobalVersion: "adoptopenjdk-11.0.11+9", installedVersions: ["adoptopenjdk-11.0.11+9"],
+            releaseLatest: "27.0.1+1", status: .done)
+        #expect(ToolStatus.installedSeries(java) == [InstalledSeries(line: "adoptopenjdk-11", current: "adoptopenjdk-11.0.11+9", latest: nil, update: nil)])
+        #expect(ToolStatus.label(java) == Strings.ToolStatus.noComparison)
+        #expect(!ToolStatus.hasUpdates(java))
+    }
+
+    @Test func runtimesWithoutALineAreNeitherGroupedNorOfferedForCleanUp() {
+        let python = PluginRow(
+            name: "python", activeGlobalVersion: "3.12.8", installedVersions: ["3.12.8", "pypy3.11-7.3.19", "pypy3.10-7.3.19"],
+            unusedVersions: ["pypy3.10-7.3.19", "pypy3.11-7.3.19"], status: .done)
+        #expect(ToolStatus.versionGroups(python).map(\.line) == ["3", nil])
+        #expect(ToolStatus.cleanupCandidates(python).isEmpty)
+        #expect(ToolStatus.installedSeries(python).map(\.line) == ["3"])
+    }
+
+    @Test func theInspectorNeverOffersADowngradeOrTheGlobalVersion() {
+        // pnpm: mise's overall latest (12.18.0) trails the installed global 12.19.0.
+        let pnpm = PluginRow(
+            name: "pnpm", activeGlobalVersion: "12.19.0", installedVersions: ["12.19.0"],
+            latestByLine: ["12": "12.19.0"], sameMajorLatest: "12.19.0", releaseLatest: "12.18.0", overallLatest: "13.0.0-rc.1", status: .done)
+        #expect(ToolStatus.otherCandidates(pnpm, includePrerelease: false).isEmpty)
+        #expect(ToolStatus.otherCandidates(pnpm, includePrerelease: true) == ["13.0.0-rc.1"])
+        #expect(ToolStatus.otherCandidates(node, includePrerelease: true) == ["22.15.0", "24.0.0", "25.0.0-rc.1"])
+        // A channel has nothing to order against, so its candidates are listed as they are.
+        let flutter = PluginRow(name: "flutter", activeGlobalVersion: "stable", installedVersions: ["stable"], releaseLatest: "3.50.0-stable", status: .done)
+        #expect(ToolStatus.otherCandidates(flutter, includePrerelease: false) == ["3.50.0-stable"])
+        // A runtime without a line is not a channel: CPython or Temurin is never suggested to it.
+        let pypy = PluginRow(name: "python", activeGlobalVersion: "pypy3.10-7.3.19", installedVersions: ["pypy3.10-7.3.19"], releaseLatest: "3.15.2", status: .done)
+        let semeru = PluginRow(name: "java", installedVersions: ["semeru-openj9-17.0.21.0"], releaseLatest: "27.0.1+1", overallLatest: "28-ea", status: .done)
+        #expect(ToolStatus.otherCandidates(pypy, includePrerelease: true).isEmpty)
+        #expect(ToolStatus.otherCandidates(semeru, includePrerelease: true).isEmpty)
     }
 
     @Test func stableUpdatePlanSeparatesSameMajorAndMajorUpgradesUsingTheInstalledFallback() {
@@ -74,10 +132,10 @@ struct ToolStatusTests {
             InstalledVersion(version: version, isGlobal: global, isSuperseded: superseded, isUnused: unused)
         }
         #expect(ToolStatus.versionGroups(multi) == [
-            InstalledVersionGroup(major: 26, versions: [v("26.13.1", global: true, unused: false)]),
-            InstalledVersionGroup(major: 24, versions: [v("24.22.3", unused: false), v("24.22.2", superseded: true, unused: true)]),
-            InstalledVersionGroup(major: 22, versions: [v("22.23.5", unused: true)]),
-            InstalledVersionGroup(major: nil, versions: [v("lts", unused: false)]),
+            InstalledVersionGroup(line: "26", versions: [v("26.13.1", global: true, unused: false)]),
+            InstalledVersionGroup(line: "24", versions: [v("24.22.3", unused: false), v("24.22.2", superseded: true, unused: true)]),
+            InstalledVersionGroup(line: "22", versions: [v("22.23.5", unused: true)]),
+            InstalledVersionGroup(line: nil, versions: [v("lts", unused: false)]),
         ])
         #expect(ToolStatus.cleanupCandidates(multi) == ["24.22.2"])
         #expect(ToolStatus.isUnused(multi, ["24.22.2", "22.23.5"]) == true)

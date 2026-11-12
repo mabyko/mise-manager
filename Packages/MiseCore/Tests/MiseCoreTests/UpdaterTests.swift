@@ -9,6 +9,7 @@ import Testing
         // What mise reports after an action: the new version landed on disk.
         runner.installed([("node", "22.14.0", ["22.15.0", "22.14.0"])])
         runner.reply("ls-remote node --json", #"["22.15.0","24.0.0","22.14.0"]"#)
+        runner.latest("node", ["22": "22.15.0"], overall: "24.0.0")
         let state = makeState(runner)
         state.plugins = [row()]
         return (runner, state)
@@ -25,7 +26,7 @@ import Testing
     @Test func updatingAnOlderInstalledMajorPreservesTheGlobalVersionEvenWithAutomaticSwitching() async {
         let (runner, state) = setup()
         state.settings.switchGlobalAfterUpdate = true
-        state.plugins = [row { $0.activeGlobalVersion = "26.0.0"; $0.installedVersions = ["26.0.0", "24.20.0"]; $0.latestByMajor = ["24": "24.21.0", "26": "26.1.0"] }]
+        state.plugins = [row { $0.activeGlobalVersion = "26.0.0"; $0.installedVersions = ["26.0.0", "24.20.0"]; $0.latestByLine = ["24": "24.21.0", "26": "26.1.0"] }]
         runner.installed([("node", "26.0.0", ["26.0.0", "24.21.0", "24.20.0"])])
         await state.updateInstalledSeries("node", "24.21.0")
         #expect(runner.count("install -y node@24.21.0") == 1)
@@ -39,10 +40,10 @@ import Testing
 
     @Test func seriesUpdatesInstallOnlyByDefaultAndSwitchTheActiveMajorOnlyWhenEnabled() async {
         let (runner, state) = setup()
-        state.plugins = [row { $0.latestByMajor = ["22": "22.15.0"] }]
+        state.plugins = [row { $0.latestByLine = ["22": "22.15.0"] }]
         await state.updateInstalledSeries("node", "22.15.0")
         #expect(!runner.called(prefix: "use"))
-        state.plugins = [row { $0.latestByMajor = ["22": "22.15.0"] }]
+        state.plugins = [row { $0.latestByLine = ["22": "22.15.0"] }]
         state.settings.switchGlobalAfterUpdate = true
         await state.updateInstalledSeries("node", "22.15.0")
         #expect(runner.count("use -g -y node@22.15.0") == 1)
@@ -112,13 +113,47 @@ import Testing
         #expect(!state.busy)
     }
 
+    @Test func installingIntoANewLineReChecksSoThatLineGetsItsAnswer() async {
+        let (runner, state) = setup()
+        runner.installed([("node", "22.14.0", ["24.0.0", "22.14.0"])])
+        runner.latest("node", ["22": "22.15.0", "24": "24.1.0"], overall: "24.1.0")
+        await state.installVersion("node", "24.0.0")
+        #expect(runner.count("ls-remote node --json") == 1)
+        let node = state.plugin("node")!
+        #expect(node.status == .done)
+        #expect(node.latestByLine == ["22": "22.15.0", "24": "24.1.0"])
+        #expect(state.updateSummary.uncomparable.isEmpty)
+
+        // Another version in a line that already existed, or removing a line, reuses the answers.
+        runner.installed([("node", "22.14.0", ["24.1.0", "24.0.0", "22.14.0"])])
+        await state.installVersion("node", "24.1.0")
+        runner.installed([("node", "22.14.0", ["22.14.0"])])
+        await state.deleteInstalledVersions("node", ["24.1.0", "24.0.0"])
+        #expect(runner.count("ls-remote node --json") == 1)
+    }
+
+    @Test func aSeriesUpdateSwitchesTheGlobalVersionOnlyWithinItsOwnLine() {
+        let (_, state) = setup()
+        state.settings.switchGlobalAfterUpdate = true
+        let java = PluginRow(name: "java", activeGlobalVersion: "temurin-21.0.12+101.0.LTS", installedVersions: ["temurin-21.0.12+101.0.LTS"])
+        #expect(state.seriesUpdateSwitchesGlobal(java, "temurin-21.0.13+9.0.LTS"))
+        #expect(!state.seriesUpdateSwitchesGlobal(java, "temurin-25.0.5+8.0.LTS"))
+        #expect(!state.seriesUpdateSwitchesGlobal(row(), "24.0.0"))
+        // A global version without a line never matches, even against another lineless version.
+        let pypy = PluginRow(name: "python", activeGlobalVersion: "pypy3.10-7.3.19", installedVersions: ["pypy3.10-7.3.19"])
+        #expect(!state.seriesUpdateSwitchesGlobal(pypy, "pypy3.12-8.0.1"))
+    }
+
     @Test func switchingGlobalToAnotherMajorReChecksCandidatesForTheNewBase() async {
         let (runner, state) = setup()
         state.plugins = [row { $0.installedVersions = ["22.14.0", "20.19.0"] }]
         runner.installed([("node", "20.19.0", ["22.14.0", "20.19.0"])])
         runner.reply("ls-remote node --json", #"["20.19.0","20.20.0","22.14.0","22.15.0","24.0.0"]"#)
+        runner.latest("node", ["20": "20.20.0", "22": "22.15.0"], overall: "24.0.0")
         await state.useInstalledVersion("node", "20.19.0")
         #expect(runner.count("ls-remote node --json") == 1)
+        // One query per installed line and one for the tool: checks only ever ask, never install.
+        #expect(runner.calls.filter { $0.first == "latest" } == [["latest", "node@20"], ["latest", "node@22"], ["latest", "node"]])
         let node = state.plugin("node")!
         #expect(node.status == .done)
         #expect(node.activeGlobalVersion == "20.19.0")
@@ -271,7 +306,7 @@ import Testing
         let (runner, state) = setup()
         state.plugins += ["bun", "python"].map {
             PluginRow(name: $0, activeGlobalVersion: "1.0.0", installedVersions: ["1.0.0"],
-                      latestByMajor: ["1": "1.1.0"], status: .done)
+                      latestByLine: ["1": "1.1.0"], status: .done)
         }
         runner.installed([("node", "22.14.0", ["22.14.0", "22.15.0"]),
                           ("bun", "1.0.0", ["1.0.0"]), ("python", "1.0.0", ["1.0.0", "1.1.0"])])
