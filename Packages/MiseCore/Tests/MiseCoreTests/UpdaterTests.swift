@@ -113,6 +113,25 @@ import Testing
         #expect(!state.busy)
     }
 
+    @Test func installingIntoANewLineReChecksSoThatLineGetsItsAnswer() async {
+        let (runner, state) = setup()
+        runner.installed([("node", "22.14.0", ["24.0.0", "22.14.0"])])
+        runner.latest("node", ["22": "22.15.0", "24": "24.1.0"], overall: "24.1.0")
+        await state.installVersion("node", "24.0.0")
+        #expect(runner.count("ls-remote node --json") == 1)
+        let node = state.plugin("node")!
+        #expect(node.status == .done)
+        #expect(node.latestByLine == ["22": "22.15.0", "24": "24.1.0"])
+        #expect(state.updateSummary.uncomparable.isEmpty)
+
+        // Another version in a line that already existed, or removing a line, reuses the answers.
+        runner.installed([("node", "22.14.0", ["24.1.0", "24.0.0", "22.14.0"])])
+        await state.installVersion("node", "24.1.0")
+        runner.installed([("node", "22.14.0", ["22.14.0"])])
+        await state.deleteInstalledVersions("node", ["24.1.0", "24.0.0"])
+        #expect(runner.count("ls-remote node --json") == 1)
+    }
+
     @Test func aSeriesUpdateSwitchesTheGlobalVersionOnlyWithinItsOwnLine() {
         let (_, state) = setup()
         state.settings.switchGlobalAfterUpdate = true

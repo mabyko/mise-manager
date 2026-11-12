@@ -126,11 +126,13 @@ extension AppState {
 
     // MARK: Version actions
 
-    /// Candidates are only meaningful for the base they were checked against. After a successful
-    /// mutation a verified row whose base did not move stays done; anything else is re-checked so a
-    /// cached 22.15 is never offered as a same-major update for 20.x.
+    /// Candidates are only meaningful for the base and the lines they were checked against. After a
+    /// successful mutation a verified row whose base did not move and that gained no line stays done;
+    /// anything else is re-checked, so a cached 22.15 is never offered as a same-major update for
+    /// 20.x and a newly installed line is not left without mise's answer.
     func settlePlugin(before: PluginRow, row: PluginRow) async {
-        if before.status == .done && before.baseVersion == row.baseVersion {
+        func lines(_ plugin: PluginRow) -> Set<String> { Set(plugin.installedVersions.compactMap(Version.line(of:))) }
+        if before.status == .done && before.baseVersion == row.baseVersion && lines(row).isSubset(of: lines(before)) {
             updatePlugin(row.name) { $0.status = .done; $0.error = nil }
         } else {
             await checkPlugin(row)
