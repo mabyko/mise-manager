@@ -113,13 +113,24 @@ public struct Mise: Sendable {
             try await runOK(["ls", "--global", "--json"], fallback: "cannot read global tool versions").stdout)
     }
 
+    /// Installed versions that no tracked config or running process selects. Advisory only, so a
+    /// mise that cannot answer yields nil instead of failing the tool list.
+    func prunableVersions() async -> [String: [String]]? {
+        guard let result = try? await runner.runMise(["ls", "--prunable", "--json"]), result.exitCode == 0 else { return nil }
+        return try? Parsers.parseInstalledPlugins(result.stdout)
+    }
+
     public func installedPlugins() async throws -> [PluginSummary] {
-        let installed = try Parsers.parseInstalledPlugins(
-            try await runOK(["ls", "--installed", "--json"], fallback: "failed to run 'mise ls --installed --json'").stdout)
+        let stdout = try await runOK(["ls", "--installed", "--json"], fallback: "failed to run 'mise ls --installed --json'").stdout
+        let installed = try Parsers.parseInstalledPlugins(stdout)
+        let paths = Parsers.parseInstallPaths(stdout)
         let globals = try await globalPlugins()
+        let prunable = await prunableVersions()
         var summaries = installed.compactMap { plugin, versions -> PluginSummary? in
             versions.isEmpty ? nil
-                : PluginSummary(name: plugin, activeGlobalVersion: globals[plugin]?.first, installedVersions: versions)
+                : PluginSummary(
+                    name: plugin, activeGlobalVersion: globals[plugin]?.first, installedVersions: versions,
+                    unusedVersions: prunable.map { $0[plugin] ?? [] }, installPaths: paths[plugin] ?? [:])
         }
         for (plugin, versions) in globals where installed[plugin]?.isEmpty != false && !versions.isEmpty {
             summaries.append(PluginSummary(name: plugin, activeGlobalVersion: versions.first, installedVersions: []))

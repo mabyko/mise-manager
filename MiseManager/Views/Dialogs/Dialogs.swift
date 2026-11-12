@@ -19,14 +19,26 @@ private struct AppDialogs: ViewModifier {
                 titleVisibility: .visible,
                 presenting: state.pendingDelete
             ) { pending in
-                Button("삭제", role: .destructive) { Task { await state.deleteInstalledVersion(pending.pluginName, pending.version) } }.disabled(state.toolActionsDisabled(pending.pluginName))
+                Button(pending.versions.count == 1 ? "삭제" : "\(pending.versions.count)개 삭제", role: .destructive) {
+                    Task { await state.deleteInstalledVersions(pending.pluginName, pending.versions, cleanup: pending.cleanup) }
+                }
+                .disabled(state.toolActionsDisabled(pending.pluginName))
                 Button("취소", role: .cancel) { state.pendingDelete = nil }
             } message: { pending in
-                Text("\(pending.pluginName)@\(pending.version)\n이 버전을 로컬에서 제거합니다. 프로젝트에서 사용 중인지 확인해 주세요. 다시 사용하려면 재설치해야 합니다.")
+                Text(deleteMessage(pending))
             }
             .sheet(isPresented: presented(\.pendingMajorUpdate)) { MajorUpdateSheet(state: state) }
             .sheet(isPresented: $state.pendingMiseUpdateConfirm) { MiseUpdateSheet(state: state) }
             .sheet(isPresented: presented(\.pendingPluginUrlDialog)) { PluginUrlSheet(state: state) }
+    }
+
+    /// Which versions go, what mise knows about their use, and how much disk comes back.
+    private func deleteMessage(_ pending: PendingDelete) -> String {
+        let tool = state.plugin(pending.pluginName)
+        var lines = ["\(pending.pluginName) " + pending.versions.joined(separator: ", ")]
+        lines.append(DeleteCopy.note(tool.flatMap { ToolStatus.isUnused($0, pending.versions) }) + " 다시 사용하려면 재설치해야 합니다.")
+        if let size = tool.flatMap({ state.diskSize($0, pending.versions) }) { lines.append("\(DeleteCopy.size(size)) 확보") }
+        return lines.joined(separator: "\n")
     }
 
     private func presented<T>(_ keyPath: ReferenceWritableKeyPath<AppState, T?>) -> Binding<Bool> {

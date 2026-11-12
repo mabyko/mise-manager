@@ -37,6 +37,31 @@ struct MiseServiceTests {
         ])
     }
 
+    @Test func installedPluginsCarryInstallPathsAndWhatMiseReportsAsUnused() async throws {
+        let runner = FakeRunner([
+            "ls --installed --json": FakeRunner.ok(#"{"node":[{"version":"24.22.3","install_path":"/i/node/24.22.3"},{"version":"24.22.2","install_path":"/i/node/24.22.2"}],"bun":[{"version":"1.4.4"}]}"#),
+            "ls --global --json": FakeRunner.ok(#"{"node":[{"version":"24.22.3"}]}"#),
+            "ls --prunable --json": FakeRunner.ok(#"{"node":[{"version":"24.22.2"}]}"#),
+        ])
+        #expect(try await Mise(runner: runner).installedPlugins() == [
+            PluginSummary(name: "bun", installedVersions: ["1.4.4"], unusedVersions: []),
+            PluginSummary(name: "node", activeGlobalVersion: "24.22.3", installedVersions: ["24.22.3", "24.22.2"],
+                          unusedVersions: ["24.22.2"], installPaths: ["24.22.3": "/i/node/24.22.3", "24.22.2": "/i/node/24.22.2"]),
+        ])
+        // A mise that cannot list prunable versions leaves usage unknown instead of failing the list.
+        runner.fail("ls --prunable --json", "unexpected argument '--prunable'")
+        #expect(try await Mise(runner: runner).installedPlugins().map(\.unusedVersions) == [nil, nil])
+    }
+
+    @Test func diskUsageSumsFilesAndReportsNothingForAMissingDirectory() throws {
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent("mise-manager-tests-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: dir.appendingPathComponent("bin"), withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: dir) }
+        try Data(count: 100_000).write(to: dir.appendingPathComponent("bin/node"))
+        #expect((DiskUsage.size(of: dir.path) ?? 0) >= 100_000)
+        #expect(DiskUsage.size(of: dir.path + "-missing") == nil)
+    }
+
     @Test func nonZeroExitUsesStderrThenFallback() async throws {
         let runner = FakeRunner(["plugins ls --core": CommandResult(stdout: "", stderr: "", exitCode: 2)])
         await #expect(throws: MiseError("failed to run 'mise plugins ls --core'")) {

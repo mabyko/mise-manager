@@ -15,8 +15,69 @@ public struct ToolUpdate: Equatable, Sendable {
     public init(primary: String?, major: String?) { self.primary = primary; self.major = major }
 }
 
+/// One installed version with what tells it apart from its siblings.
+public struct InstalledVersion: Equatable, Sendable, Identifiable {
+    public let version: String
+    public let isGlobal: Bool
+    /// A newer version of the same major is installed, so this one is a clean-up candidate.
+    public let isSuperseded: Bool
+    /// What mise reports: true = nothing tracked selects it, false = in use, nil = unknown.
+    public let isUnused: Bool?
+    public var id: String { version }
+    public init(version: String, isGlobal: Bool, isSuperseded: Bool, isUnused: Bool?) {
+        self.version = version; self.isGlobal = isGlobal; self.isSuperseded = isSuperseded; self.isUnused = isUnused
+    }
+}
+
+/// Installed versions of one major line; `major` is nil for channel or vendor-prefixed versions.
+public struct InstalledVersionGroup: Equatable, Sendable, Identifiable {
+    public let major: UInt64?
+    public let versions: [InstalledVersion]
+    public var id: String { major.map(String.init) ?? "other" }
+    /// Several versions of one numeric major: only then do "newest of the line" and "superseded" mean anything.
+    public var hasSiblings: Bool { major != nil && versions.count > 1 }
+    public init(major: UInt64?, versions: [InstalledVersion]) { self.major = major; self.versions = versions }
+}
+
 /// Port of src/mainview/core/toolStatus.ts.
 public enum ToolStatus {
+    /// Installed versions by major, newest major first and newest version first within it;
+    /// versions without a numeric major come last.
+    public static func versionGroups(_ plugin: PluginRow) -> [InstalledVersionGroup] {
+        var byMajor: [UInt64?: [String]] = [:]
+        for version in plugin.installedVersions { byMajor[Version.major(of: version), default: []].append(version) }
+        let majors = byMajor.keys.sorted { a, b in
+            switch (a, b) {
+            case let (x?, y?): x > y
+            case (nil, _): false
+            case (_, nil): true
+            }
+        }
+        return majors.map { major in
+            let versions = byMajor[major]!.sorted { Version.compare($0, $1) == .orderedDescending }
+            return InstalledVersionGroup(major: major, versions: versions.enumerated().map { index, version in
+                InstalledVersion(
+                    version: version, isGlobal: version == plugin.activeGlobalVersion,
+                    isSuperseded: major != nil && index > 0,
+                    isUnused: version == plugin.activeGlobalVersion ? false : plugin.unusedVersions.map { $0.contains(version) })
+            })
+        }
+    }
+
+    /// Superseded versions that are safe to offer as one clean-up: never the global selection, and
+    /// never a version mise reports as in use.
+    public static func cleanupCandidates(_ plugin: PluginRow) -> [String] {
+        versionGroups(plugin).flatMap(\.versions)
+            .filter { $0.isSuperseded && !$0.isGlobal && $0.isUnused != false }
+            .map(\.version)
+    }
+
+    /// Usage of several versions as one answer: false if any is in use, true if all are unused, else unknown.
+    public static func isUnused(_ plugin: PluginRow, _ versions: [String]) -> Bool? {
+        guard let unused = plugin.unusedVersions else { return nil }
+        return versions.allSatisfy { unused.contains($0) && $0 != plugin.activeGlobalVersion }
+    }
+
     public static func installedSeries(_ plugin: PluginRow) -> [InstalledSeries] {
         var newest: [UInt64: String] = [:]
         for version in plugin.installedVersions {

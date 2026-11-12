@@ -59,6 +59,8 @@ struct ToolDetail: View {
 
     private var label: String { ToolStatus.label(tool) }
     private var series: [InstalledSeries] { ToolStatus.installedSeries(tool) }
+    private var groups: [InstalledVersionGroup] { ToolStatus.versionGroups(tool) }
+    private var cleanup: [String] { ToolStatus.cleanupCandidates(tool) }
     private var update: ToolUpdate? { ToolStatus.update(tool) }
     private var disabled: Bool { state.toolActionsDisabled(tool.name) }
     private var candidates: [String] {
@@ -77,27 +79,28 @@ struct ToolDetail: View {
 
         Card {
             Eyebrow(text: "현재 전역 버전")
-            HStack(spacing: 10) {
-                Text(tool.activeGlobalVersion ?? "미선택").font(.title3.monospaced().bold())
-                if tool.activeGlobalVersion != nil { Pill(text: "사용 중", tint: .accentColor) }
-            }
+            Text(tool.activeGlobalVersion ?? "미선택").font(.title3.monospaced().bold())
         }
 
         statusNote
 
-        SectionLabel(text: "버전 계열")
-        Text("설치된 계열마다 새 버전을 확인합니다. 이전 버전은 그대로 남습니다.").foregroundStyle(.secondary)
-        if series.isEmpty {
-            Text("숫자 버전이 없어 major 계열을 비교할 수 없습니다.").foregroundStyle(.secondary)
-        } else {
-            ForEach(series, id: \.major) { seriesCard($0) }
+        HStack(alignment: .firstTextBaseline) {
+            SectionLabel(text: "설치된 버전", detail: "· \(tool.installedVersions.count)")
+            Spacer()
+            if !cleanup.isEmpty {
+                Button("구버전 \(cleanup.count)개 정리…") { state.requestCleanup(tool.name) }
+                    .controlSize(.small).disabled(disabled)
+                    .help("같은 계열에 더 새 버전이 설치된 버전을 한 번에 삭제합니다. 전역 버전과 사용 중으로 확인된 버전은 제외합니다")
+            }
         }
-
-        SectionLabel(text: "설치된 버전", detail: "· \(tool.installedVersions.count)")
+        Text(series.isEmpty
+             ? "숫자 버전이 없어 major 계열을 비교할 수 없습니다."
+             : "major 계열마다 새 버전을 확인합니다. 같은 계열에 더 새 버전이 설치된 버전은 구버전으로 표시합니다.")
+            .foregroundStyle(.secondary)
         if tool.installedVersions.isEmpty {
             Text("설치된 버전이 없습니다.").foregroundStyle(.secondary)
         } else {
-            ForEach(tool.installedVersions, id: \.self) { installedRow($0) }
+            ForEach(groups) { groupCard($0) }
         }
 
         if let major = update?.major { majorNotice(major) }
@@ -138,50 +141,63 @@ struct ToolDetail: View {
         }
     }
 
-    private func seriesCard(_ series: InstalledSeries) -> some View {
-        let switches = series.update.map { state.seriesUpdateSwitchesGlobal(tool, $0) } ?? false
-        return Card {
-            HStack(spacing: 14) {
-                Text("\(series.major).x").font(.headline.monospaced()).frame(width: 56, alignment: .leading)
-                VStack(alignment: .leading, spacing: 3) {
-                    HStack(spacing: 6) {
-                        Text(series.current)
-                        if let update = series.update {
-                            Image(systemName: "arrow.right").foregroundStyle(.secondary)
-                            Text(update).bold()
-                        }
-                    }
-                    .font(.body.monospaced())
-                    Text(series.update != nil
-                         ? (switches ? "설치 후 전역 기본값 전환" : "설치만 · 전역 기본값 유지")
-                         : (series.latest != nil ? "확인된 업데이트 없음" : label))
-                        .font(.caption).foregroundStyle(.secondary)
-                }
-                Spacer()
-                if let update = series.update {
-                    Button(switches ? "설치·전역 전환" : "설치") { Task { await state.updateInstalledSeries(tool.name, update) } }
-                        .disabled(disabled)
-                }
+    /// One major line: its update state on top, then every installed version of that line.
+    private func groupCard(_ group: InstalledVersionGroup) -> some View {
+        Card {
+            if let series = series.first(where: { $0.major == group.major }) {
+                seriesHeader(series)
+            } else if groups.count > 1 {
+                Text("기타 버전").font(.headline)
+            }
+            ForEach(group.versions) { version in
+                Divider()
+                installedRow(version, hasSiblings: group.hasSiblings)
             }
         }
     }
 
-    @ViewBuilder private func installedRow(_ version: String) -> some View {
-        HStack {
-            Text(version).font(.body.monospaced())
+    private func seriesHeader(_ series: InstalledSeries) -> some View {
+        let switches = series.update.map { state.seriesUpdateSwitchesGlobal(tool, $0) } ?? false
+        return HStack(spacing: 14) {
+            Text("\(series.major).x").font(.headline.monospaced()).frame(width: 56, alignment: .leading)
+            VStack(alignment: .leading, spacing: 3) {
+                if let update = series.update {
+                    HStack(spacing: 6) {
+                        Text(series.current)
+                        Image(systemName: "arrow.right").foregroundStyle(.secondary)
+                        Text(update).bold()
+                    }
+                    .font(.body.monospaced())
+                }
+                Text(series.update != nil
+                     ? (switches ? "설치 후 전역 기본값 전환" : "설치만 · 전역 기본값 유지")
+                     : (series.latest != nil ? "확인된 업데이트 없음" : label))
+                    .font(.caption).foregroundStyle(.secondary)
+            }
             Spacer()
-            if version == tool.activeGlobalVersion {
-                Pill(text: "사용 중 · 삭제 불가")
-            } else {
-                Button("전역으로 사용") { Task { await state.useInstalledVersion(tool.name, version) } }.disabled(disabled)
-                Button("삭제…", role: .destructive) { state.requestDelete(tool.name, version) }
+            if let update = series.update {
+                Button(switches ? "설치·전역 전환" : "설치") { Task { await state.updateInstalledSeries(tool.name, update) } }
                     .disabled(disabled)
-                    .accessibilityLabel("\(tool.name) \(version) 삭제")
+            }
+        }
+    }
+
+    private func installedRow(_ item: InstalledVersion, hasSiblings: Bool) -> some View {
+        HStack(spacing: 10) {
+            Text(item.version).font(.body.monospaced()).lineLimit(1).truncationMode(.middle)
+            VersionBadges(version: item, hasSiblings: hasSiblings)
+            Spacer()
+            if let size = state.diskSize(tool, [item.version]) {
+                Text(DeleteCopy.size(size)).font(.caption.monospacedDigit()).foregroundStyle(.secondary)
+            }
+            if !item.isGlobal {
+                Button("전역으로 사용") { Task { await state.useInstalledVersion(tool.name, item.version) } }.disabled(disabled)
+                Button("삭제…", role: .destructive) { state.requestDelete(tool.name, item.version) }
+                    .disabled(disabled)
+                    .accessibilityLabel("\(tool.name) \(item.version) 삭제")
             }
         }
         .controlSize(.small)
-        .padding(.vertical, 4)
-        Divider()
     }
 
     private func majorNotice(_ major: String) -> some View {

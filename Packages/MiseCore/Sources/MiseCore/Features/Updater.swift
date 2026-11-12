@@ -10,6 +10,7 @@ extension AppState {
         defer { toolsLoaded = true }
         do {
             plugins = try await mise.installedPlugins().map(PluginRow.init)
+            refreshVersionSizes()
             addLog("Loaded \(plugins.count) plugin(s).")
             setBusy(false)
             return true
@@ -31,7 +32,10 @@ extension AppState {
         updatePlugin(name) {
             $0.activeGlobalVersion = found.activeGlobalVersion
             $0.installedVersions = found.installedVersions
+            $0.unusedVersions = found.unusedVersions
+            $0.installPaths = found.installPaths
         }
+        refreshVersionSizes()
         return plugin(name)
     }
 
@@ -136,7 +140,7 @@ extension AppState {
     /// or not the command succeeded, so whatever mise actually did is what the table shows.
     func runToolAction(
         _ name: String, status: PluginStatus, label: String,
-        action: () async throws -> Void, okLog: String, failLog: () -> String
+        action: () async throws -> Void, okLog: @autoclosure () -> String, failLog: () -> String
     ) async {
         guard !toolActionsDisabled(name), let before = plugin(name), !Task.isCancelled else { return }
         setBusy(false)
@@ -157,7 +161,7 @@ extension AppState {
             addLog("\(name): \(failLog()) - \(error.localizedDescription)")
             return
         }
-        addLog("\(name): \(okLog)")
+        addLog("\(name): \(okLog())")
         do {
             if let row = try await refreshPlugin(name) { await settlePlugin(before: before, row: row) }
         } catch {
@@ -207,15 +211,35 @@ extension AppState {
     }
 
     public func deleteInstalledVersion(_ name: String, _ version: String) async {
-        guard !toolActionsDisabled(name), let plugin = plugin(name) else { return }
-        guard plugin.activeGlobalVersion != version else {
-            addLog("\(name): cannot delete active global version \(version).")
+        await deleteInstalledVersions(name, [version])
+    }
+
+    /// Deletes in order and stops at the first failure; the row is re-read either way.
+    /// A clean-up was confirmed against an earlier read, so it re-reads mise first and deletes only
+    /// the confirmed versions that are still candidates: never one that has since come into use.
+    public func deleteInstalledVersions(_ name: String, _ versions: [String], cleanup: Bool = false) async {
+        guard !toolActionsDisabled(name), let plugin = plugin(name), !versions.isEmpty else { return }
+        if let active = plugin.activeGlobalVersion, versions.contains(active) {
+            addLog("\(name): cannot delete active global version \(active).")
             return
         }
+        var deleted: [String] = []
         await runToolAction(
-            name, status: .deleting, label: Strings.deleting("\(name)@\(version)"),
-            action: { _ = try await mise.deleteVersion(plugin: name, version: version) },
-            okLog: "deleted \(version).", failLog: { "delete failed" })
+            name, status: .deleting,
+            label: versions.count == 1 ? Strings.deleting("\(name)@\(versions[0])") : Strings.deletingVersions(name, versions.count),
+            action: {
+                var targets = versions
+                if cleanup {
+                    let candidates = try await refreshPlugin(name).map(ToolStatus.cleanupCandidates) ?? []
+                    targets = versions.filter(candidates.contains)
+                }
+                for version in targets {
+                    _ = try await mise.deleteVersion(plugin: name, version: version)
+                    deleted.append(version)
+                }
+            },
+            okLog: deleted.isEmpty ? "nothing left to clean up." : "deleted \(deleted.joined(separator: ", ")).",
+            failLog: { deleted.isEmpty ? "delete failed" : "delete failed after removing \(deleted.joined(separator: ", "))" })
     }
 
     /// All tools share the same global config; only this short write step is serialized.
@@ -248,6 +272,13 @@ extension AppState {
 
     public func requestDelete(_ name: String, _ version: String) {
         guard !toolActionsDisabled(name) else { return }
-        pendingDelete = PendingDelete(pluginName: name, version: version)
+        pendingDelete = PendingDelete(pluginName: name, versions: [version])
+    }
+
+    /// Confirms deleting every superseded version of a tool in one step.
+    public func requestCleanup(_ name: String) {
+        guard !toolActionsDisabled(name), let plugin = plugin(name) else { return }
+        let versions = ToolStatus.cleanupCandidates(plugin)
+        if !versions.isEmpty { pendingDelete = PendingDelete(pluginName: name, versions: versions, cleanup: true) }
     }
 }

@@ -6,11 +6,21 @@ public struct PluginSummary: Codable, Equatable, Sendable {
     public var name: String
     public var activeGlobalVersion: String?
     public var installedVersions: [String]
+    /// Installed versions that no tracked config or running process selects (`mise ls --prunable`).
+    /// Nil when this mise could not tell.
+    public var unusedVersions: [String]?
+    /// Version → install directory, for disk usage.
+    public var installPaths: [String: String]
 
-    public init(name: String, activeGlobalVersion: String? = nil, installedVersions: [String] = []) {
+    public init(
+        name: String, activeGlobalVersion: String? = nil, installedVersions: [String] = [],
+        unusedVersions: [String]? = nil, installPaths: [String: String] = [:]
+    ) {
         self.name = name
         self.activeGlobalVersion = activeGlobalVersion
         self.installedVersions = installedVersions
+        self.unusedVersions = unusedVersions
+        self.installPaths = installPaths
     }
 }
 
