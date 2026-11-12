@@ -87,6 +87,8 @@ extension AppDelegate {
             row("go", "1.24.0", ["1.24.0"], ["1": "1.24.0"], "1.24.0", "1.24.0", nil, 130),
             row("ruby", "3.4.2", ["3.4.2"], ["3": "3.4.2"], "3.4.2", "3.4.2", nil, 133),
         ]
+        // What `mise ls --prunable` would report: only the older 24.x patch is unused.
+        for index in state.plugins.indices { state.plugins[index].unusedVersions = index == 0 ? ["24.19.0"] : [] }
         state.toolsLoaded = true
         state.toolsCheckedAt = now
         state.toolsError = nil

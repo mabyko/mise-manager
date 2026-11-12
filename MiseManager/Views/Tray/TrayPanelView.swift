@@ -36,8 +36,16 @@ struct TrayPanelView: View {
             Image("BrandIcon").resizable().frame(width: 18, height: 18)
             Text("Mise Manager").font(.headline)
             Spacer()
-            Button { open(.settings) } label: { Image(systemName: "gearshape") }
-                .buttonStyle(.plain).help("설정 열기").accessibilityLabel("설정 열기")
+            // Quit lives here, away from the footer's "open app" link it used to sit beside.
+            Menu {
+                Button("설정 열기") { open(.settings) }
+                Divider()
+                Button("Mise Manager 종료") { NSApp.terminate(nil) }
+            } label: {
+                Image(systemName: "gearshape")
+            }
+            .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize()
+            .help("설정 및 종료").accessibilityLabel("설정 및 종료")
         }
     }
 
@@ -200,11 +208,24 @@ struct TrayPanelView: View {
     private var footer: some View {
         HStack(spacing: 8) {
             if checking { ProgressView().controlSize(.small) }
-            Text(checking ? state.progressLabel : (state.toolsCheckedAt.map { "\($0) 도구 확인" } ?? "업데이트 확인 전"))
-                .font(.caption).foregroundStyle(.secondary).lineLimit(1)
+            footerStatus.font(.caption).foregroundStyle(.secondary).lineLimit(1)
             Spacer()
-            Button("종료") { NSApp.terminate(nil) }.buttonStyle(.link)
             Button("앱 열기 ↗") { open(.updates) }.buttonStyle(.link)
+        }
+    }
+
+    /// Progress while busy, otherwise how long ago the tools were checked (exact time on hover).
+    @ViewBuilder private var footerStatus: some View {
+        if checking {
+            Text(state.progressLabel)
+        } else if let date = state.toolsCheckedDate {
+            TimelineView(.periodic(from: .now, by: 30)) { context in
+                Text(context.date.timeIntervalSince(date) < 60 ? "방금 확인"
+                     : "\(date.formatted(.relative(presentation: .numeric).locale(Locale(identifier: "ko_KR")))) 확인")
+            }
+            .help(state.toolsCheckedAt ?? "")
+        } else {
+            Text("업데이트 확인 전")
         }
     }
 
@@ -215,29 +236,36 @@ struct TrayPanelView: View {
 }
 
 /// One tool: a summary row, its pending series/major updates with their actions, and on demand the
-/// installed versions with global switching and confirmed deletion.
+/// installed versions by major line with global switching and confirmed deletion.
 private struct TrayToolBlock: View {
     var state: AppState
     let tool: PluginRow
     let updates: [UpdateItem]
     let open: (ActiveTab, String?) -> Void
     @State private var expanded = false
-    @State private var deletingVersion: String?
+    /// Versions awaiting the inline delete confirmation: one row's version, or a whole clean-up.
+    @State private var deleting: [String] = []
 
     private var checking: Bool { state.toolActionsDisabled(tool.name) }
+    private var groups: [InstalledVersionGroup] { ToolStatus.versionGroups(tool) }
+    private var cleanup: [String] { ToolStatus.cleanupCandidates(tool) }
+    private var superseded: Int { groups.flatMap(\.versions).filter(\.isSuperseded).count }
+    /// Re-validated on every render: a version that vanished or became global is never deleted.
+    private var pendingDelete: [String] {
+        deleting.filter { tool.installedVersions.contains($0) && $0 != tool.activeGlobalVersion }
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             Button {
-                deletingVersion = nil
+                deleting = []
                 withAnimation(.easeOut(duration: 0.15)) { expanded.toggle() }
             } label: {
                 HStack(spacing: 10) {
                     ToolGlyph(name: tool.name)
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(tool.name).bold()
-                        Text("전역 \(tool.activeGlobalVersion ?? "미선택") · 설치 \(tool.installedVersions.count)개")
-                            .font(.caption.monospacedDigit()).foregroundStyle(.secondary)
+                        ToolTitle(name: tool.name)
+                        summaryLine
                     }
                     Spacer()
                     status
@@ -257,55 +285,118 @@ private struct TrayToolBlock: View {
                 Text(operation).font(.caption).foregroundStyle(.secondary).padding(.leading, 38)
             }
 
-            if expanded {
-                VStack(alignment: .leading, spacing: 6) {
-                    ForEach(tool.installedVersions, id: \.self) { version in
-                        HStack {
-                            Text(version).font(.callout.monospaced())
-                            Spacer()
-                            if tool.activeGlobalVersion == version {
-                                Text("사용 중").font(.caption).foregroundStyle(.secondary)
-                            } else {
-                                Button("전역으로 사용") { Task { await state.run(.use(name: tool.name, version: version)) } }
-                                    .controlSize(.small).disabled(checking)
-                                Button { deletingVersion = version } label: { Image(systemName: "trash") }
-                                    .controlSize(.small).disabled(checking)
-                                    .help("\(tool.name)@\(version) 삭제")
-                                    .accessibilityLabel("\(tool.name) \(version) 삭제")
-                            }
-                        }
-                    }
-                    if let version = deletingVersion,
-                       tool.installedVersions.contains(version), tool.activeGlobalVersion != version {
-                        deleteConfirmation(version)
-                    }
-                    if tool.installedVersions.isEmpty { Text("설치된 버전이 없습니다.").font(.caption).foregroundStyle(.secondary) }
-                    Button("앱에서 자세히 보기 →") { open(.updater, tool.name) }.buttonStyle(.link).font(.callout)
-                }
-                .padding(.leading, 38)
-            }
+            if expanded { versions }
         }
         .padding(.vertical, 2)
     }
 
-    private func deleteConfirmation(_ version: String) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("\(tool.name)@\(version)을 삭제할까요?").font(.callout.bold())
-            Text("프로젝트에서 사용하는 버전일 수 있습니다.").font(.caption).foregroundStyle(.secondary)
+    private var summaryLine: some View {
+        HStack(spacing: 4) {
+            if let global = tool.activeGlobalVersion {
+                Text("전역 \(global)").lineLimit(1).truncationMode(.middle)
+            } else {
+                Text("전역 미선택").foregroundStyle(.orange)
+            }
+            Text("· 설치 \(tool.installedVersions.count)개")
+            if superseded > 0 { Text("· 구버전 \(superseded)개") }
+        }
+        .font(.caption.monospacedDigit()).foregroundStyle(.secondary)
+    }
+
+    /// The installed versions in their own inset panel, so they never read as the next tool's rows.
+    private var versions: some View {
+        let showSeries = groups.contains { $0.major != nil }
+        return VStack(alignment: .leading, spacing: 8) {
+            if tool.installedVersions.isEmpty {
+                Text("설치된 버전이 없습니다.").font(.caption).foregroundStyle(.secondary)
+            } else if tool.installedVersions.contains(where: { $0 != tool.activeGlobalVersion }) {
+                Text("전역으로 쓸 버전을 선택하세요").font(.caption).foregroundStyle(.secondary)
+            }
+            ForEach(groups) { group in
+                VStack(alignment: .leading, spacing: 4) {
+                    ForEach(Array(group.versions.enumerated()), id: \.element.id) { index, item in
+                        versionRow(
+                            item, series: showSeries ? (index == 0 ? group.major.map { "\($0).x" } ?? "기타" : "") : nil,
+                            hasSiblings: group.hasSiblings)
+                    }
+                }
+            }
+            if !pendingDelete.isEmpty { deleteConfirmation(pendingDelete) }
             HStack {
+                if !cleanup.isEmpty {
+                    Button("구버전 \(cleanup.count)개 정리…") { deleting = cleanup }
+                        .controlSize(.small).disabled(checking)
+                        .help("같은 계열에 더 새 버전이 설치된, 사용하지 않는 버전을 한 번에 삭제합니다")
+                }
                 Spacer()
-                Button("취소") { deletingVersion = nil }
-                Button("삭제", role: .destructive) {
-                    deletingVersion = nil
-                    Task { await state.deleteInstalledVersion(tool.name, version) }
+                Button("앱에서 자세히 보기 →") { open(.updater, tool.name) }.buttonStyle(.link).font(.callout)
+            }
+        }
+        .padding(10)
+        .background(.quaternary.opacity(0.4), in: RoundedRectangle(cornerRadius: 8))
+        .padding(.leading, 38)
+    }
+
+    /// A radio row: the global version is the selected one, any other switches on click.
+    private func versionRow(_ item: InstalledVersion, series: String?, hasSiblings: Bool) -> some View {
+        HStack(spacing: 8) {
+            if let series {
+                Text(series).font(.caption.monospaced().bold()).foregroundStyle(.secondary)
+                    .frame(width: 34, alignment: .leading)
+            }
+            Button {
+                guard !item.isGlobal else { return }
+                Task { await state.run(.use(name: tool.name, version: item.version)) }
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: item.isGlobal ? "largecircle.fill.circle" : "circle")
+                        .foregroundStyle(item.isGlobal ? Color.accentColor : .secondary)
+                    Text(item.version).font(.callout.monospaced()).lineLimit(1).truncationMode(.middle)
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .disabled(checking && !item.isGlobal)
+            .help(item.isGlobal ? "현재 전역 버전" : "\(tool.name) \(item.version)을 전역으로 사용")
+            .accessibilityLabel(item.isGlobal ? "\(tool.name) \(item.version) 전역 사용 중" : "\(tool.name) \(item.version) 전역으로 사용")
+            VersionBadges(version: item, hasSiblings: hasSiblings)
+            Spacer(minLength: 4)
+            if let size = state.diskSize(tool, [item.version]) {
+                Text(DeleteCopy.size(size)).font(.caption.monospacedDigit()).foregroundStyle(.tertiary).fixedSize()
+            }
+            Button { deleting = [item.version] } label: { Image(systemName: "trash") }
+                .buttonStyle(.borderless)
+                .disabled(checking || item.isGlobal)
+                .opacity(item.isGlobal ? 0 : 1)
+                .help("\(tool.name) \(item.version) 삭제")
+                .accessibilityLabel("\(tool.name) \(item.version) 삭제")
+                .accessibilityHidden(item.isGlobal)
+        }
+    }
+
+    private func deleteConfirmation(_ versions: [String]) -> some View {
+        let unused = ToolStatus.isUnused(tool, versions)
+        return VStack(alignment: .leading, spacing: 6) {
+            Text(DeleteCopy.title(tool.name, versions)).font(.callout.bold())
+            if versions.count > 1 { Text(versions.joined(separator: ", ")).font(.caption.monospaced()) }
+            Text(DeleteCopy.note(unused)).font(.caption).foregroundStyle(unused == false ? .orange : .secondary)
+            HStack {
+                if let size = state.diskSize(tool, versions) {
+                    Text("\(DeleteCopy.size(size)) 확보").font(.caption).foregroundStyle(.secondary)
+                }
+                Spacer()
+                Button("취소") { deleting = [] }
+                Button(versions.count == 1 ? "삭제" : "\(versions.count)개 삭제", role: .destructive) {
+                    deleting = []
+                    Task { await state.deleteInstalledVersions(tool.name, versions) }
                 }
                 .disabled(checking)
-                .accessibilityLabel("\(tool.name) \(version) 삭제 실행")
+                .accessibilityLabel("\(tool.name) \(versions.joined(separator: ", ")) 삭제 실행")
             }
             .controlSize(.small)
         }
         .padding(10)
-        .background(.quaternary.opacity(0.4), in: RoundedRectangle(cornerRadius: 8))
+        .background(Color.red.opacity(0.08), in: RoundedRectangle(cornerRadius: 8))
     }
 
     private func updateLine(_ item: UpdateItem) -> some View {
@@ -332,18 +423,16 @@ private struct TrayToolBlock: View {
         .padding(.leading, 38)
     }
 
+    /// Pills only for states that need attention; everything else stays quiet text.
     @ViewBuilder private var status: some View {
         let label = ToolStatus.label(tool)
         switch tool.status {
         case .error: Pill(text: label, tint: .red)
-        case .checking, .updating, .deleting: Pill(text: label)
         default:
-            if !updates.isEmpty {
+            if !updates.isEmpty, tool.status == .done {
                 Pill(text: "업데이트 \(updates.count)", tint: .orange)
-            } else if label == Strings.ToolStatus.latestStable {
-                Text("최신").font(.caption).foregroundStyle(.secondary)
             } else {
-                Pill(text: label)
+                Text(label == Strings.ToolStatus.latestStable ? "최신" : label).font(.caption).foregroundStyle(.secondary)
             }
         }
     }

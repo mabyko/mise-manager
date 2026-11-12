@@ -64,6 +64,51 @@ struct ToolStatusTests {
         #expect(ToolStatus.label(with { $0.activeGlobalVersion = "24.0.0" }) == Strings.ToolStatus.latestStable)
     }
 
+    @Test func installedVersionsAreGroupedByMajorAndOnlyOlderPatchesAreSuperseded() {
+        let multi = with {
+            $0.activeGlobalVersion = "26.13.1"
+            $0.installedVersions = ["26.13.1", "24.22.3", "24.22.2", "22.23.5", "lts"]
+            $0.unusedVersions = ["24.22.2", "22.23.5"]
+        }
+        func v(_ version: String, global: Bool = false, superseded: Bool = false, unused: Bool?) -> InstalledVersion {
+            InstalledVersion(version: version, isGlobal: global, isSuperseded: superseded, isUnused: unused)
+        }
+        #expect(ToolStatus.versionGroups(multi) == [
+            InstalledVersionGroup(major: 26, versions: [v("26.13.1", global: true, unused: false)]),
+            InstalledVersionGroup(major: 24, versions: [v("24.22.3", unused: false), v("24.22.2", superseded: true, unused: true)]),
+            InstalledVersionGroup(major: 22, versions: [v("22.23.5", unused: true)]),
+            InstalledVersionGroup(major: nil, versions: [v("lts", unused: false)]),
+        ])
+        #expect(ToolStatus.cleanupCandidates(multi) == ["24.22.2"])
+        #expect(ToolStatus.isUnused(multi, ["24.22.2", "22.23.5"]) == true)
+        #expect(ToolStatus.isUnused(multi, ["24.22.2", "24.22.3"]) == false)
+    }
+
+    @Test func cleanUpNeverOffersTheGlobalVersionOrAVersionInUseAndToleratesUnknownUsage() {
+        let older = with {
+            $0.activeGlobalVersion = "24.22.1"
+            $0.installedVersions = ["24.22.3", "24.22.2", "24.22.1", "24.22.0"]
+            $0.unusedVersions = ["24.22.0"]
+        }
+        #expect(ToolStatus.cleanupCandidates(older) == ["24.22.0"])
+        let unknown = with { $0.activeGlobalVersion = "24.22.1"; $0.installedVersions = older.installedVersions }
+        #expect(ToolStatus.cleanupCandidates(unknown) == ["24.22.2", "24.22.0"])
+        #expect(ToolStatus.isUnused(unknown, ["24.22.2"]) == nil)
+        #expect(ToolStatus.versionGroups(unknown).first?.versions.map(\.isUnused) == [nil, nil, false, nil])
+        #expect(ToolStatus.cleanupCandidates(with { $0.installedVersions = ["temurin-25.0.5", "temurin-21.0.12"] }).isEmpty)
+    }
+
+    @Test func toolNamesSplitTheBackendPrefixForDisplay() {
+        #expect(ToolName.backend("node") == nil)
+        #expect(ToolName.short("node") == "node")
+        #expect(ToolName.initials("node") == "no")
+        #expect(ToolName.backend("http:tla2tools") == "http")
+        #expect(ToolName.short("http:tla2tools") == "tla2tools")
+        #expect(ToolName.initials("http:tla2tools") == "tl")
+        #expect(ToolName.initials("npm:@antfu/ni") == "ni")
+        #expect(ToolName.short("odd:") == "odd:")
+    }
+
     @Test func installOnlyClearsUpdatesWithoutMovingTheGlobalDefaultOrAdvertisingADowngrade() {
         #expect(!ToolStatus.hasUpdates(with { $0.installedVersions = ["22.14.0", "22.15.0", "24.0.0"] }))
         #expect(ToolStatus.update(with { $0.installedVersions = ["22.14.0", "22.16.0", "24.1.0"] }) == nil)

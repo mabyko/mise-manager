@@ -10,6 +10,7 @@ extension AppState {
         defer { toolsLoaded = true }
         do {
             plugins = try await mise.installedPlugins().map(PluginRow.init)
+            refreshVersionSizes()
             addLog("Loaded \(plugins.count) plugin(s).")
             setBusy(false)
             return true
@@ -31,7 +32,10 @@ extension AppState {
         updatePlugin(name) {
             $0.activeGlobalVersion = found.activeGlobalVersion
             $0.installedVersions = found.installedVersions
+            $0.unusedVersions = found.unusedVersions
+            $0.installPaths = found.installPaths
         }
+        refreshVersionSizes()
         return plugin(name)
     }
 
@@ -207,15 +211,28 @@ extension AppState {
     }
 
     public func deleteInstalledVersion(_ name: String, _ version: String) async {
-        guard !toolActionsDisabled(name), let plugin = plugin(name) else { return }
-        guard plugin.activeGlobalVersion != version else {
-            addLog("\(name): cannot delete active global version \(version).")
+        await deleteInstalledVersions(name, [version])
+    }
+
+    /// Deletes in order and stops at the first failure; the row is re-read either way.
+    public func deleteInstalledVersions(_ name: String, _ versions: [String]) async {
+        guard !toolActionsDisabled(name), let plugin = plugin(name), !versions.isEmpty else { return }
+        if let active = plugin.activeGlobalVersion, versions.contains(active) {
+            addLog("\(name): cannot delete active global version \(active).")
             return
         }
+        var deleted: [String] = []
         await runToolAction(
-            name, status: .deleting, label: Strings.deleting("\(name)@\(version)"),
-            action: { _ = try await mise.deleteVersion(plugin: name, version: version) },
-            okLog: "deleted \(version).", failLog: { "delete failed" })
+            name, status: .deleting,
+            label: versions.count == 1 ? Strings.deleting("\(name)@\(versions[0])") : Strings.deletingVersions(name, versions.count),
+            action: {
+                for version in versions {
+                    _ = try await mise.deleteVersion(plugin: name, version: version)
+                    deleted.append(version)
+                }
+            },
+            okLog: "deleted \(versions.joined(separator: ", ")).",
+            failLog: { deleted.isEmpty ? "delete failed" : "delete failed after removing \(deleted.joined(separator: ", "))" })
     }
 
     /// All tools share the same global config; only this short write step is serialized.
@@ -248,6 +265,13 @@ extension AppState {
 
     public func requestDelete(_ name: String, _ version: String) {
         guard !toolActionsDisabled(name) else { return }
-        pendingDelete = PendingDelete(pluginName: name, version: version)
+        pendingDelete = PendingDelete(pluginName: name, versions: [version])
+    }
+
+    /// Confirms deleting every superseded version of a tool in one step.
+    public func requestCleanup(_ name: String) {
+        guard !toolActionsDisabled(name), let plugin = plugin(name) else { return }
+        let versions = ToolStatus.cleanupCandidates(plugin)
+        if !versions.isEmpty { pendingDelete = PendingDelete(pluginName: name, versions: versions) }
     }
 }

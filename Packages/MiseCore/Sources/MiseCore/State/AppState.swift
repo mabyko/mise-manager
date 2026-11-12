@@ -10,6 +10,9 @@ public struct PluginRow: Equatable, Sendable {
     public var name: String
     public var activeGlobalVersion: String?
     public var installedVersions: [String]
+    /// See `PluginSummary.unusedVersions`; nil = unknown.
+    public var unusedVersions: [String]?
+    public var installPaths: [String: String]
     public var latestByMajor: [String: String]
     public var sameMajorLatest: String?
     public var releaseLatest: String?
@@ -20,12 +23,15 @@ public struct PluginRow: Equatable, Sendable {
 
     public init(
         name: String, activeGlobalVersion: String? = nil, installedVersions: [String] = [],
+        unusedVersions: [String]? = nil, installPaths: [String: String] = [:],
         latestByMajor: [String: String] = [:], sameMajorLatest: String? = nil, releaseLatest: String? = nil,
         overallLatest: String? = nil, checkedVersions: Int = 0, status: PluginStatus = .idle, error: String? = nil
     ) {
         self.name = name
         self.activeGlobalVersion = activeGlobalVersion
         self.installedVersions = installedVersions
+        self.unusedVersions = unusedVersions
+        self.installPaths = installPaths
         self.latestByMajor = latestByMajor
         self.sameMajorLatest = sameMajorLatest
         self.releaseLatest = releaseLatest
@@ -36,7 +42,9 @@ public struct PluginRow: Equatable, Sendable {
     }
 
     public init(_ summary: PluginSummary) {
-        self.init(name: summary.name, activeGlobalVersion: summary.activeGlobalVersion, installedVersions: summary.installedVersions)
+        self.init(
+            name: summary.name, activeGlobalVersion: summary.activeGlobalVersion, installedVersions: summary.installedVersions,
+            unusedVersions: summary.unusedVersions, installPaths: summary.installPaths)
         normalizeInstalled()
     }
 
@@ -58,8 +66,9 @@ public struct PluginRow: Equatable, Sendable {
 
 public struct PendingDelete: Equatable, Sendable {
     public var pluginName: String
-    public var version: String
-    public init(pluginName: String, version: String) { self.pluginName = pluginName; self.version = version }
+    /// One version, or every superseded version of a clean-up.
+    public var versions: [String]
+    public init(pluginName: String, versions: [String]) { self.pluginName = pluginName; self.versions = versions }
 }
 
 public struct PendingMajorUpdate: Equatable, Sendable {
@@ -95,8 +104,13 @@ public enum PluginUrlDialog: Equatable, Sendable {
     /// Installed by the app (Phase 4); opens the menu bar panel.
     @ObservationIgnored public var showTray: @MainActor () -> Void = {}
     @ObservationIgnored var intervalTask: Task<Void, Never>?
+    @ObservationIgnored let diskUsage: @Sendable (String) -> Int64?
+    @ObservationIgnored var sizeTask: Task<Void, Never>?
+    /// Install directory → bytes on disk, filled in the background after the tool list loads.
+    public internal(set) var versionSizes: [String: Int64] = [:]
 
     public var toolsCheckedAt: String?
+    public var toolsCheckedDate: Date? { toolsCheckedAt.flatMap(Self.logFormatter.date(from:)) }
     public var updateCheckRunning = false
     public var outdatedPluginNames: [String] = []
     public var pluginUpdatesCheckedAt: String?
@@ -160,11 +174,13 @@ public enum PluginUrlDialog: Equatable, Sendable {
 
     public init(
         mise: Mise, settings: Settings,
-        latestRelease: @escaping @Sendable () async throws -> [MiseRelease] = ReleaseChecker.miseReleases
+        latestRelease: @escaping @Sendable () async throws -> [MiseRelease] = ReleaseChecker.miseReleases,
+        diskUsage: @escaping @Sendable (String) -> Int64? = DiskUsage.size(of:)
     ) {
         self.mise = mise
         self.settings = settings
         self.latestRelease = latestRelease
+        self.diskUsage = diskUsage
     }
 
     // MARK: Busy / progress
@@ -212,6 +228,32 @@ public enum PluginUrlDialog: Equatable, Sendable {
     // MARK: Row helpers
 
     public func plugin(_ name: String) -> PluginRow? { plugins.first { $0.name == name } }
+
+    /// Bytes on disk for these versions; nil until every one of them has been measured.
+    public func diskSize(_ plugin: PluginRow, _ versions: [String]) -> Int64? {
+        var total: Int64 = 0
+        for version in versions {
+            guard let size = plugin.installPaths[version].flatMap({ versionSizes[$0] }) else { return nil }
+            total += size
+        }
+        return versions.isEmpty ? nil : total
+    }
+
+    /// Measures install directories not measured yet, one at a time off the main actor.
+    func refreshVersionSizes() {
+        let paths = Set(plugins.flatMap { $0.installPaths.values })
+        versionSizes = versionSizes.filter { paths.contains($0.key) }
+        let missing = paths.subtracting(versionSizes.keys).sorted()
+        sizeTask?.cancel()
+        guard !missing.isEmpty else { return }
+        sizeTask = Task { [diskUsage] in
+            for path in missing {
+                let size = await Task.detached(priority: .utility) { diskUsage(path) }.value
+                if Task.isCancelled { return }
+                if let size { versionSizes[path] = size }
+            }
+        }
+    }
 
     func updatePlugin(_ name: String, _ patch: (inout PluginRow) -> Void) {
         guard let index = plugins.firstIndex(where: { $0.name == name }) else { return }

@@ -1,3 +1,4 @@
+import Foundation
 import Testing
 @testable import MiseCore
 
@@ -187,6 +188,50 @@ import Testing
         #expect(runner.count("uninstall -y node@22.14.0") == 1)
         #expect(state.plugin("node") == nil)
         #expect(!state.busy)
+    }
+
+    @Test func cleanUpDeletesEverySupersededVersionAndStopsAtTheFirstFailure() async {
+        let (runner, state) = setup()
+        let installed = ["22.14.0", "22.13.0", "22.12.0", "20.9.0"]
+        state.plugins = [row { $0.installedVersions = installed }]
+        state.requestCleanup("node")
+        #expect(state.pendingDelete == PendingDelete(pluginName: "node", versions: ["22.13.0", "22.12.0"]))
+
+        runner.installed([("node", "22.14.0", ["22.14.0", "20.9.0"])])
+        await state.deleteInstalledVersions("node", ["22.13.0", "22.12.0"])
+        #expect(runner.count("uninstall -y node@22.13.0") == 1)
+        #expect(runner.count("uninstall -y node@22.12.0") == 1)
+        #expect(state.logs.contains { $0.contains("deleted 22.13.0, 22.12.0.") })
+        #expect(state.plugin("node")?.installedVersions == ["22.14.0", "20.9.0"])
+        state.pendingDelete = nil
+        state.requestCleanup("node")
+        #expect(state.pendingDelete == nil)
+
+        state.plugins = [row { $0.installedVersions = installed }]
+        runner.fail("uninstall -y node@22.13.0", "busy")
+        await state.deleteInstalledVersions("node", ["22.13.0", "22.12.0"])
+        #expect(runner.count("uninstall -y node@22.12.0") == 1)
+        #expect(state.plugin("node")?.status == .error)
+        await state.deleteInstalledVersions("node", ["22.12.0", "22.14.0"])
+        #expect(state.logs.first?.contains("cannot delete active global version 22.14.0") == true)
+    }
+
+    @Test func installDirectoriesAreMeasuredInTheBackgroundAndForgottenWhenRemoved() async {
+        let runner = FakeRunner()
+        runner.reply("ls --installed --json", #"{"node":[{"version":"22.14.0","install_path":"/i/22.14.0"},{"version":"22.13.0","install_path":"/i/22.13.0"}]}"#)
+        runner.reply("ls --global --json", #"{"node":[{"version":"22.14.0"}]}"#)
+        let state = AppState(mise: Mise(runner: runner), settings: Settings(defaults: UserDefaults(suiteName: "mise-manager.tests.\(UUID().uuidString)")!),
+                             latestRelease: { [] }, diskUsage: { $0.hasSuffix("22.13.0") ? 7 : 5 })
+        await state.reloadAndCheckTools(check: false)
+        await state.sizeTask?.value
+        let node = state.plugin("node")!
+        #expect(state.diskSize(node, ["22.13.0"]) == 7)
+        #expect(state.diskSize(node, ["22.14.0", "22.13.0"]) == 12)
+        #expect(state.diskSize(node, ["22.14.0", "9.9.9"]) == nil)
+
+        runner.reply("ls --installed --json", #"{"node":[{"version":"22.14.0","install_path":"/i/22.14.0"}]}"#)
+        await state.deleteInstalledVersion("node", "22.13.0")
+        #expect(state.versionSizes == ["/i/22.14.0": 5])
     }
 
     @Test func actionsAreNoOpsWhileAnotherActionIsRunning() async {

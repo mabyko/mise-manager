@@ -11,6 +11,7 @@ public enum Strings {
     public static func using(_ spec: String) -> String { "\(spec) 전역 전환 중" }
     public static func updating(_ spec: String) -> String { "\(spec) 업데이트 중" }
     public static func deleting(_ spec: String) -> String { "\(spec) 삭제 중" }
+    public static func deletingVersions(_ name: String, _ count: Int) -> String { "\(name) 버전 \(count)개 삭제 중" }
 
     public static let loadingPluginDefinitions = "플러그인 목록 불러오는 중"
     public static let checkingPluginUpdates = "플러그인 업데이트 확인 중"

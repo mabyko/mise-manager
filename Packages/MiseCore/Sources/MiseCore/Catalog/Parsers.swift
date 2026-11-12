@@ -78,6 +78,21 @@ enum Parsers {
         return result
     }
 
+    /// `ls --installed --json`: tool → version → install directory. Best effort; sizes are optional.
+    static func parseInstallPaths(_ stdout: String) -> [String: [String: String]] {
+        guard let entries = (try? json(stdout)) as? [String: Any] else { return [:] }
+        return entries.compactMapValues { raw in
+            guard let rows = raw as? [[String: Any]] else { return nil }
+            var paths: [String: String] = [:]
+            for row in rows {
+                if let version = (row["version"] as? String).flatMap(sanitizeVersion), let path = row["install_path"] as? String {
+                    paths[version] = path
+                }
+            }
+            return paths
+        }
+    }
+
     /// `plugins ls --user --outdated`: an unreachable remote only warns on stderr, so anything on
     /// stderr other than mise's own "all up to date" line is treated as a failure.
     static func parseOutdatedPlugins(stdout: String, stderr: String) throws -> [String] {
