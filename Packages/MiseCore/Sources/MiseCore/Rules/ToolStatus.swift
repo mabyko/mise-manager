@@ -132,8 +132,10 @@ public enum ToolStatus {
             .compactMap { $0 }
             .filter { candidate in
                 guard candidate != plugin.activeGlobalVersion, seen.insert(candidate).inserted else { return false }
-                // A channel such as `stable` has nothing to order candidates against.
-                guard let base, baseLine != nil else { return true }
+                // A channel such as `stable` has nothing to order candidates against, so they are listed.
+                // A runtime without a line (pypy3.10-…, semeru-openj9-…) gets none: nothing here is
+                // known to be the same runtime.
+                guard let base, baseLine != nil else { return base?.contains(where: \.isNumber) != true }
                 if vendorLine, Version.line(of: candidate) != baseLine { return false }
                 return Version.compare(candidate, base) == .orderedDescending
             }

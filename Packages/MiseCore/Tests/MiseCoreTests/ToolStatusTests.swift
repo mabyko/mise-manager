@@ -90,6 +90,11 @@ struct ToolStatusTests {
         // A channel has nothing to order against, so its candidates are listed as they are.
         let flutter = PluginRow(name: "flutter", activeGlobalVersion: "stable", installedVersions: ["stable"], releaseLatest: "3.50.0-stable", status: .done)
         #expect(ToolStatus.otherCandidates(flutter, includePrerelease: false) == ["3.50.0-stable"])
+        // A runtime without a line is not a channel: CPython or Temurin is never suggested to it.
+        let pypy = PluginRow(name: "python", activeGlobalVersion: "pypy3.10-7.3.19", installedVersions: ["pypy3.10-7.3.19"], releaseLatest: "3.15.2", status: .done)
+        let semeru = PluginRow(name: "java", installedVersions: ["semeru-openj9-17.0.21.0"], releaseLatest: "27.0.1+1", overallLatest: "28-ea", status: .done)
+        #expect(ToolStatus.otherCandidates(pypy, includePrerelease: true).isEmpty)
+        #expect(ToolStatus.otherCandidates(semeru, includePrerelease: true).isEmpty)
     }
 
     @Test func stableUpdatePlanSeparatesSameMajorAndMajorUpgradesUsingTheInstalledFallback() {
