@@ -120,6 +120,25 @@ public enum ToolStatus {
         return primary == nil && major == nil ? nil : ToolUpdate(primary: primary, major: major)
     }
 
+    /// Versions the "other versions" inspector may offer to install: mise's answers and, on request,
+    /// the pre-release candidate. Never the global version, never older than the base, and for a
+    /// vendor line never another line (the tool's overall latest can be another vendor's build).
+    public static func otherCandidates(_ plugin: PluginRow, includePrerelease: Bool) -> [String] {
+        let base = plugin.baseVersion
+        let baseLine = base.flatMap(Version.line(of:))
+        let vendorLine = baseLine != nil && base.flatMap(Version.major(of:)) == nil
+        var seen = Set<String>()
+        return [plugin.sameMajorLatest, plugin.releaseLatest, includePrerelease ? plugin.overallLatest : nil]
+            .compactMap { $0 }
+            .filter { candidate in
+                guard candidate != plugin.activeGlobalVersion, seen.insert(candidate).inserted else { return false }
+                // A channel such as `stable` has nothing to order candidates against.
+                guard let base, baseLine != nil else { return true }
+                if vendorLine, Version.line(of: candidate) != baseLine { return false }
+                return Version.compare(candidate, base) == .orderedDescending
+            }
+    }
+
     public static func label(_ plugin: PluginRow) -> String {
         switch plugin.status {
         case .error: return Strings.ToolStatus.checkFailed
@@ -131,8 +150,9 @@ public enum ToolStatus {
         }
         guard let base = plugin.baseVersion, Version.line(of: base) != nil else { return Strings.ToolStatus.channel }
         if hasUpdates(plugin) { return Strings.ToolStatus.updateAvailable }
-        if plugin.sameMajorLatest == nil && plugin.releaseLatest == nil { return Strings.ToolStatus.noComparison }
         if Version.startsWithDigit(base), Version.isPreRelease(base) { return Strings.ToolStatus.prerelease }
+        // mise had no answer for the line in use: that is not the same as being up to date.
+        if plugin.sameMajorLatest == nil { return Strings.ToolStatus.noComparison }
         return Strings.ToolStatus.latestStable
     }
 }

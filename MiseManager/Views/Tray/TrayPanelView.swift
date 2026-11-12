@@ -410,17 +410,21 @@ private struct TrayToolBlock: View {
         let action = item.kind == .major ? "검토…" : (switches ? "설치·전환" : "설치")
         let hint = item.kind == .major ? "호환성 확인이 필요해 앱에서 검토합니다"
             : (switches ? "설치 후 전역 기본값을 이 버전으로 전환합니다" : "설치만 하고 전역 기본값은 유지합니다")
+        // A vendor line's versions are too long for one row with its label: the line goes above the target.
+        let stacked = !numeric && item.kind != .major
         return HStack(spacing: 8) {
-            // A vendor line's versions are long and name the line themselves: show only the target.
-            if numeric || item.kind == .major {
+            if !stacked {
                 Text(series).font(.caption.bold()).foregroundStyle(.secondary).frame(width: 56, alignment: .leading)
             }
-            HStack(spacing: 4) {
-                if numeric || item.kind == .major { Text(item.from) }
-                Image(systemName: "arrow.right").font(.caption2).foregroundStyle(.secondary)
-                Text(item.to).bold().lineLimit(1).truncationMode(.middle)
+            VStack(alignment: .leading, spacing: 2) {
+                if stacked { Text(series).font(.caption.bold()).foregroundStyle(.secondary) }
+                HStack(spacing: 4) {
+                    if !stacked { Text(item.from) }
+                    Image(systemName: "arrow.right").font(.caption2).foregroundStyle(.secondary)
+                    Text(item.to).bold().lineLimit(1).truncationMode(.middle)
+                }
+                .font(.callout.monospaced())
             }
-            .font(.callout.monospaced())
             Spacer()
             Button(action) { Task { await state.run(.apply(id: item.id)) } }
                 .controlSize(.small)

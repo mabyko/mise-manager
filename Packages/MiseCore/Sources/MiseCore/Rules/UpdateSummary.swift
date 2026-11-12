@@ -13,8 +13,9 @@ public struct UpdateSummary: Equatable, Sendable {
     public let items: [UpdateItem]
     public let errors: [String]
     public let attention: Bool
-    /// Checked tools whose remote offers nothing to compare against (an `http:` tool, for example).
-    /// Checking again cannot change that, so they are listed instead of raising `attention`.
+    /// Checked lines mise has no latest version for (`node 27.x` with only pre-releases, an `http:`
+    /// tool), or a whole tool when it has no line at all. Checking again cannot change that, so they
+    /// are listed instead of raising `attention`, and never pass as up to date.
     public let uncomparable: [String]
 }
 
@@ -52,9 +53,11 @@ extension AppState {
         let unchecked = !toolsLoaded || toolsCheckedAt == nil || miseLatestCheckedAt == nil || pluginUpdatesCheckedAt == nil
             || !settled.contains(mise.key)
             || plugins.contains { $0.status != .done }
-        let uncomparable = plugins
-            .filter { $0.status == .done && $0.sameMajorLatest == nil && $0.releaseLatest == nil && $0.latestByLine.isEmpty }
-            .map(\.name)
+        let uncomparable = plugins.filter { $0.status == .done }.flatMap { tool -> [String] in
+            let unanswered = ToolStatus.installedSeries(tool).filter { $0.latest == nil }.map { "\(tool.name) \($0.line).x" }
+            if !unanswered.isEmpty { return unanswered }
+            return tool.sameMajorLatest == nil && tool.releaseLatest == nil && tool.latestByLine.isEmpty ? [tool.name] : []
+        }
         return UpdateSummary(items: items, errors: errors, attention: unchecked || !errors.isEmpty, uncomparable: uncomparable)
     }
 }

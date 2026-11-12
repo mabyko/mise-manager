@@ -113,6 +113,18 @@ import Testing
         #expect(!state.busy)
     }
 
+    @Test func aSeriesUpdateSwitchesTheGlobalVersionOnlyWithinItsOwnLine() {
+        let (_, state) = setup()
+        state.settings.switchGlobalAfterUpdate = true
+        let java = PluginRow(name: "java", activeGlobalVersion: "temurin-21.0.12+101.0.LTS", installedVersions: ["temurin-21.0.12+101.0.LTS"])
+        #expect(state.seriesUpdateSwitchesGlobal(java, "temurin-21.0.13+9.0.LTS"))
+        #expect(!state.seriesUpdateSwitchesGlobal(java, "temurin-25.0.5+8.0.LTS"))
+        #expect(!state.seriesUpdateSwitchesGlobal(row(), "24.0.0"))
+        // A global version without a line never matches, even against another lineless version.
+        let pypy = PluginRow(name: "python", activeGlobalVersion: "pypy3.10-7.3.19", installedVersions: ["pypy3.10-7.3.19"])
+        #expect(!state.seriesUpdateSwitchesGlobal(pypy, "pypy3.12-8.0.1"))
+    }
+
     @Test func switchingGlobalToAnotherMajorReChecksCandidatesForTheNewBase() async {
         let (runner, state) = setup()
         state.plugins = [row { $0.installedVersions = ["22.14.0", "20.19.0"] }]

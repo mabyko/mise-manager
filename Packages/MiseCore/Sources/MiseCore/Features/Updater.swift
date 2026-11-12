@@ -180,8 +180,8 @@ extension AppState {
     }
 
     public func seriesUpdateSwitchesGlobal(_ plugin: PluginRow, _ version: String) -> Bool {
-        settings.switchGlobalAfterUpdate && plugin.activeGlobalVersion != nil
-            && Version.line(of: plugin.activeGlobalVersion!) == Version.line(of: version)
+        settings.switchGlobalAfterUpdate
+            && plugin.activeGlobalVersion.flatMap(Version.line(of:)).map { $0 == Version.line(of: version) } == true
     }
 
     /// Series updates install only; the global default moves only when the setting says so.

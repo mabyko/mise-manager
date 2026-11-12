@@ -56,6 +56,40 @@ struct ToolStatusTests {
         var current = java
         current.latestByLine["temurin-21"] = "temurin-21.0.12+101.0.LTS"
         #expect(ToolStatus.label(current) == Strings.ToolStatus.latestStable)
+        // The inspector never offers the overall latest to a vendor line: 27.0.1+1 is another vendor's build.
+        #expect(ToolStatus.otherCandidates(java, includePrerelease: true).isEmpty)
+    }
+
+    @Test func aLineMiseHasNoAnswerForIsNotReportedAsUpToDate() {
+        // `mise latest java@adoptopenjdk-11` prints nothing although the tool itself has a latest.
+        let java = PluginRow(
+            name: "java", activeGlobalVersion: "adoptopenjdk-11.0.11+9", installedVersions: ["adoptopenjdk-11.0.11+9"],
+            releaseLatest: "27.0.1+1", status: .done)
+        #expect(ToolStatus.installedSeries(java) == [InstalledSeries(line: "adoptopenjdk-11", current: "adoptopenjdk-11.0.11+9", latest: nil, update: nil)])
+        #expect(ToolStatus.label(java) == Strings.ToolStatus.noComparison)
+        #expect(!ToolStatus.hasUpdates(java))
+    }
+
+    @Test func runtimesWithoutALineAreNeitherGroupedNorOfferedForCleanUp() {
+        let python = PluginRow(
+            name: "python", activeGlobalVersion: "3.12.8", installedVersions: ["3.12.8", "pypy3.11-7.3.19", "pypy3.10-7.3.19"],
+            unusedVersions: ["pypy3.10-7.3.19", "pypy3.11-7.3.19"], status: .done)
+        #expect(ToolStatus.versionGroups(python).map(\.line) == ["3", nil])
+        #expect(ToolStatus.cleanupCandidates(python).isEmpty)
+        #expect(ToolStatus.installedSeries(python).map(\.line) == ["3"])
+    }
+
+    @Test func theInspectorNeverOffersADowngradeOrTheGlobalVersion() {
+        // pnpm: mise's overall latest (12.18.0) trails the installed global 12.19.0.
+        let pnpm = PluginRow(
+            name: "pnpm", activeGlobalVersion: "12.19.0", installedVersions: ["12.19.0"],
+            latestByLine: ["12": "12.19.0"], sameMajorLatest: "12.19.0", releaseLatest: "12.18.0", overallLatest: "13.0.0-rc.1", status: .done)
+        #expect(ToolStatus.otherCandidates(pnpm, includePrerelease: false).isEmpty)
+        #expect(ToolStatus.otherCandidates(pnpm, includePrerelease: true) == ["13.0.0-rc.1"])
+        #expect(ToolStatus.otherCandidates(node, includePrerelease: true) == ["22.15.0", "24.0.0", "25.0.0-rc.1"])
+        // A channel has nothing to order against, so its candidates are listed as they are.
+        let flutter = PluginRow(name: "flutter", activeGlobalVersion: "stable", installedVersions: ["stable"], releaseLatest: "3.50.0-stable", status: .done)
+        #expect(ToolStatus.otherCandidates(flutter, includePrerelease: false) == ["3.50.0-stable"])
     }
 
     @Test func stableUpdatePlanSeparatesSameMajorAndMajorUpgradesUsingTheInstalledFallback() {

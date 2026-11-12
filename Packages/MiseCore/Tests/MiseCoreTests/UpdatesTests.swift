@@ -41,8 +41,13 @@ import Testing
 
         await state.checkAllUpdates()
         #expect(state.updateSummary.errors.isEmpty)
-        #expect(state.updateSummary.uncomparable == ["http:tla2tools"])
+        #expect(state.updateSummary.uncomparable == ["http:tla2tools 1.x"])
         #expect(!state.updateSummary.attention)
+
+        // One unanswered line of an otherwise current tool is named too, so it never passes as checked.
+        state.plugins[1].installedVersions = ["27.0.0-alpha.1", "22.14.0"]
+        #expect(state.updateSummary.uncomparable == ["http:tla2tools 1.x", "node 27.x"])
+        state.plugins[1].installedVersions = ["22.14.0"]
 
         // A tool that has not been checked still asks for a check.
         state.plugins[0].status = .idle

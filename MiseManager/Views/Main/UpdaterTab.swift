@@ -63,12 +63,7 @@ struct ToolDetail: View {
     private var cleanup: [String] { ToolStatus.cleanupCandidates(tool) }
     private var update: ToolUpdate? { ToolStatus.update(tool) }
     private var disabled: Bool { state.toolActionsDisabled(tool.name) }
-    private var candidates: [String] {
-        var seen = Set<String>()
-        return [tool.sameMajorLatest, tool.releaseLatest, state.settings.showPrereleases ? tool.overallLatest : nil]
-            .compactMap { $0 }
-            .filter { $0 != tool.activeGlobalVersion && seen.insert($0).inserted }
-    }
+    private var candidates: [String] { ToolStatus.otherCandidates(tool, includePrerelease: state.settings.showPrereleases) }
 
     var body: some View {
         HStack(spacing: 10) {
@@ -159,7 +154,7 @@ struct ToolDetail: View {
     private func seriesHeader(_ series: InstalledSeries) -> some View {
         let switches = series.update.map { state.seriesUpdateSwitchesGlobal(tool, $0) } ?? false
         return HStack(spacing: 14) {
-            Text("\(series.line).x").font(.headline.monospaced()).frame(minWidth: 56, alignment: .leading)
+            Text("\(series.line).x").font(.headline.monospaced()).lineLimit(1).fixedSize().frame(minWidth: 56, alignment: .leading)
             VStack(alignment: .leading, spacing: 3) {
                 if let update = series.update {
                     HStack(spacing: 6) {
@@ -167,11 +162,11 @@ struct ToolDetail: View {
                         Image(systemName: "arrow.right").foregroundStyle(.secondary)
                         Text(update).bold()
                     }
-                    .font(.body.monospaced())
+                    .font(.body.monospaced()).lineLimit(1).truncationMode(.middle)
                 }
                 Text(series.update != nil
                      ? (switches ? "설치 후 전역 기본값 전환" : "설치만 · 전역 기본값 유지")
-                     : (series.latest != nil ? "확인된 업데이트 없음" : label))
+                     : (series.latest != nil ? "확인된 업데이트 없음" : (tool.status == .done ? Strings.ToolStatus.noComparison : label)))
                     .font(.caption).foregroundStyle(.secondary)
             }
             Spacer()
